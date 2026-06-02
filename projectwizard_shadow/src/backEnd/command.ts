@@ -22,6 +22,8 @@ import {
   findHiprojFiles,
   showMessageModal,
   getUserDir,
+  upsertProjectDataJson,
+  removeProjectDataJson,
 } from './utils';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -194,9 +196,10 @@ export class Command {
     writeHiproj(projectData, hiprojDir, sdkDir);
 
     // Register the project: path points to the .hiproj file inside hiprojDir.
+    const hiprojFilePath = path.join(hiprojDir, `${projectData.projectName}.hiproj`);
     const item = {
       name:     projectData.projectName,
-      path:     path.join(hiprojDir, `${projectData.projectName}.hiproj`),
+      path:     hiprojFilePath,
       chip:     projectData.soc,
       board:    projectData.board,
       platform: projectData.platform,
@@ -205,6 +208,9 @@ export class Command {
     if (extension.globalStoragePath) {
       addItemsToProList([item], extension.globalStoragePath);
       updateOneItemToLatestList(item, extension.globalStoragePath);
+      // Also write projectdata.json so that the hisparkai (code) extension can
+      // locate the .hiproj when the SDK workspace folder is opened in VSCode.
+      upsertProjectDataJson(sdkDir, hiprojFilePath, extension.globalStoragePath);
     }
 
     // Signal wizard to close
@@ -239,6 +245,14 @@ export class Command {
     const { projectPath } = operate.paramData ?? {};
     if (!projectPath || !extension.globalStoragePath) { return; }
     deleteFromProjectList(projectPath, extension.globalStoragePath);
+
+    // Also remove the corresponding entry from projectdata.json.
+    // projectPath here is the .hiproj file path; sdk_path is stored inside it.
+    const content = getHiprojContent(projectPath);
+    const sdkDir: string | undefined = content?.information?.sdk_path;
+    if (sdkDir) {
+      removeProjectDataJson(sdkDir, extension.globalStoragePath);
+    }
   }
 
   // ─── Import panel ─────────────────────────────────────────────────────────

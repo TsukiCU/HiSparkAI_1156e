@@ -77,6 +77,45 @@ export function deleteFromProjectList(targetPath: string, globalStoragePath: str
   fs.writeFileSync(latestPath, JSON.stringify(latest, null, 2), 'utf-8');
 }
 
+// ─── projectdata.json bridge ──────────────────────────────────────────────────
+// code (hisparkai) extension reads projectdata.json to map SDK workspace → .hiproj path.
+// Shadow must write the same file so the two extensions work together.
+// Entry schema used by code/extension.ts: { SDK: string; active: string; chip?: string }
+
+const PROJECTDATA_FILE = 'projectdata.json';
+
+/**
+ * Insert or update a { SDK, active } entry in projectdata.json.
+ * @param sdkDir      Absolute path of the SDK workspace folder.
+ * @param hiprojPath  Absolute path of the .hiproj file (inside xxx_hiproj/).
+ * @param globalStoragePath  extension.globalStorageUri.fsPath
+ */
+export function upsertProjectDataJson(
+  sdkDir: string,
+  hiprojPath: string,
+  globalStoragePath: string,
+): void {
+  const filePath = getListPath(globalStoragePath, PROJECTDATA_FILE);
+  const list: any[] = readJsonSafe(filePath);
+  const idx = list.findIndex((x) => x.SDK === sdkDir);
+  const entry = { SDK: sdkDir, active: hiprojPath };
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...entry };
+  } else {
+    list.push(entry);
+  }
+  fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8');
+}
+
+/**
+ * Remove the entry for sdkDir from projectdata.json.
+ */
+export function removeProjectDataJson(sdkDir: string, globalStoragePath: string): void {
+  const filePath = getListPath(globalStoragePath, PROJECTDATA_FILE);
+  const list: any[] = readJsonSafe(filePath).filter((x) => x.SDK !== sdkDir);
+  fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8');
+}
+
 // ─── hiproj helpers ───────────────────────────────────────────────────────────
 
 export function getHiprojContent(hiprojPath: string): any {
