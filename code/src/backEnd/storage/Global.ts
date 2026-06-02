@@ -1,0 +1,137 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Global model selected by user.
+export class GlobalModel {
+  private static _instance: GlobalModel;
+
+  private _source: 'wsl' | 'linux' | 'windows' | undefined;
+  private _target: 'NPU' | 'CPU' | undefined;
+
+  private _hiprojPath: string | undefined;
+  // Root folder of the xxx_hiproj directory (sibling of the SDK folder).
+  // aicache/ lives here instead of in the SDK workspace folder.
+  private _hiprojDir: string | undefined;
+  private _localFile?: string | undefined; // path of locally copied file.
+  private _aiCacheDir?: string | undefined; // History dir for current operation. (aicache/${name}.${ext}_${ts})
+
+  // Absolute path of model user picked on either Linux or WSL.
+  private _selectedFile: string | undefined;
+
+  // linux specific
+  private _remoteHome: string | undefined;
+
+  // wsl specific.
+  private _wslDistro?: string | undefined;
+
+  private constructor() { }
+
+  public static get instance(): GlobalModel {
+    if (!this._instance) { this._instance = new GlobalModel(); }
+    return this._instance;
+  }
+
+  // getter
+  get source(): 'wsl' | 'linux' | 'windows' | undefined {
+    return this._source;
+  }
+
+  get target(): 'NPU' | 'CPU' | undefined {
+    return this._target;
+  }
+
+  get hiprojPath(): string | undefined {
+    return this._hiprojPath;
+  }
+
+  get hiprojDir(): string | undefined {
+    return this._hiprojDir;
+  }
+
+  get remoteHome(): string | undefined {
+    return this._remoteHome;
+  }
+
+  get selectedFile(): string | undefined {
+    return this._selectedFile;
+  }
+
+  get localFile(): string | undefined {
+    return this._localFile;
+  }
+
+  get aiCacheDir(): string | undefined {
+    return this._aiCacheDir;
+  }
+
+  get wslDistro(): string | undefined {
+    return this._wslDistro;
+  }
+
+  // setter
+  set source(value: 'wsl' | 'linux' | 'windows' | undefined) {
+    this._source = value;
+  }
+
+  set target(value: 'NPU' | 'CPU' | undefined) {
+    this._target = value;
+  }
+
+  set hiprojPath(value: string | undefined) {
+    this._hiprojPath = value;
+  }
+
+  set hiprojDir(value: string | undefined) {
+    this._hiprojDir = value;
+  }
+
+  set remoteHome(value: string | undefined) {
+    this._remoteHome = value;
+  }
+
+  set selectedFile(value: string | undefined) {
+    this._selectedFile = value;
+  }
+
+  set localFile(value: string | undefined) {
+    this._localFile = value;
+  }
+
+  set aiCacheDir(value: string | undefined) {
+    this._aiCacheDir = value;
+  }
+
+  set wslDistro(value: string | undefined) {
+    this._wslDistro = value;
+  }
+}
+
+export enum targetPlatform {
+  CPU = 'CPU',
+  NPU = 'NPU'
+}
+
+export const remoteRootDir = 'hisparkai';
+export const DEFAULT_WSL_DISTRO = 'ubuntu-22.04-cann-base';
+export const remotePython = {
+  NPU: '/usr/bin/python3.10',
+  CPU: '/usr/bin/python3.11',
+};
+
+export const LAST_SELECTED_PATH = {
+  model: '',
+  general: '',
+};

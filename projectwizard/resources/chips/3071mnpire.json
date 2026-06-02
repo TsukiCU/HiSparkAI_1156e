@@ -1,0 +1,98 @@
+{
+    "information": {
+      "flash": 131072
+    },
+    "compile": {
+      "tool_chain": [
+        "gcc_arm"
+      ],
+      "float_type": "132_hard",
+      "map_path": "./out/bin/target.map",
+      "constant_type": "float"
+    },
+    "debug": {
+        "elf_path": "./out/bin/target.elf",
+        "target_bin_path": "./out/bin/target_boot.bin",
+        "breakpoints_limitation": "4",
+        "stop_debug_state": "disconnect",
+        "client": [
+          "gdb"
+        ],
+        "tool": [
+          "HiSparkLinkPro"
+        ],
+        "params": [
+          {
+            "name": "HiSparkLinkPro",
+            "param": {
+              "openocd_interface_file": "cmsis-dap.cfg",
+              "openocd_target_file": "3071MNPIRE-swd.cfg",
+              "interface": [
+                "swd"
+              ],
+              "speed": "5000",
+              "port": "3333"
+            }
+          }
+        ],
+        "timeout_list": ["15000", "30000", "60000", "120000", "-1"],
+        "timeout_default": "60000"
+    },
+    "analysis": {
+      "elf_path": "./out/bin/target.elf",
+      "map_path": "./out/bin/target.map"
+    },
+    "upload": {
+      "bin_path": "./out/bin/target_boot.bin",
+      "reset": 1,
+      "burn_verification": 0,
+      "base_page_byte": 8192,
+      "protocol": [
+        "swd",
+        "i2c"
+      ],
+      "baudList": ["2400", "4800", "9600", "19200", "38400", "57600", "115200"],
+      "params": [
+        {
+          "name": "swd",
+          "param": {
+            "debug_board": [
+              "HiSparkLinkPro"
+            ],
+            "frequency": "4000",
+            "address": "0x100000",
+            "partition_length": "0x20000"
+          }
+        },
+        {
+          "name": "i2c",
+          "param": {
+            "debug_board": [
+              "HiSparkLinkPro"
+            ],
+            "frequency": "400",
+            "address": "0x100000",
+            "partition_length": "0x20000"
+          }
+        }
+      ]
+    },
+    "console": {
+      "port": "",
+      "baud": "115200",
+      "stop_bit": "0",
+      "parity": "N"
+    },
+    "need_sdk": true,
+    "need_project_path": true,
+    "chip_config": true,
+    "variabletrace": true,
+    "gui": false,
+    "platform": "vendorhm",
+    "project_type": [
+      {
+        "name": "MCU",
+        "base_on_sdk": true
+      }
+    ]
+  }

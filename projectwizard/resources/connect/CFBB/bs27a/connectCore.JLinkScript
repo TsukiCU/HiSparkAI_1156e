@@ -1,0 +1,42 @@
+void WriteAddr(U32 addr, U32 dat) {
+    int v;
+    JLINK_CORESIGHT_WriteAP(1, addr); //addr
+    JLINK_CORESIGHT_WriteAP(3, dat);
+    v = JLINK_CORESIGHT_ReadAP(3);
+    JLINK_SYS_Report("*******************WriteAddr*******************************");
+    JLINK_SYS_Report1("opt    addr = ", addr);
+    JLINK_SYS_Report1("write  data = ", dat);
+    JLINK_SYS_Report1("read   data = ", v);
+    JLINK_SYS_Report("**************************************************");
+}
+
+void InitTarget(void) {
+  int v;
+
+  Report("J-Link script: Connect to Core 1");
+  //CPU=CORTEX_M3;                             // Pre-select that we have a Cortex-M0/M0+ connected
+  //
+  // Manually configure which APs are present on the CoreSight device
+  //
+  
+  // 1 mcpu, 2 bt, 0 总线
+  CORESIGHT_AddAP(0, CORESIGHT_AHB_AP);  // AHB-AP of first 总线 backdoor/dap
+  CORESIGHT_AddAP(1, CORESIGHT_AHB_AP);  // AHB-AP of third APP Core
+  CORESIGHT_AddAP(2, CORESIGHT_AHB_AP);  // AHB-AP of fourth Bt Core
+  
+  /* 清中断保证低功耗后连接 */
+  JLINK_CORESIGHT_WriteDP(2, 0xE);
+  JLINK_CORESIGHT_WriteDP(1, 1);
+  JLINK_CORESIGHT_ReadDP(1);
+  JLINK_CORESIGHT_WriteDP(2, 0);
+  
+  CORESIGHT_IndexAHBAPToUse  = 0;
+
+  // 关ulp dog
+  //JLINK_CORESIGHT_WriteAP(1, 0x55020900); //addr
+  //JLINK_CORESIGHT_WriteAP(3, 0);          //value
+  //JLINK_CORESIGHT_WriteAP(1, 0x55000468); //addr
+  //JLINK_CORESIGHT_WriteAP(3, 0xFB);          //value
+
+  CORESIGHT_IndexAHBAPToUse  = 1;
+}

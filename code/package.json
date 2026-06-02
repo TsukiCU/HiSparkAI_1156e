@@ -1,0 +1,247 @@
+{
+  "name": "hisparkai",
+  "displayName": "HiSpark Studio AI",
+  "description": "Develop and optimize AI applications for HiSilicon chips with HiSpark Studio AI",
+  "version": "0.0.1",
+  "publisher": "HiSpark",
+  "repository": {
+    "url": ""
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn format; yarn lint"
+    }
+  },
+  "engines": {
+    "vscode": "^1.78.0"
+  },
+  "categories": [
+    "Debuggers"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "keywords": [
+    "c",
+    "c++",
+    "microcontroller"
+  ],
+  "main": "./dist/extension",
+  "icon": "resources/ai.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "HisparkAI.show",
+        "title": "Welcome",
+        "category": "HisparkAI"
+      },
+      {
+        "command": "HisparkAI.openHome",
+        "title": "Home",
+        "icon": "resources/28px_AI.svg"
+      },
+      {
+        "command": "HisparkAI.connectServer",
+        "title": "Connect to Server",
+        "category": "HisparkAI"
+      },
+      {
+        "command": "HisparkAI-studio.remote",
+        "title": "Command Line",
+        "icon": "resources/28px_AI.svg"
+      },
+      {
+        "command": "HisparkAI-studio.manageToolchain",
+        "title": "Download Toolchain",
+        "icon": "resources/28px_AI.svg"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "hisparkai-custom",
+          "title": "HiSpark Studio AI",
+          "icon": "resources/28px_AI.svg",
+          "priority": 1
+        }
+      ]
+    },
+    "views": {
+      "hisparkai-custom": [
+        {
+          "id": "hisparkai-home",
+          "name": "",
+          "icon": "",
+          "type": "tree",
+          "visibility": "visible"
+        }
+      ]
+    },
+    "walkthroughs": [
+      {
+        "id": "hisparkAI.basicGuide",
+        "title": "快速入门",
+        "description": "学习如何使用HiSpark Studio AI扩展插件, 请按照顺序操作。",
+        "when": "true",
+        "primary": true,
+        "icon": "resources/HiSpark-Studio.png",
+        "featuredFor": [
+          "workspace"
+        ],
+        "steps": [
+          {
+            "id": "environmentConfiguration",
+            "title": "环境配置",
+            "description": "如何进入环境配置",
+            "media": {
+              "markdown": "walkthroughs/basic/environmentConfiguration.md"
+            }
+          },
+          {
+            "id": "openPlugin",
+            "title": "进入插件",
+            "description": "如何进入插件",
+            "media": {
+              "markdown": "walkthroughs/basic/openPlugin.md"
+            }
+          },
+          {
+            "id": "buildProject",
+            "title": "构建工程",
+            "description": "如何构建工程",
+            "media": {
+              "markdown": "walkthroughs/basic/buildProject.md"
+            }
+          },
+          {
+            "id": "selectModel",
+            "title": "导入模型",
+            "description": "如何导入模型",
+            "media": {
+              "markdown": "walkthroughs/basic/selectModel.md"
+            }
+          },
+          {
+            "id": "quantize",
+            "title": "量化操作",
+            "description": "如何进行量化操作",
+            "media": {
+              "markdown": "walkthroughs/basic/quantize.md"
+            }
+          },
+          {
+            "id": "convert",
+            "title": "转换操作",
+            "description": "如何进行转换操作",
+            "media": {
+              "markdown": "walkthroughs/basic/convert.md"
+            }
+          },
+          {
+            "id": "deploy",
+            "title": "SDK编译",
+            "description": "关于SDK编译",
+            "media": {
+              "markdown": "walkthroughs/basic/deploy.md"
+            }
+          },
+          {
+            "id": "benchmark",
+            "title": "Benchmark",
+            "description": "性能验证与精度验证",
+            "media": {
+              "markdown": "walkthroughs/basic/profiling.md"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "build-dev": "webpack --config ./scripts/webpack.dev.config.js",
+    "build-pro": "webpack --config ./scripts/webpack.pro.config.js",
+    "build-frontend-dark-dev": "cross-env theme=dark webpack --config ./scripts/webpack.front.config.js --mode development --hot",
+    "build-frontend-light-dev": "cross-env theme=light webpack --config ./scripts/webpack.front.config.js --mode development --hot",
+    "build-frontend-dark-pro": "cross-env theme=dark webpack --config ./scripts/webpack.front.config.js --mode production",
+    "build-frontend-light-pro": "cross-env theme=light webpack --config ./scripts/webpack.front.config.js --mode production",
+    "pre-launch": "yarn build-frontend-light-dev && yarn build-frontend-dark-dev && yarn build-dev",
+    "compile": "yarn build-frontend-light-pro && yarn build-frontend-dark-pro && yarn build-pro",
+    "watch": "cross-env theme=dark webpack --config ./scripts/webpack.front.config.js ./scripts/webpack.dev.config.js --mode development --watch",
+    "start": "cross-env theme=dark webpack server --open --config ./scripts/webpack.front.config.js --mode development --hot",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "lint": "eslint --ext .ts src",
+    "ts-format": "prettier --write \"src/**/*.ts\"&&eslint --ext .ts src --fix",
+    "tsx-format": "prettier --write \"src/**/*.ts*\"&&eslint --ext .ts,.tsx src --fix",
+    "vscode:package": "node ./scripts/addVersionFull.js && yes | vsce package",
+    "test": "jest --config jest.config.js"
+  },
+  "devDependencies": {
+    "@babel/core": "7.24.5",
+    "@babel/plugin-transform-runtime": "7.24.3",
+    "@babel/preset-env": "7.24.5",
+    "@babel/preset-react": "7.24.1",
+    "@babel/preset-typescript": "7.24.1",
+    "@babel/runtime": "7.24.5",
+    "@types/cross-spawn": "6.0.6",
+    "@types/glob": "7.2.0",
+    "@types/jest": "27.4.1",
+    "@types/node": "18.18.2",
+    "@types/react": "18.2.56",
+    "@types/react-dom": "18.3.1",
+    "@types/vscode": "1.78.0",
+    "@types/ws": "8.5.10",
+    "@types/minimatch": "5.1.2",
+    "@typescript-eslint/eslint-plugin": "5.62.0",
+    "@typescript-eslint/parser": "5.62.0",
+    "babel-loader": "8.3.0",
+    "babel-plugin-import": "1.13.8",
+    "cross-env": "7.0.3",
+    "css-loader": "6.11.0",
+    "eslint": "8.57.0",
+    "eslint-config-google": "0.14.0",
+    "eslint-config-prettier": "8.10.0",
+    "eslint-plugin-header": "3.1.1",
+    "eslint-plugin-jest": "28.8.0",
+    "eslint-plugin-prettier": "4.2.1",
+    "eslint-plugin-react": "7.34.1",
+    "eslint-plugin-react-hooks": "4.6.2",
+    "glob": "7.2.3",
+    "html-webpack-plugin": "5.6.0",
+    "husky": "7.0.4",
+    "jest": "27.5.1",
+    "jest-html-reporter": "3.10.2",
+    "jest-junit": "16.0.0",
+    "less": "4.2.0",
+    "less-loader": "11.1.3",
+    "mini-css-extract-plugin": "2.9.0",
+    "mocha": "8.4.0",
+    "prettier": "2.8.8",
+    "react-dom": "18.1.0",
+    "react-hot-loader": "4.13.1",
+    "style-loader": "3.3.4",
+    "svg-inline-loader": "0.8.2",
+    "ts-jest": "27.1.4",
+    "ts-loader": "8.4.0",
+    "typescript": "4.9.5",
+    "webpack": "5.91.0",
+    "webpack-cli": "4.10.0",
+    "webpack-dev-server": "4.15.2",
+    "i18next": "23.10.0",
+    "ws": "8.17.0",
+    "archiver": "5.3.2",
+    "react-router-dom": "6.21.1"
+  },
+  "dependencies": {
+    "antd": "4.24.16",
+    "echarts": "5.5.1",
+    "log4js": "6.9.1",
+    "react": "18.3.1",
+    "react-i18next": "13.5.0",
+    "react-redux": "8.1.3",
+    "redux": "5.0.1",
+    "redux-saga": "1.3.0",
+    "serialport": "13.0.0",
+    "iconv-lite": "0.6.3",
+    "ini": "5.0.0"
+  }
+}

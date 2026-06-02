@@ -1,0 +1,1 @@
+yarn & yarn compile & yarn run vscode:package

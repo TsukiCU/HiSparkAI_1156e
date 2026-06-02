@@ -1,0 +1,36 @@
+void InitTarget(void) {
+  int v;
+
+  Report("J-Link script: Connect to Core 1 - MCPU");
+  //CPU=RISCV;                         
+  //
+  // Manually configure which APs are present on the CoreSight device
+  //
+  CORESIGHT_AddAP(0, CORESIGHT_AHB_AP);  // AHB-AP of first aon
+  CORESIGHT_AddAP(1, CORESIGHT_AHB_AP);  // AHB-AP of Second linx170
+  CORESIGHT_AddAP(2, CORESIGHT_AHB_AP);  // AHB-AP of third linx132
+  
+  JLINK_CORESIGHT_WriteDP(2, 0xE);
+  JLINK_CORESIGHT_WriteDP(1, 1);
+  JLINK_CORESIGHT_ReadDP(1);
+  JLINK_CORESIGHT_WriteDP(2, 0);
+  
+  // enable dap clk 
+   JLINK_CORESIGHT_WriteAP(1, 0x52000048); //addr
+   JLINK_CORESIGHT_WriteAP(3, 3);          //value
+  // disable chip_watchdog
+  
+  JLINK_CORESIGHT_WriteAP(1, 0x570003C0); //addr
+  JLINK_CORESIGHT_WriteAP(3, 0x1);       //value
+  
+  // write(reg = mcpu0_wait) val = 0(0 : core normal run, 1 : core wait) 
+  JLINK_CORESIGHT_WriteAP(1, 0x52000940); //addr
+  JLINK_CORESIGHT_WriteAP(3, 0);          //value
+  // disable chip_watchdog
+  JLINK_CORESIGHT_WriteAP(1, 0x57034010); //addr
+  JLINK_CORESIGHT_WriteAP(3, 0xFC);       //value
+  
+  
+  CORESIGHT_IndexAHBAPToUse  = 1;
+  
+}

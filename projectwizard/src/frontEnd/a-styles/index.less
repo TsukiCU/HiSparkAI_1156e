@@ -1,0 +1,622 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+@import '../../../node_modules/antd/dist/antd.less';
+@import url('./modules/projectImport');
+@import url('./modules/projectSettings');
+@import url('./modules/targetManage');
+
+// ant-divider
+.ant-radio-group-label {
+  font-size: 14px !important;
+  color: @colorForeground;
+}
+
+.ant-col-label-name {
+  padding-top: 3px !important;
+}
+
+.ant-input-button {
+  padding-left: 10px !important;
+}
+
+.width100 {
+  width: 100% !important;
+}
+
+.ant-input-text {
+  color: @textColorSecondary !important;
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+.ant-select-product-width {
+  width: 100px !important;
+}
+
+.ant-select-soc-width {
+  width: 170px !important;
+  padding-left: 25px !important;
+}
+
+// file input button
+.input-file-btn-primary {
+  background-color: #5C5AA7;
+  color: #FFFFFF;
+}
+
+.ant-button-cancel {
+  padding-left: 1px !important;
+  ;
+}
+
+.input-file-btn {
+  border-radius: 0;
+  -webkit-appearance: none;
+  border: none;
+  outline: none;
+  color: white;
+  background: @button-primary-background;
+  height: 32px;
+  width: 95%;
+  padding: 0px 1px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: center;
+  transition: all 0.3s ease-out;
+  position: absolute;
+  left: 0;
+  top: 0;
+  line-height: 28.844px !important;
+
+  &:hover {
+    background: @button-hover-background;
+  }
+}
+
+.input-file {
+  height: 32px !important;
+  width: 86% !important;
+}
+
+.input-file-btn-label {
+  padding: 0 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 36px;
+  cursor: pointer;
+}
+
+.ant-divider-plain.ant-divider-with-text {
+  color: @colorForeground;
+}
+
+.ant-divider-plain.ant-divider-with-text::before,
+.ant-divider-plain.ant-divider-with-text::after {
+  border-top: 1px @colorForeground solid;
+}
+
+.ant-divider-horizontal:not(.ant-divider-with-text) {
+  border-top: 1px @colorForeground solid;
+}
+
+.ant-radio {
+  color: @colorForeground;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+}
+body {
+  background-color: @body-background;
+  color: @colorForeground;
+  font-family: MicrosoftYaHei;
+  padding: 0;
+
+  #app {
+    min-height: 100%;
+    background-color: @colorWindowBackground;
+    padding: 0 20px;
+  }
+}
+
+.font-front {
+  font-family: MicrosoftYaHei;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: @colorForeground;
+  font-family: MicrosoftYaHei;
+}
+
+.font16 {
+  font-size: 16px;
+}
+
+.font14 {
+  font-size: 14px;
+}
+
+.font12 {
+  font-size: 12px;
+}
+
+.font20 {
+  font-size: 20px;
+}
+
+.ant-select-dropdown {
+  background-color: @dropdown-background-color;
+  box-shadow:0 4px 16px 0 rgba(0,0,0,0.32);
+
+  .ant-select-item {
+    background-color: @dropdown-background-color;
+    color: @colorForeground;
+    font-family: MicrosoftYaHei;
+  }
+
+  .ant-select-tree{
+    background-color: @dropdown-background-color;
+  }
+
+  .ant-select-tree-treenode {
+    background-color: @dropdown-background-color;
+    color: @colorForeground;
+    font-family: MicrosoftYaHei;
+    .ant-select-tree-node-content-wrapper:hover {
+      background-color: @colorFocusedFgTertiary;
+      &.ant-select-tree-node-content-wrapper-open:hover {
+        background-color: @colorFocusedFgTertiary;
+        cursor: pointer;
+      }
+      &.ant-select-tree-node-content-wrapper-close:hover {
+        background-color: @colorFocusedFgTertiary;
+        cursor: pointer;
+      }
+    }
+    .ant-select-tree-node-selected {
+      background-color: @listDivider;
+    }
+    .ant-select-tree-node-content-wrapper {
+      padding: 0;
+    }
+  }
+
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    color: @colorForeground;
+    background-color: @listDivider;
+    font-family: MicrosoftYaHei;
+    border-radius: 8px;
+  }
+
+  .ant-select-item:not(.ant-select-item-option-disabled,.ant-select-item-option-selected):hover {
+    background-color: @colorFocusedFgTertiary;
+    border-radius: 8px;
+  }
+}
+
+.ant-modal {
+  background-color: @colorModalBackground;
+  padding-bottom: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid @listDivider;
+  top: 50px
+}
+
+.custom-modal {
+  width: 710px !important;
+  height: 600px !important;
+}
+
+/* 自定义表格背景色和字体颜色 */
+.custom-table {
+  color: #ffffff; /* 设置表格字体颜色 */
+}
+
+/* 表头样式 */
+.custom-table .ant-table-thead > tr > th {
+  background-color:  #696969; 
+  color: #ffffff;
+  border-bottom: 1px solid @listDivider; /* 表头底部边框 */
+  border-top: 1px solid @listDivider; /* 表头底部边框 */
+}
+
+
+.custom-modal .ant-modal-close {
+  top: 12px; /* 控制关闭按钮的上边距 */
+}
+
+/* 表格滚动时，保持底部边框固定 */
+.custom-table .ant-table-body {
+  border-bottom: 1px solid @listDivider; /* 添加底部边框 */
+  border-right: 1px solid @listDivider; /* 右侧外边框 */
+  padding-bottom: 1px; /* 确保内容和底部边框之间有空隙 */
+  background-color: #242424; /* 背景色与表格内容一致 */
+}
+
+.custom-modal .ant-modal-header {
+  padding-top: 16px;
+  padding-left: 8px;
+  height: 32px;
+  border-bottom: none;
+  background-color: @colorModalBackground;
+}
+
+/* 表格内容样式 */
+.custom-table .ant-table-tbody > tr > td {
+  background-color: #242424;
+  color: #ffffff;
+  border-bottom: 1px solid @listDivider; /* 每行底部的横向边框 */
+}
+
+/* 选中行背景色 */
+.custom-table .selected-row {
+  background-color: #7faaf5ff; /* 选中行的背景色 */
+}
+
+/* 隐藏内部的竖向边框 */
+.custom-table .ant-table-tbody > tr > td:first-child {
+  border-left: 1px solid @listDivider; /* 左侧外边框 */
+}
+
+.custom-table .ant-table-tbody > tr > td:last-child {
+  border-right: 1px solid @listDivider; /* 右侧外边框 */
+}
+
+.custom-table .ant-table-thead > tr > th:first-child {
+  border-left: 1px solid @listDivider; /* 左侧外边框 */
+}
+
+.custom-table .ant-table-thead > tr > th:last-child {
+  border-right: 1px solid @listDivider; /* 右侧外边框 */
+}
+
+/* 取消默认行悬浮时背景色变化 */
+.custom-table .ant-table-tbody > tr:hover > td {
+  background-color: #242424 !important;;
+}
+
+/* 默认Radio按钮的样式 */
+.radio-default .ant-radio-inner {
+  border-color: #ffffff; /* 默认按钮的边框颜色 */
+}
+
+.radio-default .ant-radio-inner::after {
+  background-color: #ffffff; /* 默认按钮选中时的颜色 */
+}
+
+/* 选中后的Radio按钮样式 */
+.radio-selected .ant-radio-inner {
+  border-color: #5291ff !important; /* 选中后的按钮边框颜色 */
+}
+
+.radio-selected .ant-radio-inner::after {
+  background-color: #5291ff !important; /* 选中后的按钮颜色 */
+}
+
+.custom-table .ant-table-body {
+  background-color: #242424;
+}
+
+.ant-modal-content {
+  background-color: @colorModalBackground;
+  border-radius: 16px;
+}
+
+.ant-modal-header {
+  padding: 8px 3%;
+  height: 32px;
+  border-bottom: none;
+  background-color: @colorModalBackground;
+}
+
+.ant-modal-title {
+  font-family: MicrosoftYaHei;
+  font-size: 12px;
+  color: @colorForeground;
+  line-height: 20px;
+}
+
+.ant-modal-body {
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 28px;
+  color: @textColorPrimary;
+  font-family: MicrosoftYaHei;
+  .ant-form {
+    color: @textColorPrimary;
+    .ant-form-item-label > label {
+      color: @colorForeground;
+    }
+  }
+}
+
+.ant-modal-footer {
+  padding: 3%;
+  padding-top: 0;
+  border-top: none;
+  text-align: center;
+
+  .ant-btn {
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 18px;
+    background-color: @cancel-button-backgroundColor;
+    border: none;
+    color: @primary-color;
+  }
+
+  .ant-btn-primary {
+    background-color: @primary-color;
+    color: @buttonText;
+  }
+}
+
+.title-text {
+  opacity: 0.4;
+  margin-left: 8px;
+}
+
+.ant-download {
+  top: 200px !important;
+
+  .ant-modal-footer {
+    padding: 0 !important;
+  }
+}
+
+.ant-input {
+  background-color: @input-background-color;
+  border-color: @input-border-color;
+  border-radius: 8px;
+  color: @colorForeground;
+  &::placeholder {
+    color: @textColorPlaceholder;
+  }
+}
+
+.ant-input[disabled] {
+  background-color: @input-background-color;
+  border-color: @input-border-color;
+}
+
+.ant-select {
+  color: @colorForeground;
+}
+
+.ant-select-selection-placeholder {
+  color: @textColorPlaceholder;
+}
+
+.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  border-color: @input-border-color;
+  background-color: @input-background-color;
+  border-radius: 8px;
+}
+
+.ant-select-disabled.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  background-color: @input-background-color;
+  color: @colorForeground;
+}
+
+.ant-select-status-error.ant-select:not(.ant-select-disabled):not(.ant-select-customize-input):not(.ant-pagination-size-changer) {
+  .ant-select-selector {
+    background-color: @colorModalBackground;
+  }
+}
+
+.ant-select.ant-select-in-form-item.ant-select-status-error.ant-select-single.ant-select-show-arrow.ant-select-disabled .ant-select-selector {
+  border-color: #ff4d4f;
+}
+
+.ant-input-status-error:not(.ant-input-disabled):not(.ant-input-borderless).ant-input,
+.ant-input-status-error:not(.ant-input-disabled):not(.ant-input-borderless).ant-input:hover {
+  background-color: @colorModalBackground;
+}
+
+.ant-modal-close-x {
+  line-height: 32px;
+
+  .anticon {
+    svg {
+      fill: @colorForeground;
+    }
+  }
+}
+
+.ant-message-notice-content {
+  background-color: @message-background;
+  color: @colorForeground;
+  border-color: @listDivider;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 @message-box-shadow-color;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.ant-modal-body {
+  padding: 24px 3%;
+}
+
+.ant-empty-description {
+  color: @colorForeground;
+}
+
+.ant-collapse {
+  background-color: transparent;
+  border: none;
+  border-radius: 20px;
+}
+
+.ant-collapse>.ant-collapse-item>.ant-collapse-header {
+  color: @colorForeground;
+  font-size: 16px;
+  font-family: MicrosoftYaHei;
+  line-height: 24px;
+  opacity: 0.9;
+}
+
+.ant-collapse>.ant-collapse-item {
+  border-bottom: none;
+}
+
+.ant-collapse-content {
+  background-color: transparent;
+  border-top: none;
+  padding-left: 24px;
+}
+
+.ant-select-multiple .ant-select-selection-item {
+  background-color: transparent;
+  border: 1px solid @listDivider;
+  border-radius: 8px;
+  .anticon-close{
+    color: @colorForeground;
+  }
+}
+
+.ant-input-group-addon {
+  background-color: @colorActivated;
+  border: 1px solid @listDivider;
+  border-radius: 0 8px 8px 0;
+}
+
+.ant-input-number {
+  background-color: @colorControlNormal;
+  border-radius: 8px;
+  border-color: @listDivider;
+  color: @colorForeground;
+}
+
+.ant-input-number-handler:active {
+  background-color: @colorControlNormal;
+}
+
+.ant-input-number-handler-wrap {
+  background-color: transparent;
+}
+
+.ant-input-number-handler {
+  color: @colorForeground;
+}
+
+.ant-select-single.ant-select-show-arrow .ant-select-selection-item {
+  text-align: center;
+  padding-right: 20px;
+}
+
+.ant-select-arrow {
+  color: @colorForeground;
+}
+
+.vertical-center {
+  display: flex !important;
+  align-items: center;
+}
+
+.horizontal-center {
+  display: flex !important;
+  justify-content: center;
+}
+
+.sel-width {
+  width: 300px;
+}
+
+.ant-checkbox-disabled+span {
+  color: @colorForeground !important;
+}
+
+.ant-select-single.ant-select-show-arrow .ant-select-selection-item {
+  text-align: left !important;
+}
+
+.ant-select {
+    .ant-select-selector .ant-select-selection-placeholder {
+      text-align: left;
+    }
+    .ant-select-clear {
+      background-color: @colorModalBackground;
+      color: @colorForeground;
+    }
+}
+
+.select-container {
+  color: @colorForeground;
+  font-family: MicrosoftYaHei;
+  background-color: @colorModalBackground;
+  border-radius: 8px;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  cursor: pointer;
+  .folder-tag-lists {
+    flex: 1;
+    overflow: hidden;
+    .ant-tag {
+      width: 95%;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: @colorModalBackground;
+      border-color: @listDivider;
+      color: @textColorSecondary;
+      .file-name-item {
+        flex: 1;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    }
+    .ant-tag:last-child {
+      margin-bottom: 0;
+    }
+  }
+  .folder-icon-style {
+    color: @colorPrimaryDark;
+    background-color: @textColorLink;
+    color: @colorForeground;
+    padding: 6px 10px;
+    border-radius: 5px;
+  }
+}
+
+.selectFolderAndExtern,.selectFolderAndFile{
+  .ant-select-selector{
+    height: 116px;
+    overflow: auto;
+  }
+  .ant-select-clear{
+    right: 15px	
+  }
+}

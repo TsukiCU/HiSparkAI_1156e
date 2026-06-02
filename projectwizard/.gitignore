@@ -1,0 +1,10 @@
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+*.tgz
+*.log
+.yarn-cache/
+src/pythonUtils.ts
+resources/getArmGcc.bat

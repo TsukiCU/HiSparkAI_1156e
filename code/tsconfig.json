@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2018",
+    "outDir": "./dist/",
+    "lib": [
+		"es6",
+		"dom"
+	],
+    "sourceMap": true,
+    "rootDir": "src",
+    "strict": true,
+    "jsx": "react",
+    "baseUrl": "./",
+    "paths": {
+      "@src/*": [
+        "src/*"
+      ],
+      "react": [ "./node_modules/@types/react" ]
+    },
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  "include": ["src"]
+}

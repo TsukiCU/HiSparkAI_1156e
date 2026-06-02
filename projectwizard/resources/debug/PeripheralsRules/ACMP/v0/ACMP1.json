@@ -1,0 +1,11 @@
+{
+  "CMP_CTRL1":{
+    "cmp_mux_n": {
+      "0":"",
+      "1":"{{ADC1.ADC_SOC0_CTRL.soc0_chsel}} != 15 &&{{ADC1.ADC_SOC1_CTRL.soc1_chsel}} != 15 &&{{ADC1.ADC_SOC2_CTRL.soc2_chsel}} != 15 &&{{ADC1.ADC_SOC3_CTRL.soc3_chsel}} != 15 &&{{ADC1.ADC_SOC4_CTRL.soc4_chsel}} != 15 &&{{ADC1.ADC_SOC5_CTRL.soc5_chsel}} != 15 &&{{ADC1.ADC_SOC6_CTRL.soc6_chsel}} != 15 &&{{ADC1.ADC_SOC7_CTRL.soc7_chsel}} != 15 &&{{ADC1.ADC_SOC8_CTRL.soc8_chsel}} != 15 &&{{ADC1.ADC_SOC9_CTRL.soc9_chsel}} != 15 &&{{ADC1.ADC_SOC10_CTRL.soc10_chsel}} != 15 &&{{ADC1.ADC_SOC11_CTRL.soc11_chsel}} != 15 &&{{ADC1.ADC_SOC12_CTRL.soc12_chsel}} != 15 &&{{ADC1.ADC_SOC13_CTRL.soc13_chsel}} != 15 &&{{ADC1.ADC_SOC14_CTRL.soc14_chsel}} != 15 &&{{ADC1.ADC_SOC15_CTRL.soc15_chsel}} != 15",
+      "2":"",
+      "4":"",
+      "8":""
+    }
+  }
+}

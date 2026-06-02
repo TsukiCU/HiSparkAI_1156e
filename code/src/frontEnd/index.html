@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>HiSpark Studio AI</title>
+</head>
+
+<body>
+  <div id="app"></div>
+</body>
+
+<script>
+  /*
+   * Copyright (c) CompanyNameMagicTag. 2023-2024. All rights reserved.
+   */
+  const className = document.getElementsByTagName('body')[0].getAttribute('class');
+  const theme = className.includes('dark') ? 'dark' : 'light';
+  document.getElementsByTagName('link')[0].href = document
+    .getElementsByTagName('link')[0]
+    .href.replace(/themes\/.*\.css/, `themes/${theme}.css`);
+</script>
+
+</html>

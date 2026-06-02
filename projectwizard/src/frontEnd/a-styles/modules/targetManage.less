@@ -1,0 +1,242 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.target-manage {
+    padding-top: 20px;
+}
+
+.ant-table-container table > thead > tr:first-child th:first-child {
+    border-top-left-radius: 0px;
+}
+
+.ant-table-container table > thead > tr:first-child th:last-child {
+    border-top-right-radius: 0px;
+}
+
+.target-title {
+    font-size: 16px;
+    color: @target-title-color;
+    margin-bottom: 24px;
+}
+
+.target-add-button {
+    margin-bottom: 16px;
+    border-radius: 16px;
+    font-size: 12px;
+    height: 28px;
+    width: 72px;
+    background-color: @target-add-button-color;
+    margin-left: 6px;
+}
+
+.target-form-container {
+    max-width: 600px;
+}
+
+.target-form-title {
+    font-size: 16px;
+    color: @target-font-color;
+    margin-bottom: 12px;
+}
+
+.target-form {
+    background-color: @colorWindowBackground;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.target-form-button {
+    border-radius: 16px;
+    font-size: 12px;
+    height: 28px;
+    width: 72px;
+}
+
+.target-form-button.primary {
+    background-color: @target-add-button-color;
+    margin-left: 6px;
+}
+
+.target-form-button.cancel {
+    background-color: @target-form-button-cancel-color;
+    color: @target-font-color;
+    border-color: @target-form-button-cancel-color;
+}
+
+.target-table .ant-table-thead > tr > th {
+    background-color: @target-table-color;
+    color: @target-title-color;
+}
+
+.target-table .ant-table-tbody > tr > td {
+    background-color: @colorWindowBackground;
+    color: @target-font-color;
+}
+
+.target-table .ant-table-tbody > tr:hover > td {
+    background-color: @target-table-hover-color;
+}
+
+.target-table .ant-table {
+    border: 1px solid @target-table-color;
+}
+
+.target-table .ant-table-thead > tr > th,
+.target-table .ant-table-tbody > tr > td {
+    border-color: @target-table-color;
+}
+
+.ant-btn:disabled {
+    color: @target-btn-disabled-color !important;
+}
+
+.ant-form-item-label > label {
+    color: @target-font-color !important;
+    margin-right: 30px;
+}
+
+.target-input {
+    background-color: @colorWindowBackground;
+    border-color: @target-table-color;
+    border-radius: 12px;
+    color: @target-font-color;
+}
+
+.ant-input-status-error {
+    border-color: @target-input-status-error !important;
+    background-color: @colorWindowBackground;
+    border-radius: 12px;
+    color: @target-font-color;
+}
+
+.target-select {
+    background-color: @colorWindowBackground !important;
+    border-color: @target-table-color !important;
+    border-radius: 12px !important;
+    color: @target-font-color !important;
+}
+
+.target-select .ant-select-selector {
+    background-color: @colorWindowBackground !important;
+    border-color: @target-table-color !important;
+    border-radius: 12px !important;
+}
+
+.target-select .ant-select-arrow {
+    color: @target-title-color !important;
+}
+
+.ant-select-dropdown {
+    background-color: @colorWindowBackground !important;
+    border-radius: 12px !important;
+}
+
+.ant-select-dropdown .ant-select-item {
+    background-color: @colorWindowBackground !important;
+    border-radius: 6px !important;
+}
+
+.ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+    background-color: @target-item-option-active-color !important;
+    border-radius: 6px !important;
+}
+
+input:focus {
+    border-color: @target-add-button-color !important;
+    border-width: 1px !important;
+}
+
+.ant-select-focused .ant-select-selector {
+    border-color: @target-add-button-color !important;
+    border-width: 1px !important;
+}
+
+.ant-input:focus, .ant-select-focused {
+    border-radius: 12px !important;
+}
+
+.ant-input {
+    background-color: @colorWindowBackground !important;
+    border-color: @target-table-color !important;
+    color: @target-font-color !important;
+}
+
+.ant-select-selector {
+    background-color: @colorWindowBackground !important;
+    border-color: @target-table-color !important;
+    color: @target-font-color !important;
+}
+
+.ant-input:focus, .ant-select-focused {
+    background-color: @colorWindowBackground !important;
+    border-color: @target-add-button-color !important;
+}
+
+.ant-input:disabled, .ant-select-disabled .ant-select-selector {
+    background-color: @colorWindowBackground !important;
+    border-color: @target-table-color !important;
+    color: @target-btn-disabled-color !important;
+}
+
+.ant-pagination-item, 
+.ant-pagination-item-link, 
+.ant-pagination-prev .ant-pagination-item-link, 
+.ant-pagination-next .ant-pagination-item-link {
+    background-color: @colorWindowBackground !important;
+    border-color: @colorWindowBackground !important;
+    color: @target-font-color !important;
+}
+
+.ant-pagination-item-active a {
+    background-color: @target-add-button-color !important;
+    color: @target-font-color !important;
+    border-color: @colorWindowBackground !important;
+}
+
+.ant-pagination-item-active:hover a {
+    background-color: @target-pagination-item-active !important;
+    border-color: @colorWindowBackground !important;
+}
+
+.ant-pagination-item a {
+    border-color: @colorWindowBackground !important;
+    color: @target-font-color !important;
+}
+
+.ant-pagination-item:hover a {
+    background-color: @target-item-option-active-color !important;
+    border-color: @colorWindowBackground !important;
+}
+
+.ant-pagination-disabled .ant-pagination-item-link {
+    color: @target-font-color !important;
+    background-color: @colorWindowBackground !important;
+    border-color: @colorWindowBackground !important;
+}
+
+.ant-pagination-options-quick-jumper{
+    color: @target-font-color;
+  }
+
+.ant-pagination-options-quick-jumper input{
+    background-color: @colorWindowBackground;
+    border-color: @target-table-color;
+    color: @target-font-color;
+}
+
+.ant-input-status-error:not(.ant-input-disabled):not(.ant-input-borderless).ant-input, .ant-input-status-error:not(.ant-input-disabled):not(.ant-input-borderless).ant-input:hover {
+    border-color: @target-input-status-error !important;
+}

@@ -1,0 +1,64 @@
+{
+  "PERI_CRG0": {
+    "pll_ref_cksel": {
+      "0": "pll_ref_cksel = [[HOSC]] && [[pll_ref_cksel]] >= 4 && [[pll_ref_cksel]] <= 30",
+      "1": "pll_ref_cksel = {{XTAL}} && [[pll_ref_cksel]] >= 4 && [[pll_ref_cksel]] <= 30"
+    }
+  },
+  "PERI_CRG1": {
+    "pll_prediv": {
+      "0-7": "pll_prediv  = [[pll_ref_cksel]] / ({{CRG.PERI_CRG1.pll_prediv}} + 1) && [[pll_prediv]] >= 4 && [[pll_prediv]] <= 7.5"
+    }
+  },
+  "PERI_CRG2": {
+    "pll_fbdiv": {
+      "0-5": "pll_fbdiv = [[pll_prediv]] * 6  && [[pll_fbdiv]] >= 100 &&  [[pll_fbdiv]] <= 300",
+      "6-127": "pll_fbdiv = [[pll_prediv]] * {{CRG.PERI_CRG2.pll_fbdiv}} && [[pll_fbdiv]] >= 100 &&  [[pll_fbdiv]] <= 300"
+    }
+  },
+  "PERI_CRG3": {
+    "pll_postdiv1": {
+      "0-7": "pll_postdiv1 = [[pll_fbdiv]] / ({{CRG.PERI_CRG3.pll_postdiv1}} + 1) "
+    },
+    "pll_postdiv2": {
+      "0-7": "pll_postdiv2 = [[pll_fbdiv]] / ({{CRG.PERI_CRG3.pll_postdiv2}} + 1)  && [[pll_postdiv2]] <= 100"
+    }
+  },
+  "PERI_CRG64": {
+    "clk_pst1_sw_sel": {
+      "0": "clk_pst1_sw_sel = [[HOSC]]  && [[clk_pst1_sw_sel]] <= 150",
+      "1": "clk_pst1_sw_sel = {{XTAL}}  && [[clk_pst1_sw_sel]] <= 30 && [[clk_pst1_sw_sel]] >= 4",
+      "2": "clk_pst1_sw_sel = [[pll_postdiv1]]  && [[clk_pst1_sw_sel]] <= 150"
+    },
+    "clk_pst2_sw_sel": {
+      "0": "clk_pst2_sw_sel = [[HOSC]] ",
+      "1": "clk_pst2_sw_sel = {{XTAL}} ",
+      "2": "clk_pst2_sw_sel = [[pll_postdiv2]] "
+    }
+  },
+  "PERI_CRG66": {
+    "clk_1m_ini_cksel": {
+      "0": "clk_1m_ini_cksel = [[HOSC]] ",
+      "1": "clk_1m_ini_cksel = {{XTAL}} "
+    }
+  },
+  "PERI_CRG67": {
+    "clk_1m_div": {
+      "0-63": "[[clk_1m_ini_cksel]] / ({{CRG.PERI_CRG67.clk_1m_div}} + 1) == 1"
+    }
+  },
+  "PERI_CRG640": {
+    "clk_adc_div0": {
+      "0-3": "clk_adc_div0 = [[clk_pst2_sw_sel]] / ({{CRG.PERI_CRG640.clk_adc_div0}} + 1)"
+    },
+    "clk_adc_div1": {
+      "0-3": "clk_adc_div1 = [[clk_pst1_sw_sel]] / ({{CRG.PERI_CRG640.clk_adc_div1}} + 1)"
+    }
+  },
+  "PERI_CRG641": {
+    "adc_clk_mode": {
+      "0": "{{ADC.ADC_EN.cfg_adc_en}} == 0 || [[clk_adc_div0]] <= 100",
+      "1": "{{ADC.ADC_EN.cfg_adc_en}} == 0 || [[clk_adc_div1]] <= 100"
+    }
+  }
+}

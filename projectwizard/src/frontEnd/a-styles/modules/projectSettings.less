@@ -1,0 +1,311 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+.project-config {
+    .config-edit {
+      width: 100%;
+      height: calc(100vh - 25px);
+      margin: auto;
+      padding: 25px 0 0 0;
+      overflow: hidden;
+      display: flex;
+      overflow-x: scroll;
+      .ant-input {
+        color: @textColorTertiary;
+      }
+    
+      .config-index {
+        padding-left: 3px;
+        width: 320px;
+        height: 100%;
+        overflow: scroll;
+        border-right: 1px solid @cancel-button-backgroundColor;
+        .ant-anchor-wrapper {
+          overflow: unset;
+        }
+      }
+    
+      .config-container {
+        flex: 1;
+        height: 100%;
+        min-width: 350px;
+        overflow: scroll;
+        h3 {
+          font-family: MicrosoftYaHei;
+          font-size: 14px;
+          letter-spacing: 0;
+          line-height: 24px;
+        }
+        h4 {
+          opacity: 0.6;
+          font-family: MicrosoftYaHei;
+          font-size: 12px;
+          letter-spacing: 0;
+          line-height: 20px;
+        }
+        .ant-collapse-content {
+          color: @textColorSecondary;
+          .ant-collapse-content-box {
+            padding: 0 16px;
+          }
+        }
+        .config-card:hover {
+          background: @config-card-hover;
+        }
+        .config-card {
+          padding: 12px 14px 18px;
+          .message-tooltip {
+            color: @colorTertiary;
+            font-size: 12px;
+            margin-top: 3px;
+          }
+          .select-container {
+            color: @colorForeground;
+            font-family: MicrosoftYaHei;
+            border-radius: 8px;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid @border-color;
+            cursor: pointer;
+            .folder-tag-lists {
+              flex: 1;
+              overflow: hidden;
+              .ant-tag {
+                width: 95%;
+                margin-bottom: 5px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background-color: @bgcSelectMultipleFile;
+                border-color: @listDivider;
+                color: @textColorSecondary;
+                .file-name-item {
+                  flex: 1;
+                  overflow: hidden;
+                  white-space: nowrap;
+                  text-overflow: ellipsis;
+                }
+                .anticon-close {
+                  color: @textColorSecondary;
+                }
+              }
+              .ant-tag:last-child {
+                margin-bottom: 0;
+              }
+            }
+            .folder-icon-style {
+              color: @colorPrimaryDark;
+              background-color: @textColorLink;
+              color: @colorForeground;
+              padding: 2px 5px;
+              border-radius: 5px;
+            }
+          }
+          .ant-input-status-error {
+            background-color: @colorControlNormal;
+          }
+    
+          .rttconfig-info {
+            display: flex;
+            .ant-form-item {
+              flex: 1;
+            }
+            .ant-form-item:first-child {
+              width: 80px;
+              flex: none;
+            }
+            .ant-form-item:nth-child(2) {
+              min-width: 105px;
+            }
+            .ant-form-item-label > label {
+              color: @colorForeground;
+            }
+          }
+  
+          .ant-table {
+            background-color: transparent;
+            border-radius: 8px;
+            border: 1px solid @listDivider;
+            min-height: 160px;
+            .ant-table-container{
+              min-height: 160px;
+            }
+            .ant-table-body {
+              border-bottom-left-radius: 7px;
+            }
+            .ant-table-thead > tr > th {
+              padding: 2px;
+              background-color: @colorControlNormal;
+              color: @colorForeground;
+              font-size: 14px;
+              line-height: 24px;
+              border-color: @listDivider;
+            }
+            .ant-table-tbody > tr > td {
+              padding: 2px;
+              line-height: 24px;
+              border: none;
+              background-color: transparent;
+              .ant-table-cell {
+                background-color: transparent;;
+              }
+            }
+            .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+              background: @colorFocusedFgTertiary;
+            }
+            .ant-table-header{
+              border-top-left-radius: 7px;
+              border-top-right-radius: 7px;
+              background: @colorControlNormal;
+            }
+            .ant-table-thead {
+              .ant-table-cell-ellipsis:nth-child(1) {
+                padding-left: 40px;
+              }
+            }
+    
+            .ant-table-tbody {
+              font-size: 14px;
+              color: @colorForeground;
+              background-color: transparent;
+            }
+    
+            .ant-table-column-sorters,
+            .ant-table-cell-scrollbar {
+              box-shadow: 0 0 0 0;
+            }
+            .ant-table-row-expand-icon {
+              background: @body-background;
+              color: @colorForeground;
+            }
+    
+            .ant-table-row-expand-icon:hover {
+              color: @colorActivated;
+            }
+          }
+  
+          .global-macro-row-selected{
+            background-color: @listDivider;
+          }
+          .global-macro-row-selected:hover{
+            background-color: @colorFocusedFgTertiary;
+            cursor: pointer;
+          }
+          .global-macro-row-default{
+            // background-color: yellow;
+          }
+          .global-macro-row-default:hover{
+            background-color: @colorFocusedFgTertiary;
+            cursor: pointer;
+          }
+          .ant-table-expanded-row-fixed{
+            margin-bottom: 0px;
+          }
+        }
+        .ant-input-number-input {
+          color: @colorTertiary;
+        }
+        .ant-select {
+          width: 100%;
+          color: @textColorTertiary;
+        }
+        .ant-select-disabled {
+          .ant-select-selector{
+            color: @textColorTertiary;
+          }
+        }
+        .upload-partition {
+          .ant-btn {
+            float: right;
+            border-radius: 20px;
+            width: 88px;
+          }
+          .small-bnt {
+            width: auto;
+            margin-left: 5px;
+          }
+        }
+        .ant-checkbox-wrapper {
+          color: @colorForeground;
+        }
+        #compile-compile {
+          position: relative;
+        }
+      }
+    }
+}
+
+.macroDeleteModal{
+  .ant-table {
+    background-color: transparent;
+    border-radius: 8px;
+    border: 1px solid @listDivider;
+    min-height: 120px;
+    .ant-table-body {
+      border-bottom-left-radius: 7px;
+    }
+    .ant-table-thead > tr > th {
+      padding: 2px;
+      background-color: @colorControlNormal;
+      color: @colorForeground;
+      font-size: 14px;
+      line-height: 24px;
+      border-color: @listDivider;
+    }
+    .ant-table-tbody > tr > td {
+      padding: 2px;
+      line-height: 24px;
+      border: none;
+      background-color: transparent;
+      .ant-table-cell {
+        background-color: transparent;;
+      }
+    }
+    .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+      background: @colorFocusedFgTertiary;
+    }
+    .ant-table-header{
+      border-top-left-radius: 7px;
+      border-top-right-radius: 7px;
+      background: @colorControlNormal;
+    }
+    .ant-table-thead {
+      .ant-table-cell-ellipsis:nth-child(1) {
+        padding-left: 40px;
+      }
+    }
+
+    .ant-table-tbody {
+      font-size: 14px;
+      color: @colorForeground;
+      background-color: @colorBackground;
+    }
+
+    .ant-table-column-sorters,
+    .ant-table-cell-scrollbar {
+      box-shadow: 0 0 0 0;
+    }
+    .ant-table-row-expand-icon {
+      background: @body-background;
+      color: @colorForeground;
+    }
+
+    .ant-table-row-expand-icon:hover {
+      color: @colorActivated;
+    }
+  }
+}

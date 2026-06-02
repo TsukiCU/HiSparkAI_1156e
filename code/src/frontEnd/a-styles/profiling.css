@@ -1,0 +1,22 @@
+.SC-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.SC-info-content {
+    display: flex;
+    justify-content: space-between;
+
+}
+
+.SC-info-content-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.SC-info-btn {
+    text-align: center;
+}

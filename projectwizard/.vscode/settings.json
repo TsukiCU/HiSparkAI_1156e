@@ -1,0 +1,10 @@
+{
+    "CodeCheck.RelatedRemoteRepo": "https://szv-y.codehub.huawei.com/HiIDE/code/manifest.git",
+    "CodeCheck.RelatedRemoteBranch": "master",
+    "CodeCheck.TaskIdsUpdateTime": "2024-05-09 15:33:10",
+    "CodeCheck.TaskIdsForRemoteUrl": "https://szv-y.codehub.huawei.com/HiIDE/code/manifest.git",
+    "CodeCheck.TaskIdsForRemoteBranch": "master",
+    "CodeCheck.TaskIds": "",
+    "CodeCheck.SubRepoTaskIdsInfo": {},
+    "CodeCheck.RepoSettingMode": "manual"
+}

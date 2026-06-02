@@ -1,0 +1,94 @@
+{
+	"compile": {
+		"tool_chain": [
+			"cc_riscv32_musl_fp_win"
+		],
+		"custom_build_command": "python ./build/script/build_entry.py --project hi3065 --core windows --target full",
+		"custom_clean_command": "python ./build/script/build_entry.py --clean all",
+		"map_path": "./output/hi3065/bin/info/windows_full.map"
+	},
+	"debug": {
+		"elf_path": "./output/hi3065/bin/info/windows_full.elf",
+		"client": [
+			"gdb"
+		],
+		"tool": [
+			"HiSpark-Trace",
+			"HiSpark-Link"
+		],
+		"params": [
+			{
+				"name": "HiSpark-Trace",
+				"param": {
+					"openocd_interface_file": "cmsis-dap.cfg",
+					"openocd_target_file": "3065HRPIRZ-swd.cfg",
+					"interface": [
+						"swd",
+						"jtag"
+					],
+					"speed": "10000",
+					"port": "3000"
+				}
+			},
+			{
+				"name": "HiSpark-Link",
+				"param": {
+					"openocd_interface_file": "ft2232h-ftdi-swd.cfg",
+					"openocd_target_file": "3065HRPIRZ-swd.cfg",
+					"interface": [
+						"swd",
+						"jtag"
+					],
+					"speed": "10000",
+					"port": "3000"
+				}
+			}
+		]
+	},
+	"upload": {
+		"bin_path": "./output/hi3065/bin/windows_full.bin",
+		"protocol": [
+			"serial",
+			"jtag",
+			"swd"
+		],
+		"baudList": ["2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400", "460800"],
+		"params": [
+			{
+				"name": "serial",
+				"param": {
+					"port": "",
+					"baud": "115200",
+					"stop_bit": "0",
+					"parity": "0"
+				}
+			},
+			{
+				"name": "jtag",
+				"param": {
+					"debug_board": [
+						"HiSpark-Trace",
+						"HiSpark-Link"
+					],
+					"frequency": "5000",
+					"address": "0x3000000"
+				}
+			},
+			{
+				"name": "swd",
+				"param": {
+					"debug_board": [
+						"HiSpark-Trace",
+						"HiSpark-Link"
+					],
+					"frequency": "5000",
+					"address": "0x3000000"
+				}
+			}
+		]
+	},
+	"need_sdk": true,
+	"chip_config": true,
+  "variabletrace": true,
+	"gui": false
+}

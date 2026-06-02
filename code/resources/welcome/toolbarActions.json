@@ -1,0 +1,12 @@
+[
+    {
+    	"id": "home",
+		"icon": "./1_home.svg",
+    	"name": "home",
+		"command": "HisparkAI.welcomePage",
+		"description": "welcomeDescription",
+		"shortcut": "",
+		"group": "0_project_manage",
+		"order": 0
+    }
+]

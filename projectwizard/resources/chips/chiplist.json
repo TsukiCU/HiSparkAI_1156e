@@ -1,0 +1,224 @@
+[
+  {
+    "value": "shortrangeiot",
+    "title": "Short-Range IoT",
+    "selectable": false,
+    "key": "shortrangeiot",
+    "children": [
+      {
+        "value": "bs20",
+        "title": "BS20",
+        "key": "bs20",
+        "series": "cfbb",
+        "boards": [
+          "bs20"
+        ]
+      },
+      {
+        "value": "bs20c",
+        "title": "BS20C",
+        "key": "bs20c",
+        "series": "cfbb",
+        "boards": [
+          "bs20c"
+        ]
+      },
+      {
+        "value": "bs20h",
+        "title": "BS20H",
+        "key": "bs20h",
+        "series": "cfbb",
+        "boards": [
+          "bs20h"
+        ]
+      },
+      {
+        "value": "bs21",
+        "title": "BS21",
+        "key": "bs21",
+        "series": "cfbb",
+        "boards": [
+          "bs21"
+        ]
+      },
+      {
+        "value": "bs21a",
+        "title": "BS21A",
+        "key": "bs21a",
+        "series": "cfbb",
+        "boards": [
+          "bs21a"
+        ]
+      },
+      {
+        "value": "bs21e",
+        "title": "BS21E",
+        "key": "bs21e",
+        "series": "cfbb",
+        "boards": [
+          "bs21e"
+        ]
+      },
+      {
+        "value": "bs22",
+        "title": "BS22",
+        "key": "bs22",
+        "series": "cfbb",
+        "boards": [
+          "bs22"
+        ]
+      },
+      {
+        "value": "bs25",
+        "title": "BS25",
+        "key": "bs25",
+        "series": "cfbb",
+        "boards": [
+          "bs25"
+        ]
+      },
+      {
+        "value": "bs26",
+        "title": "BS26",
+        "key": "bs26",
+        "series": "cfbb",
+        "boards": [
+          "bs26"
+        ]
+      },
+      {
+        "value": "bs27a",
+        "title": "BS27A",
+        "key": "bs27a",
+        "series": "cfbb",
+        "boards": [
+          "bs27a"
+        ]
+      },
+      {
+        "value": "ws53",
+        "title": "WS53",
+        "key": "ws53",
+        "series": "cfbb",
+        "boards": [
+          "ws53"
+        ]
+      },
+      {
+        "value": "ws63",
+        "title": "WS63",
+        "key": "ws63",
+        "series": "cfbb",
+        "boards": [
+          "ws63"
+        ]
+      }
+    ]
+  },
+  {
+    "value": "smartphonesandwearables",
+    "title": "Smartphones and Wearables",
+    "selectable": false,
+    "key": "smartphonesandwearables",
+    "children": [
+      {
+        "value": "brandy",
+        "title": "BRANDY",
+        "key": "brandy",
+        "series": "cfbb",
+        "boards": [
+          "brandy"
+        ]
+        },
+        {
+        "value": "socmn2",
+        "title": "SOCMN2",
+        "key": "socmn2",
+        "series": "cfbb",
+        "boards": [
+          "socmn2"
+        ]
+        },
+        {
+          "value": "3322",
+          "title": "3322",
+          "key": "3322",
+          "series": "cfbb",
+          "boards": [
+            "3322"
+          ]
+        },
+        {
+          "value": "sw21",
+          "title": "SW21",
+          "key": "sw21",
+          "series": "cfbb",
+          "boards": [
+            "sw21"
+          ]
+        }
+    ]
+  },
+  {
+    "value": "waniot",
+    "title": "WAN IoT",
+    "selectable": false,
+    "key": "waniot",
+    "children": [
+      {
+        "value": "nb17",
+        "title": "NB17",
+        "key": "nb17",
+        "series": "cfbb",
+        "boards": [
+          "nb17"
+        ]
+      },
+      {
+        "value": "nb17e",
+        "title": "NB17E",
+        "key": "nb17e",
+        "series": "cfbb",
+        "boards": [
+          "nb17e"
+        ]
+      },
+      {
+        "value": "nb18",
+        "title": "NB18",
+        "key": "nb18",
+        "series": "cfbb",
+        "boards": [
+          "nb18"
+        ]
+      },
+      {
+        "value": "hi2113",
+        "title": "Hi2113",
+        "key": "hi2113",
+        "series": "cfbb",
+        "boards": [
+          "hi2113"
+        ]
+      },
+      {
+        "value": "hi2131",
+        "title": "Hi2131",
+        "key": "hi2131",
+        "series": "cfbb",
+        "boards": [
+          "hi2131"
+        ]
+      },
+      {
+        "value": "hi2131c",
+        "title": "Hi2131C",
+        "key": "hi2131c",
+        "series": "cfbb",
+        "boards": [
+          "hi2131c"
+        ]
+      }
+    ]
+  }
+]

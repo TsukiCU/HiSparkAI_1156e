@@ -1,0 +1,46 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.pro-Validation {
+  width: 100%;
+  height: auto;
+  /* background-color: #303133; */
+  --pro-surface: #1d1d1e;
+  --pro-border: #ffffff3b;
+  --pro-text: #ffffff;
+  --pro-mute: #E6E6E6;
+  color: var(--pro-text);
+  border: 1px solid var(--pro-border);
+  border-radius: 10px;
+}
+
+.pro-Validation .pro-Validation {
+  background: #0f0f0f;
+  border: 1px solid var(--pro-border);
+  border-radius: 10px;
+  padding: 12px 12px 6px;
+}
+
+.AVC-container-2 .ant-table-cell-scrollbar:not([rowspan]) {
+  box-shadow: none !important;
+}
+
+.pro-Validation .ant-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 180px;
+}

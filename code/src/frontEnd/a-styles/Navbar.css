@@ -1,0 +1,168 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+.navbar-container {
+  display: flex;
+  flex-direction: column;
+  /*子元素垂直排列（从上到下）*/
+  align-items: center;
+  /*子元素垂直居中对齐*/
+  justify-content: center;
+  /*子元素水平居中对齐*/
+  height: auto;
+  padding: 32px;
+  gap: 24px;
+}
+
+.nav-buttons {
+  width: 70vw;
+  height: 100px;
+  max-width: 100%;
+  display: flex;
+  gap: 160px;
+  align-items: center;
+  justify-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.nav-item1 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 110px;
+  height: 80px;
+}
+
+.nav-item1-active {
+  background: rgb(191 191 191 / 8%);
+}
+
+.nav-item-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.navbar-button {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: white;
+}
+
+.button-text {
+  font-size: 14px;
+  white-space: nowrap;
+  margin-top: 5px;
+  /* 防止文字换行 */
+}
+
+.outlet-container {
+  flex: 1;
+  width: 100%;
+}
+
+
+.show-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.show-button1 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  left: 15px;
+  top: 0px;
+}
+
+.show-button2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  left: 18px;
+  top: 0px;
+}
+
+.select-desc {
+  color: rgba(82, 145, 255, 1);
+}
+
+.ant-steps-label-vertical .ant-steps-item-icon {
+  margin-left: 10px !important;
+  font-family: Arial !important;
+}
+
+.ant-steps-item-custom>.ant-steps-item-container>.ant-steps-item-icon>.ant-steps-icon {
+  width: 100px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.ant-steps-item-active>.ant-steps-item-container>.ant-steps-item-icon>.ant-steps-icon {
+  background: rgb(191 191 191 / 8%);
+}
+
+.ant-steps-label-vertical .ant-steps-item-tail {
+  margin-left: 62px;
+  padding: 23.5px 50px;
+}
+
+.steps-action-pre.ant-btn:focus {
+  background: white !important;
+  color: black !important;
+  border-color: initial !important;
+  box-shadow: none !important;
+}
+
+.steps-action-pre.ant-btn:focus {
+  background: white !important;
+  color: black !important;
+  border-color: initial !important;
+  box-shadow: none !important;
+}
+
+.steps-action>.ant-btn {
+  border-radius: 8px;
+}
+
+.step-process .ant-steps-item-proecss .ant-steps-item-tail::after {
+  background: black !important;
+}

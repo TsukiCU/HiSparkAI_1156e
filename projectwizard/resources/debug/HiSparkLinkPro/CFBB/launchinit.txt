@@ -1,0 +1,12 @@
+echo debug_tool = openocd(HiSparkLinkPro)\n
+echo Initializing remote target...\n
+target extended-remote :3333
+monitor halt
+monitor reset
+load
+define pio_restart_target
+monitor halt
+monitor reset
+load
+echo Initialization completed\n
+end

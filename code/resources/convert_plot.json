@@ -1,0 +1,15 @@
+[
+    {
+        "ram": {
+            "workspace": 9088,
+            "pack_weight": 11776,
+            "stack": 12288,
+            "other": 184
+        },
+        "flash": {
+            "code": 124116,
+            "data": 0,
+            "weight": 70648
+        }
+    }
+]

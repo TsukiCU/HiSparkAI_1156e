@@ -1,0 +1,19 @@
+{
+  "mode":{
+    "CRG":{
+      "channels":"1",
+      "ip": "v0"
+    },
+    "ACMP":{
+      "channels":"3",
+      "ip": "v0"
+    }
+  },
+  "Global":{
+    "HOSC": 25,
+    "LOSC": 32
+  },
+  "config":{
+    "registersToGet" : ["CRG",  "ACMP0", "ACMP1", "ACMP2", "ADC0", "ADC1", "ADC2"]
+  }
+}

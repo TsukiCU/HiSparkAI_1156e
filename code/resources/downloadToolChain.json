@@ -1,0 +1,107 @@
+[
+    {
+      "url": "https://mirrors.huaweicloud.com/python/3.11.4/python-3.11.4-embed-amd64.zip",
+      "name": "python",
+      "type": "zip"
+    },
+    {
+      "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/pip.pyz",
+      "name": "pip",
+      "type": "pyz"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl",
+      "name": "wheel",
+      "type": "whl"
+    },
+    {
+        "url": "https://mirrors.cloud.tencent.com/pypi/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
+        "name": "setuptools",
+        "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/a6/95/ce80f1180b27d6ef0cf65ea82abfea09d0c320f7cbecc36e0a78f20d7888/onnx-1.14.0-cp311-cp311-win_amd64.whl",
+      "name": "onnx",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/8a/f1/d98a89231e779b079b977590efcc31249d959c8f1d4b5858cad69695ff9c/kconfiglib-14.1.0-py2.py3-none-any.whl",
+      "name": "kconfiglib",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/50/29/fd7c0c80177d8df55f841504a5f332b95b0002c80f82055913b6caac94e6/windows_curses-2.4.1-cp311-cp311-win_amd64.whl",
+      "name": "windows_curses",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/65/7f/80cf681cd376834b442af8af48e6f17b4197d20b7255aa2f76d8d93a9e44/cmake-3.20.5-py2.py3-none-win_amd64.whl",
+      "name": "cmake",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/62/d5/5f610ebe421e85889f2e55e33b7f9a6795bd982198517d912eb1c76e1a53/pycparser-2.21-py2.py3-none-any.whl",
+      "name": "pycparser",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/c1/d0/5866318eec2b801cdb8c82abf190c8343d8a1cd8bf5a0c17444a6f268291/pillow-10.4.0-cp311-cp311-win_amd64.whl",
+      "name": "pillow",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/fa/80/eb88edc2e2b11cd2dd2e56f1c80b5784d11d6e6b7f04a1145df64df40065/opencv_python-4.12.0.88-cp37-abi3-win_amd64.whl",
+      "name": "opencv_python",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/0c/14/9966e648a48f9bfee456002700cde4ca41f1e04ebaea842ccf663b6e7db2/onnxruntime-1.16.0-cp311-cp311-win_amd64.whl",
+      "name": "onnxrntime",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/8e/59/712db1d7040520de7a4965df15b774348980e6df45c129b8c64d0dbe74ef/pandas-2.3.3-cp311-cp311-win_amd64.whl",
+      "name": "pandas",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9b/0f/022ca4783b6e6239a53b988a4d315d67f9ae7126227fb2255054a558bd72/numpy-2.0.0-cp311-cp311-win_amd64.whl",
+      "name": "numpy",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/07/bc/587a445451b253b285629263eb51c2d8e9bcea4fc97826266d186f96f558/pyserial-3.5-py2.py3-none-any.whl",
+      "name": "pyserial",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9e/b8/ed5f794359d05cd0bffb894c6418da87b93016ee17b669d55c45d1bd5d5b/tensorflow-2.13.0-cp311-cp311-win_amd64.whl",
+      "name": "tensorflow",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/65/76/903324159e4a3566e518c558aeb21571d642f781d842d8dd0fd9c6b0645a/scipy-1.10.1-cp311-cp311-win_amd64.whl",
+      "name": "scipy",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/a2/b5/01fa4f6b1b78b01c1602d8e6e28879dcbef2d399d934f28d3324c1114552/tkinter_embed-3.11.0.tar.gz",
+      "name": "tkinter-embed",
+      "type": "tar.gz"
+    },
+    {
+      "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/HiSparkStudioToolchain.zip",
+      "name": "compiler",
+      "type": "zip"
+    },
+    {
+     "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/DebugKits_25.12.2.tar.gz",
+     "name": "DebugKits",
+     "type": "tar.gz"
+    },
+    {
+     "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/mindspore-enterprise-lite-win-x64.tar.gz",
+     "name": "MindSpore",
+     "type": "tar.gz"
+    }
+  ]

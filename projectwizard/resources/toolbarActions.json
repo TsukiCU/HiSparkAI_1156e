@@ -1,0 +1,32 @@
+[
+	{
+		"id": "newProject",
+		"icon": "newProject.svg",
+		"command": "showProjectWizard",
+		"name": "newProjectName",
+		"description": "newProjectDescription",
+		"shortcut": "",
+		"group": "0_project_manage",
+		"order": 1
+	},
+	{
+		"id": "openProject",
+		"icon": "openProject.svg",
+		"command": "openSingalProject",
+		"name": "openProjectName",
+		"description": "openProjectDescription",
+		"shortcut": "Ctrl + O",
+		"group": "0_project_manage",
+		"order": 2
+	},
+	{
+		"id": "projectSetting",
+		"icon": "projectSetting-custom.svg",
+		"command": "showProjectSetting",
+		"name": "projectSettingName",
+		"description": "projectSettingDescription",
+		"shortcut": "",
+		"group": "0_project_manage",
+		"order": 3
+	}
+]

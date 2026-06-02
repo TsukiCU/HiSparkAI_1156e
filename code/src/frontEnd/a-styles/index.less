@@ -1,0 +1,485 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+@import '../../../node_modules/antd/dist/antd.less';
+@import url('./modules/welcome.less');
+@import url('./modules/chip.less');
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0);
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  width: 6px;
+  background: #6c6f74;
+  border-radius: 2px;
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0);
+}
+
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+body {
+  background-color: @body-background;
+  color: @colorForeground;
+  font-family: Arial;
+  padding: 0;
+
+  #app {
+    min-height: 100%;
+    background-color: @colorControlNormal;
+    padding: 0 0px;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: scroll;
+  }
+}
+
+.font-front {
+  font-family: Arial;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: @colorForeground;
+  font-family: Arial;
+}
+
+.font16 {
+  font-size: 16px;
+}
+
+.font14 {
+  font-size: 14px;
+}
+
+.font12 {
+  font-size: 12px;
+}
+
+.font20 {
+  font-size: 20px;
+}
+
+.ant-select-dropdown {
+  background-color: @colorBackground;
+
+  .ant-select-item {
+    background-color: @listDivider;
+    color: @colorForeground;
+    font-family: Arial;
+  }
+
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    color: @colorForeground;
+    background-color: @colorFocusedFgTertiary;
+    font-family: Arial;
+    border-radius: 8px;
+  }
+
+  .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+    background-color: @colorFocusedFgTertiary;
+    border-radius: 8px;
+  }
+}
+
+.ant-radio-button-wrapper {
+  background-color: @colorBackground;
+  color: @colorForeground;
+}
+
+.ant-radio-button-wrapper:not(:first-child)::before {
+  background-color: @colorForeground;
+}
+
+.ant-modal {
+  background-color: @colorBackground;
+  padding-bottom: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid @listDivider;
+}
+
+.ant-modal-content {
+  background-color: @colorBackground;
+  border-radius: 16px;
+}
+
+.ant-modal-header {
+  padding: 8px 24px;
+  height: 32px;
+  border-bottom: none;
+  background-color: @colorControlNormal;
+}
+
+.ant-modal-title {
+  font-family: Arial;
+  font-size: 16px;
+  color: @colorForeground;
+  line-height: 20px;
+}
+
+.ant-modal-body {
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 24px;
+  color: @colorForeground;
+  font-family: Arial;
+  background-color: @colorControlNormal;
+}
+
+.ant-modal-footer {
+  border-top: none;
+  text-align: center;
+  background-color: @colorControlNormal;
+
+  .ant-btn {
+    border-radius: 16px;
+    height: 36px;
+    font-size: 14px;
+    line-height: 24px;
+    background-color: @colorControlNormal;
+    border: none;
+    color: @primary-color;
+  }
+
+  .ant-btn-primary {
+    background-color: @primary-color;
+    color: @buttonText;
+  }
+}
+
+.title-text {
+  opacity: 0.4;
+  margin-left: 8px;
+}
+
+.ant-input {
+  background-color: @colorControlNormal;
+  border-color: @listDivider;
+  border-radius: 8px;
+  color: @colorForeground;
+}
+
+.ant-input[disabled] {
+  background-color: @colorControlNormal;
+  border-color: @listDivider;
+  color: @colorForeground;
+}
+
+.ant-select {
+  color: @colorForeground;
+}
+
+.ant-select-selection-placeholder {
+  color: @colorForeground;
+}
+
+.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  border-color: @listDivider;
+  background-color: @colorControlNormal;
+  border-radius: 8px;
+}
+
+.ant-select-disabled.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  background-color: @colorControlNormal;
+  color: @colorForeground;
+}
+
+.ant-modal-close-x {
+  line-height: 32px;
+
+  .anticon {
+    svg {
+      fill: @colorForeground;
+    }
+  }
+}
+
+.ant-message-notice-content {
+  background-color: @message-background;
+  color: @colorForeground;
+  border-color: @listDivider;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 @message-box-shadow-color;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.ant-tabs {
+  color: @colorForeground;
+}
+
+.ant-tabs-card>.ant-tabs-nav .ant-tabs-tab,
+.ant-tabs-card>div>.ant-tabs-nav .ant-tabs-tab {
+  color: @colorForeground;
+  background-color: transparent;
+  border: none;
+}
+
+.ant-tabs>.ant-tabs-nav .ant-tabs-nav-add,
+.ant-tabs>div>.ant-tabs-nav .ant-tabs-nav-add {
+  color: @colorForeground;
+  background-color: transparent;
+  border: none;
+}
+
+.ant-tabs-top>.ant-tabs-nav::before,
+.ant-tabs-bottom>.ant-tabs-nav::before,
+.ant-tabs-top>div>.ant-tabs-nav::before,
+.ant-tabs-bottom>div>.ant-tabs-nav::before {
+  border-bottom: 1px solid @listDivider;
+}
+
+.ant-tabs-card>.ant-tabs-nav .ant-tabs-ink-bar,
+.ant-tabs-card>div>.ant-tabs-nav .ant-tabs-ink-bar {
+  visibility: inherit;
+}
+
+.ant-tabs-top>.ant-tabs-nav,
+.ant-tabs-bottom>.ant-tabs-nav,
+.ant-tabs-top>div>.ant-tabs-nav,
+.ant-tabs-bottom>div>.ant-tabs-nav {
+  margin: 0 0 24px 0;
+}
+
+.ant-modal-body {
+  padding: 24px 48px;
+}
+
+.ant-collapse {
+  background-color: transparent;
+  border: none;
+  border-radius: 20px;
+}
+
+.ant-collapse>.ant-collapse-item>.ant-collapse-header {
+  color: @colorForeground;
+  font-size: 16px;
+  font-family: Arial;
+  line-height: 24px;
+  opacity: 0.9;
+}
+
+.ant-collapse>.ant-collapse-item {
+  border-bottom: none;
+}
+
+.ant-collapse-content {
+  background-color: transparent;
+  border-top: none;
+  padding-left: 24px;
+}
+
+.ant-select-multiple .ant-select-selection-item {
+  background-color: transparent;
+  border: 1px solid @listDivider;
+  border-radius: 8px;
+}
+
+.ant-input-group-addon {
+  background-color: @colorActivated;
+  border: 1px solid @listDivider;
+  border-radius: 0 8px 8px 0;
+}
+
+.ant-input-number {
+  background-color: @colorControlNormal;
+  border-radius: 8px;
+  border-color: @listDivider;
+  color: @colorForeground;
+}
+
+.ant-input-number-handler:active {
+  background-color: @colorControlNormal;
+}
+
+.ant-input-number-handler-wrap {
+  background-color: transparent;
+}
+
+.ant-input-number-handler {
+  color: @colorForeground;
+}
+
+.ant-form-item-has-error :not(.ant-input-disabled):not(.ant-input-borderless).ant-input,
+.ant-form-item-has-error .ant-select:not(.ant-select-disabled):not(.ant-select-customize-input) .ant-select-selector {
+  background-color: @colorControlNormal;
+}
+
+.ant-form-item-has-error :not(.ant-input-disabled):not(.ant-input-borderless).ant-input:hover {
+  background-color: @colorControlNormal;
+}
+
+.ant-cascader-menu {
+  background-color: @colorControlNormal;
+  border-right: 1px solid @listDivider;
+}
+
+.ant-cascader-menu-item {
+  color: @colorForeground;
+}
+
+.ant-cascader-menu-item:hover {
+  background-color: @colorFocusedFgTertiary;
+}
+
+.ant-cascader-menu-item-active:not(.ant-cascader-menu-item-disabled),
+.ant-cascader-menu-item-active:not(.ant-cascader-menu-item-disabled):hover {
+  background-color: @colorFocusedFgTertiary;
+}
+
+.ant-cascader-menu-item-expand-icon {
+  svg {
+    fill: @colorForeground;
+  }
+}
+
+.ant-empty-description {
+  color: @colorForeground;
+}
+
+.ant-table {
+  background-color: @tableBackground;
+  border: 1px solid @listDivider;
+
+  .error-status {
+    color: @colorError;
+  }
+
+  .ant-table-thead>tr>th {
+    padding: 0 0;
+    height: 32px;
+    background-color: @colorControlNormal;
+    color: @colorForeground;
+    font-size: 14px;
+    line-height: 20px;
+    border-color: @listDivider;
+  }
+
+  .ant-table-tbody>tr>td {
+    padding: 0 0;
+    padding-left: 8px;
+    padding-right: 8px;
+    height: 48px;
+    border-color: @listDivider;
+    background-color: @colorControlNormal;
+  }
+
+  .ant-table-tbody>tr:hover>td,
+  .ant-table-tbody>tr.ant-table-row-hover>td,
+  .ant-table-tbody>tr>td.ant-table-cell-row-hover {
+    background: @colorFocusedFgTertiary !important;
+  }
+
+  .ant-table-thead {
+    font-size: 14px;
+    letter-spacing: 0.25px;
+    background: @colorControlNormal;
+  }
+
+  .ant-table-tbody {
+    font-size: 14px;
+    color: @colorForeground;
+    border: 1px solid @listDivider;
+    background-color: @colorBackground;
+  }
+}
+
+.ant-pagination {
+
+  .ant-pagination-prev,
+  .ant-pagination-next,
+  .ant-pagination-jump-next,
+  .ant-pagination-jump-prev {
+
+    button,
+    .ant-pagination-item-container {
+      background: @colorControlNormal;
+      border: 1px solid @listDivider;
+
+      svg {
+        fill: @colorForeground;
+      }
+
+      .ant-pagination-item-ellipsis {
+        color: @colorForeground;
+      }
+    }
+  }
+
+  .ant-pagination-item {
+    background: @colorControlNormal;
+    border: 1px solid @listDivider;
+
+    a,
+    span {
+      color: @colorForeground;
+    }
+  }
+
+  .ant-pagination-item-active {
+    border: 1px solid @colorActivated;
+    height: 97%;
+    a {
+      color: @colorActivated;
+    }
+  }
+
+  .ant-select:not(.ant-select-customize-input) .ant-select-selector {
+    background: @colorControlNormal;
+  }
+
+  .ant-select-single.ant-select-show-arrow .ant-select-selection-item {
+    text-align: center;
+    padding-right: 20px;
+  }
+
+  .ant-select-arrow {
+    color: @colorForeground;
+  }
+}
+
+.config-cards {
+  .ant-table {
+    border: none;
+  }
+
+  .select-model-pagination {
+    margin-top: 10px;
+    text-align: end;
+    margin-right: 20px;
+  }
+}
+
+.ant-steps-item-wait>.ant-steps-item-container>.ant-steps-item-tail::after,
+.ant-steps-item-process>.ant-steps-item-container>.ant-steps-item-tail::after {
+  background-color: @colorForeground;
+}

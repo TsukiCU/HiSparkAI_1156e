@@ -1,0 +1,1 @@
+yarn & yarn pre-launch & yarn run vscode:package

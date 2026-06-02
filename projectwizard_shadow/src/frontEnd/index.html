@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>HiSpark Project Wizard Shadow</title>
+</head>
+<body>
+  <div id="app"></div>
+  <span id="flagdefault" data-path="{{path}}"></span>
+</body>
+<script>
+  const className = document.getElementsByTagName('body')[0].getAttribute('class') || '';
+  const theme = className.includes('dark') ? 'dark' : 'light';
+  const link = document.getElementsByTagName('link')[0];
+  if (link) {
+    link.href = link.href.replace(/themes\/.*\.css/, `themes/${theme}.css`);
+  }
+</script>
+</html>

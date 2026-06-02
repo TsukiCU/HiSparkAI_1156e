@@ -1,0 +1,90 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+export enum ApiMethod {
+  CHANGE_THEME = 'changeTheme',
+  SET_LANGUAGE = 'setLanguage',
+  GET_DEMO_DATA = 'getDemoData',
+  DEMO_CALL_BACK = 'demoCallBack',
+  SET_LOG4JS_MESSAGE = 'setLog4jsMessage',
+  IMPORT_CONFIG_TARGET = 'importConfigandTarget',
+  IMPORT_CONFIG_TARGET_CALLBACK = 'importConfigandTargetCallback',
+  IMPORT_LAYER = 'importLayer',
+  UPDATE_HISGRAPH = 'updateHisgraph',
+  UPDATE_CONSTARK = 'updateConstark',
+  IMPORT_PROGRAPH = 'importProGraph',
+  IMPORT_PROGRAPH_CALLBACK = 'importProGraphCallback',
+  IMPORT_PROVALIDATION = 'importProValidation',
+  IMPORT_PROVALIDATION_CALLBACK = 'importProValidationCallback',
+  SET_MOCKLOCALSTORAGE = 'setMockLocalStorage',
+  SET_MOCKLOCALSTORAGE_CALLBACK = 'setMockLocalStorageCallback',
+  GET_MOCKLOCALSTORAGE = 'getMockLocalStorage',
+  GET_MOCKLOCALSTORAGE_CALLBACK = 'getMockLocalStorageCallback',
+  SAVE_CONFIG = 'saveConfig',
+  SAVE_ITEMS_CALLBACK = 'saveItemsCallback',
+  SAVE_CONFIG_CALLBACK = 'saveConfigCallback',
+  START_DATA_QUANTIZE = 'startDataQuantize',
+  START_DATA_QUANTIZE_CALLBACK = 'startDataQuantizeCallback',
+  START_DATA_CONVERT = 'startDataConvert',
+  START_DATA_CONVERT_CALLBACK = 'startDataConvertCallback',
+  EXPORT_DATA_MESSAGE = 'exportDataMessage',
+  SHOW_FILE_PICKER = 'showFilePicker',
+  SHOW_FILE_PICKER_CALLBACK = 'showFilePickerCallback',
+  SHOW_NET_STRUCT = 'showNetStruct',
+  PARSE_SELECTED_MODEL = 'parseModel',
+  CONNECT_TO_SERVER = 'connectToServer',
+  CONNECT_TO_WSL = 'connectToWSL',
+  EDIT_RETRAIN_SCRIPTS = 'retrainScripts',
+  EDIT_RETRAIN_CONFIG = 'retrainConfig',
+  START_FLASHING = 'startFlashing',
+  START_PROFILING = 'startProfiling',
+  GET_SELECT_MODEL_HISTORY_INFO = 'getSelectModelHistoryInfo',
+  GET_SELECT_MODEL_HISTORY_INFO_BACK = 'getSelectModelHistoryInfoCallback',
+  DELETE_SELECT_MODEL_HISTORY_INFO = 'deleteSelectModelHistoryInfo',
+  SORT_SELECT_MODEL_HISTORY_INFO = 'sortSelectModelHistoryInfo',
+  SET_CURRENT_MODEL_HISTORY = 'setCurrentModelHistory',
+  LOAD_CONVERT_MODEL = 'loadConvertModel',
+  LOAD_QUANT_FILE = 'loadQuantFile',
+  DOWNLOAD_OUTPUTS = 'downloadOutputs',
+  DELETE_PROJECT = 'deleteProject',
+  DELETE_PROJECT_CB = 'deleteProjectCallBack',
+  OPEN_PROJECT = 'openProject',
+  GET_COMPRESSION_HISTORY_INFO = 'getCompressionHistoryInfo',
+  GET_COMPRESSION_HISTORY_INFO_BACK = 'getCompressionHistoryInfoCallback',
+  DELETE_OMPRESSION_HISTORY_INFO = 'deleteCompressionHistoryInfo',
+  UPDATE_LAST_TS = 'updateLastTs',
+  UPDATE_CONFIG = 'updateConfig',
+  GET_CONVERT_HISTORY_INFO = 'getConvertHistoryInfo',
+  GET_CONVERT_HISTORY_INFO_BACK = 'getConvertHistoryInfoCallback',
+  DELETE_CONVERT_HISTORY_INFO = 'deleteConvertHistoryInfo',
+  DELETE_PROFILING_HISTORY_INFO = 'deleteProfilingHistoryInfo',
+  GET_PROFILING_HISTORY_INFO = 'getProfilingHistoryInfo',
+  GET_PROFILING_HISTORY_INFO_BACK = 'getProfilingHistoryInfoCallback',
+  GET_USERGUIDE_WEBSITE = 'getUserGuideWebsite',
+  OPEN_RELEASE_NOTE = 'openReleaseNote',
+  RELEASE_CALL_BACK = 'releaseCallBack',
+  GET_RELEASE_NOTES = 'getReleaseNotes',
+  GET_USERGUIDE_WEBSITE_CB = 'getUserGuideWebsiteCallBack',
+  GET_COMPRESSION_DATA_CONFIG = 'getCompressDataConfigInfo',
+  DOWNLOAD_SAMPLE_CONFIG = 'downloadSampleConfig',
+  LOG_MANUAL_INPUT_TO_CHANNEL = 'logManualInputToChannel',
+  STOP_DATA_QUANTIZE = 'stopDataQuantize',
+  STOP_DATA_CONVERT = 'stopDataConvert',
+  STOP_FLASHING = 'stopFlashing',
+  STOP_PROFILING = 'stopProfiling',
+  STOP_BUILDING = 'stopBuilding',
+  FIND_BENCHMARK_HISTORY_CONFIG = 'findBenchmarkHistoryConfig',
+}

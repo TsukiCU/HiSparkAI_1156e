@@ -1,0 +1,15 @@
+{
+  "mode":{
+    "CRG":{
+      "channels":"1",
+      "ip": "v1"
+    }
+  },
+  "Global":{
+    "HOSC": 25,
+    "LOSC": 32
+  },
+  "config":{
+    "registersToGet" : "ALL"
+  }
+}

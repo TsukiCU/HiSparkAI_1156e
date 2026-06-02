@@ -1,0 +1,530 @@
+[
+  {
+    "value": "mcu",
+    "title": "MCU",
+    "selectable": false,
+    "key": "mcu",
+    "children": [
+      {
+        "value": "3061M",
+        "title": "3061M",
+        "selectable": false,
+        "key": "3061M",
+        "children": [
+          {
+            "value": "3061MNPICA",
+            "title": "3061MNPICA",
+            "key": "3061MNPICA",
+            "series": "3061m",
+            "boards": [
+              "3061MNPICA",
+              "AD201MPCHVVA",
+              "ECBMCU201MPC"
+            ]
+          },
+          {
+            "value": "3061MNNICA",
+            "title": "3061MNNICA",
+            "key": "3061MNNICA",
+            "series": "3061m",
+            "boards": [
+              "3061MNNICA"
+            ]
+          },
+          {
+            "value": "3061MNPIKA",
+            "title": "3061MNPIKA",
+            "key": "3061MNPIKA",
+            "series": "3061m",
+            "boards": [
+              "3061MNPIKA"
+            ]
+          },
+          {
+            "value": "3061MNNIKA",
+            "title": "3061MNNIKA",
+            "key": "3061MNNIKA",
+            "series": "3061m",
+            "boards": [
+              "3061MNNIKA"
+            ]
+          },
+          {
+            "value": "3061MNPIC8",
+            "title": "3061MNPIC8",
+            "key": "3061MNPIC8",
+            "series": "3061m",
+            "boards": [
+              "3061MNPIC8"
+            ]
+          },
+          {
+            "value": "3061MNNIC8",
+            "title": "3061MNNIC8",
+            "key": "3061MNNIC8",
+            "series": "3061m",
+            "boards": [
+              "3061MNNIC8"
+            ]
+          },
+          {
+            "value": "3061MNPIK8",
+            "title": "3061MNPIK8",
+            "key": "3061MNPIK8",
+            "series": "3061m",
+            "boards": [
+              "3061MNPIK8"
+            ]
+          },
+          {
+            "value": "3061MNNIK8",
+            "title": "3061MNNIK8",
+            "key": "3061MNNIK8",
+            "series": "3061m",
+            "boards": [
+              "3061MNNIK8"
+            ]
+          }
+        ]
+      },
+      {
+        "value": "3065A",
+        "title": "3065A",
+        "selectable": false,
+        "key": "3065A",
+        "children": [
+          {
+            "value": "3065ARPIRZ",
+            "title": "3065ARPIRZ",
+            "key": "3065ARPIRZ",
+            "series": "3065a",
+            "boards": [
+              "3065ARPIRZ"
+            ]
+          }
+        ]
+      },
+      {
+        "value": "306xH",
+        "title": "306xH",
+        "selectable": false,
+        "key": "306xH",
+        "children": [
+          {
+            "value": "3065HRPIRZ",
+            "title": "3065HRPIRZ",
+            "key": "3065HRPIRZ",
+            "series": "3065h",
+            "boards": [
+              "3065HRPIRZ",
+              "AD105HDMA",
+              "ECMCU105H"
+            ]
+          },
+          {
+            "value": "3065HRPICZ",
+            "title": "3065HRPICZ",
+            "key": "3065HRPICZ",
+            "series": "3065h",
+            "boards": [
+              "3065HRPICZ",
+              "AD101HDMA"
+            ]
+          },
+          {
+            "value": "3061HRPIKZ",
+            "title": "3061HRPIKZ",
+            "key": "3061HRPIKZ",
+            "series": "3061h",
+            "boards": [
+              "3061HRPIKZ",
+              "AD101LDMA",
+              "AD101LDMB"
+            ]
+          }
+        ],
+        "boardsMap": {
+          "ECMCU105H": "ECBMCU105H"
+        }
+      },
+      {
+        "value": "3065P",
+        "title": "3065P",
+        "selectable": false,
+        "key": "3065P",
+        "children": [
+          {
+            "value": "3065PNPIMH",
+            "title": "3065PNPIMH",
+            "key": "3065PNPIMH",
+            "series": "3065p",
+            "boards": [
+              "3065PNPIMH"
+            ]
+          },
+          {
+            "value": "3065PNPIRH",
+            "title": "3065PNPIRH",
+            "key": "3065PNPIRH",
+            "series": "3065p",
+            "boards": [
+              "3065PNPIRH"
+            ]
+          },
+          {
+            "value": "3065PNPIRE",
+            "title": "3065PNPIRE",
+            "key": "3065PNPIRE",
+            "series": "3065p",
+            "boards": [
+              "3065PNPIRE"
+            ]
+          },
+          {
+            "value": "3065PNPIRA",
+            "title": "3065PNPIRA",
+            "key": "3065PNPIRA",
+            "series": "3065p",
+            "boards": [
+              "3065PNPIRA"
+            ]
+          }
+        ]
+      },
+      {
+        "value": "3066M",
+        "title": "3066M",
+        "selectable": false,
+        "key": "3066M",
+        "children": [
+          {
+            "value": "3066MNPIRH",
+            "title": "3066MNPIRH",
+            "key": "3066MNPIRH",
+            "series": "3066m",
+            "boards": [
+              "3066MNPIRH"
+            ]
+          }
+        ]
+      },
+      {
+        "value": "3066H",
+        "title": "3066H",
+        "selectable": false,
+        "key": "3066H",
+        "children": [
+          {
+            "value": "3066HAPIMM",
+            "title": "3066HAPIMM",
+            "key": "3066HAPIMM",
+            "series": "3066h",
+            "boards": [
+              "3066HAPIMM"
+            ]
+          },
+          {
+            "value": "3066HAPIVM",
+            "title": "3066HAPIVM",
+            "key": "3066HAPIVM",
+            "series": "3066h",
+            "boards": [
+              "3066HAPIVM"
+            ]
+          },
+          {
+            "value": "3066HAPIDM",
+            "title": "3066HAPIDM",
+            "key": "3066HAPIDM",
+            "series": "3066h",
+            "boards": [
+              "3066HAPIDM"
+            ]
+          },
+          {
+            "value": "3066HNPIDM",
+            "title": "3066HNPIDM",
+            "key": "3066HNPIDM",
+            "series": "3066h",
+            "boards": [
+              "3066HNPIDM"
+            ]
+          }
+        ]
+      },
+      {
+        "value": "3067M",
+        "title": "3067M",
+        "selectable": false,
+        "key": "3067M",
+        "children": [
+          {
+            "value": "3067MBPIDM",
+            "title": "3067MBPIDM",
+            "key": "3067MBPIDM",
+            "series": "3067m",
+            "boards": [
+              "3067MBPIDM"
+            ]
+          }
+        ]
+      },
+      {
+        "value": "AU",
+        "title": "Aucu",
+        "selectable": false,
+        "key": "AU",
+        "children": [
+          {
+            "value": "AU302PDF51",
+            "title": "AU302PDF51",
+            "key": "AU302PDF51",
+            "series": "au",
+            "boards": [
+              "AU302PDF51"
+            ]
+          },
+          {
+            "value": "AU302NDF51",
+            "title": "AU302NDF51",
+            "key": "AU302NDF51",
+            "series": "au",
+            "boards": [
+              "AU302NDF51"
+            ]
+          },
+          {
+            "value": "AU301LDF51",
+            "title": "AU301LDF51",
+            "key": "AU301LDF51",
+            "series": "au",
+            "boards": [
+              "AU301LDF51"
+            ]
+          }
+        ]
+      },
+      {
+        "value": "3071",
+        "title": "3071",
+        "selectable": false,
+        "key": "3071",
+        "children": [
+          {
+            "value": "3071MNNICE",
+            "title": "3071MNNICE",
+            "key": "3071MNNICE",
+            "series": "3071",
+            "boards": [
+              "3071MNNICE"
+            ]
+          },
+          {
+            "value": "3071MNPIRE",
+            "title": "3071MNPIRE",
+            "key": "3071MNPIRE",
+            "series": "3071",
+            "boards": [
+              "3071MNPIRE"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "value": "shortrangeiot",
+    "title": "Short-Range IoT",
+    "selectable": false,
+    "key": "shortrangeiot",
+    "children": [
+      {
+        "value": "bs20",
+        "title": "BS20",
+        "key": "bs20",
+        "series": "cfbb",
+        "boards": [
+          "bs20"
+        ]
+      },
+      {
+        "value": "bs20c",
+        "title": "BS20C",
+        "key": "bs20c",
+        "series": "cfbb",
+        "boards": [
+          "bs20c"
+        ]
+      },
+      {
+        "value": "bs20h",
+        "title": "BS20H",
+        "key": "bs20h",
+        "series": "cfbb",
+        "boards": [
+          "bs20h"
+        ]
+      },
+      {
+        "value": "bs21",
+        "title": "BS21",
+        "key": "bs21",
+        "series": "cfbb",
+        "boards": [
+          "bs21"
+        ]
+      },
+      {
+        "value": "bs21a",
+        "title": "BS21A",
+        "key": "bs21a",
+        "series": "cfbb",
+        "boards": [
+          "bs21a"
+        ]
+      },
+      {
+        "value": "bs21e",
+        "title": "BS21E",
+        "key": "bs21e",
+        "series": "cfbb",
+        "boards": [
+          "bs21e"
+        ]
+      },
+      {
+        "value": "bs22",
+        "title": "BS22",
+        "key": "bs22",
+        "series": "cfbb",
+        "boards": [
+          "bs22"
+        ]
+      },
+      {
+        "value": "bs25",
+        "title": "BS25",
+        "key": "bs25",
+        "series": "cfbb",
+        "boards": [
+          "bs25"
+        ]
+      },
+      {
+        "value": "bs26",
+        "title": "BS26",
+        "key": "bs26",
+        "series": "cfbb",
+        "boards": [
+          "bs26"
+        ]
+      },
+      {
+        "value": "ws53",
+        "title": "WS53",
+        "key": "ws53",
+        "series": "cfbb",
+        "boards": [
+          "ws53"
+        ]
+      },
+      {
+        "value": "ws63",
+        "title": "WS63",
+        "key": "ws63",
+        "series": "cfbb",
+        "boards": [
+          "ws63"
+        ]
+      }
+    ]
+  },
+  {
+    "value": "smartphonesandwearables",
+    "title": "Smartphones and Wearables",
+    "selectable": false,
+    "key": "smartphonesandwearables",
+    "children": [
+      {
+        "value": "brandy",
+        "title": "BRANDY",
+        "key": "brandy",
+        "series": "cfbb",
+        "boards": [
+          "brandy"
+        ]
+      },
+      {
+        "value": "socmn2",
+        "title": "SOCMN2",
+        "key": "socmn2",
+        "series": "cfbb",
+        "boards": [
+          "socmn2"
+        ]
+      },
+        {
+          "value": "3322",
+          "title": "3322",
+          "key": "3322",
+          "series": "cfbb",
+          "boards": [
+            "3322"
+          ]
+      }
+    ]
+  },
+  {
+    "value": "waniot",
+    "title": "WAN IoT",
+    "selectable": false,
+    "key": "waniot",
+    "children": [
+      {
+        "value": "nb17",
+        "title": "NB17",
+        "key": "nb17",
+        "series": "cfbb",
+        "boards": [
+          "nb17"
+        ]
+      },
+      {
+        "value": "nb17e",
+        "title": "NB17E",
+        "key": "nb17e",
+        "series": "cfbb",
+        "boards": [
+          "nb17e"
+        ]
+      },
+      {
+        "value": "nb18",
+        "title": "NB18",
+        "key": "nb18",
+        "series": "cfbb",
+        "boards": [
+          "nb18"
+        ]
+      },
+      {
+        "value": "hi2131",
+        "title": "Hi2131",
+        "key": "hi2131",
+        "series": "cfbb",
+        "boards": [
+          "hi2131"
+        ]
+      },
+      {
+        "value": "hi2131c",
+        "title": "Hi2131C",
+        "key": "hi2131c",
+        "series": "cfbb",
+        "boards": [
+          "hi2131c"
+        ]
+      }
+    ]
+  }
+]

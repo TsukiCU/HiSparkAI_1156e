@@ -1,0 +1,136 @@
+{
+  "information": {
+    "flash": 65536
+  },
+  "compile": {
+    "tool_chain": [
+      "cc_riscv32_musl_fp_win",
+      "BiSheng"
+    ],
+    "float_type": "131_hard",
+    "map_path": "./out/bin/target.map",
+    "constant_type": "float"
+  },
+  "debug": {
+    "elf_path": "./out/bin/target.elf",
+    "breakpoints_limitation": "3",
+    "stop_debug_state": "disconnect",
+    "client": [
+      "gdb"
+    ],
+    "tool": [
+      "HiSpark-Trace",
+      "HiSpark-Link",
+      "jlink"
+    ],
+    "params": [
+      {
+        "name": "HiSpark-Trace",
+        "param": {
+          "openocd_interface_file": "cmsis-dap.cfg",
+          "openocd_target_file": "3061MNPIC8-swd.cfg",
+          "interface": [
+            "swd",
+            "jtag"
+          ],
+          "speed": "5000",
+          "port": "3333"
+        }
+      },
+      {
+        "name": "HiSpark-Link",
+        "param": {
+          "openocd_interface_file": "ft2232h-ftdi-swd.cfg",
+          "openocd_target_file": "3061MNPIC8-swd.cfg",
+          "interface": [
+            "swd",
+            "jtag"
+          ],
+          "speed": "5000",
+          "port": "3333"
+        }
+      },
+      {
+        "name": "jlink",
+        "param": {
+          "interface": [
+            "swd",
+            "jtag"
+          ],
+          "speed": "5000",
+          "port": "3333"
+        }
+      }
+    ],
+    "timeout_list": ["15000", "30000", "60000", "120000", "-1"],
+    "timeout_default": "60000"
+  },
+  "upload": {
+    "bin_path": "./out/bin/target.bin",
+    "reset": 1,
+    "burn_verification": 0,
+    "flash_region": 0,
+    "loadFiles": ["PART_MAIN_RGN\\FlashAlgo.elf"],
+    "is_edit": "yes",
+    "base_page_byte": 1024,
+    "baudList": ["2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400", "460800"],
+    "protocol": [
+      "serial",
+      "jtag",
+      "swd"
+    ],
+    "params": [
+      {
+        "name": "serial",
+        "param": {
+          "port": "",
+          "baud": "115200",
+          "stop_bit": "0",
+          "parity": "N"
+        }
+      },
+      {
+        "name": "jtag",
+        "param": {
+          "debug_board": [
+            "HiSpark-Trace",
+            "HiSpark-Link"
+          ],
+          "frequency": "5000",
+          "address": "0x3000000",
+          "partition_length": "0x10000"
+        }
+      },
+      {
+        "name": "swd",
+        "param": {
+          "debug_board": [
+            "HiSpark-Trace",
+            "HiSpark-Link"
+          ],
+          "frequency": "5000",
+          "address": "0x3000000",
+          "partition_length": "0x10000"
+        }
+      }
+    ]
+  },
+  "console": {
+    "port": "",
+    "baud": "115200",
+    "stop_bit": "0",
+    "parity": "N"
+  },
+  "need_sdk": true,
+  "need_project_path": true,
+  "chip_config": true,
+  "variabletrace": true,
+  "gui": false,
+  "platform": "vendorhm",
+  "project_type": [
+    {
+      "name": "MCU",
+      "base_on_sdk": true
+    }
+  ]
+}

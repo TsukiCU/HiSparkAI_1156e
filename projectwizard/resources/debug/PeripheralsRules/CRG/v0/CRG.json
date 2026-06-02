@@ -1,0 +1,75 @@
+{
+  "PERI_CRG0": {
+    "pll_ref_cksel": {
+      "0": "pll_ref_cksel = [[HOSC]] && [[pll_ref_cksel]] >= 4 && [[pll_ref_cksel]] <= 30",
+      "1": "pll_ref_cksel = {{XTAL}} && [[pll_ref_cksel]] >= 4 && [[pll_ref_cksel]] <= 30"
+    }
+  },
+  "PERI_CRG1": {
+    "pll_prediv": {
+      "0-3": "pll_prediv  = [[pll_ref_cksel]] / ({{CRG.PERI_CRG1.pll_prediv}} + 1) && [[pll_prediv]] >= 4 && [[pll_prediv]] <= 7.5"
+    }
+  },
+  "PERI_CRG2": {
+    "pll_fbdiv": {
+      "6-63": "pll_fbdiv = [[pll_prediv]] * {{CRG.PERI_CRG2.pll_fbdiv}} && [[pll_fbdiv]] >= 100 &&  [[pll_fbdiv]] <= 200"
+    }
+  },
+  "PERI_CRG3": {
+    "pll_postdiv": {
+      "0-5": "pll_postdiv = [[pll_fbdiv]]  >> {{CRG.PERI_CRG3.pll_postdiv}}  && [[pll_postdiv]] >= 3.125 && [[pll_postdiv]] <= 200"
+    }
+  },
+  "PERI_CRG7": {
+    "core_cksel": {
+      "0-1": "",
+      "2": "{{CRG.PERI_CRG4.pll_pd}} == 0 && {{CRG.PERI_CRG5.pll_lockdet_pd}} == 0"
+    }
+  },
+  "PERI_CRG20": {
+    "uart0_cksel": {
+      "0-3": ""
+    }
+  },
+  "PERI_CRG41": {
+    "adc0_div": {
+      "0-15": "pc42_a0d = [[pll_fbdiv]] / ( {{CRG.PERI_CRG41.adc0_div}} >> 1 + 1 + 0.5 * ( {{CRG.PERI_CRG41.adc0_div}} % 2 )) "
+    },
+    "adc0_cksel": {
+      "0": "clk_adc0 = [[HOSC]] && [[clk_adc0]] >= 2.35 && [[clk_adc0]] <= 40",
+      "1": "clk_adc0 = {{XTAL}} && [[clk_adc0]] >= 2.35 && [[clk_adc0]] <= 40",
+      "2-3": "clk_adc0 = [[pc42_a0d]] && [[clk_adc0]] >= 2.35 && [[clk_adc0]] <= 40"
+    }
+  },
+  "PERI_CRG42": {
+    "adc1_div": {
+      "0-15": "pc42_a1d = [[pll_fbdiv]] / ( {{CRG.PERI_CRG42.adc1_div}} >> 1 + 1 + 0.5 * ( {{CRG.PERI_CRG42.adc1_div}} % 2 )) "
+    },
+    "adc1_cksel": {
+      "0": "clk_adc1 = [[HOSC]] && [[clk_adc1]] >= 2.35 && [[clk_adc1]] <= 40",
+      "1": "clk_adc1 = {{XTAL}} && [[clk_adc1]] >= 2.35 && [[clk_adc1]] <= 40",
+      "2-3": "clk_adc1 = [[pc42_a1d]] && [[clk_adc1]] >= 2.35 && [[clk_adc1]] <= 40"
+    }
+  },
+  "PERI_CRG43": {
+    "adc2_div": {
+      "0-15": "pc42_a2d = [[pll_fbdiv]] / ( {{CRG.PERI_CRG43.adc2_div}} >> 1 + 1 + 0.5 * ( {{CRG.PERI_CRG43.adc2_div}} % 2 )) "
+    },
+    "adc2_cksel": {
+      "0": "clk_adc2 = [[HOSC]] && [[clk_adc2]] >= 2.35 && [[clk_adc2]] <= 40",
+      "1": "clk_adc2 = {{XTAL}} && [[clk_adc2]] >= 2.35 && [[clk_adc2]] <= 40",
+      "2-3": "clk_adc2 = [[pc42_a2d]] && [[clk_adc2]] >= 2.35 && [[clk_adc2]] <= 40"
+    }
+  },
+  "PERI_CRG45": {
+    "dac0_div": {
+      "0-15": "dac0_div = [[pll_ref_cksel]] / ({{CRG.PERI_CRG45.dac0_div}} + 1)  && [[dac0_div]] <= 10"
+    },
+    "dac1_div": {
+      "0-15": "dac1_div = [[pll_ref_cksel]] / ({{CRG.PERI_CRG45.dac1_div}} + 1)  && [[dac1_div]] <= 10"
+    },
+    "dac2_div": {
+      "0-15": "dac2_div = [[pll_ref_cksel]] / ({{CRG.PERI_CRG45.dac2_div}} + 1)  && [[dac2_div]] <= 10"
+    }
+  }
+}

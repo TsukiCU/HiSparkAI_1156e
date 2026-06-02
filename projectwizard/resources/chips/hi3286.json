@@ -1,0 +1,61 @@
+{
+	"compile": {
+		"tool_chain": ["cc_riscv32_musl_fp_win"],
+		"custom_build_command": "python build/build_check.py ${BUILD_VENDOR} && python build/build.py build && python build/packet_create.py",
+		"custom_clean_command": "python build/build.py clean",
+		"bin_path": "out/bin/target.bin",
+		"elf_path": "out/bin/target.elf",
+		"map_path": "out/bin/target.map"
+	},
+	"debug": {
+		"client": [
+			"gdb"
+		],
+		"tool": []
+	},
+	"upload": {
+		"protocol": [
+			"burn-serial",
+			"burn-jtag",
+			"burn-swd"
+		],
+		"baudList": ["2400", "4800", "9600", "19200", "38400", "57600", "115200", "230400", "460800"],
+		"params": [
+			{
+				"name": "burn-serial",
+				"param": {
+					"port": "",
+					"baud": "115200",
+					"stop_bit": "0",
+					"parity": "0"
+				}
+			},
+			{
+				"name": "burn-jtag",
+				"param": {
+					"debug_board": [
+						"HiSpark-Trace",
+						"HiSpark-Link"
+					],
+					"frequency": "5000",
+					"address": "0x3000000"
+				}
+			},
+			{
+				"name": "burn-swd",
+				"param": {
+					"debug_board": [
+						"HiSpark-Trace",
+						"HiSpark-Link"
+					],
+					"frequency": "5000",
+					"address": "0x3000000"
+				}
+			}
+		]
+	},
+	"need_sdk": false,
+	"chip_config": true,
+  "variabletrace": true,
+	"gui": false
+}

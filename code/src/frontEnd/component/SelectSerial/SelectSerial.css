@@ -1,0 +1,14 @@
+.serial-item {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.serial-item .custom-select {
+    margin-left: 7px;
+}
+
+.custom-select  .ant-select-selector {
+    line-height: 26px;
+}

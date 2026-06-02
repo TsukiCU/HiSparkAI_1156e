@@ -1,0 +1,333 @@
+/**
+ * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+.projectImport {
+  position: relative;
+  .ant-modal-content {
+    .ant-modal-body {
+      padding-bottom: 8px;
+      .ant-table {
+        background-color: transparent;
+        border-radius: 8px;
+        border: 1px solid @listDivider;
+        .ant-table-body {
+          border-bottom-left-radius: 7px;
+        }
+        .ant-table-thead > tr > th {
+          padding: 2px;
+          background-color: @colorControlNormal;
+          color: @colorForeground;
+          font-size: 14px;
+          line-height: 24px;
+          border-color: @listDivider;
+        }
+        .ant-table-tbody > tr > td {
+          padding: 2px;
+          line-height: 24px;
+          border: none;
+          background-color: transparent;
+          .ant-table-cell {
+            background-color: transparent;;
+          }
+        }
+        .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+          background: @colorFocusedFgTertiary;
+        }
+        .ant-table-header{
+          border-top-left-radius: 7px;
+          border-top-right-radius: 7px;
+          background: @colorControlNormal;
+        }
+        .ant-table-thead {
+          .ant-table-cell-ellipsis:nth-child(1) {
+            padding-left: 40px;
+          }
+        }
+
+        .ant-table-tbody {
+          font-size: 14px;
+          color: @colorForeground;
+          background-color: @colorBackground;
+        }
+
+        .ant-table-column-sorters,
+        .ant-table-cell-scrollbar {
+          box-shadow: 0 0 0 0;
+        }
+        .ant-table-row-expand-icon {
+          background: @body-background;
+          color: @colorForeground;
+        }
+
+        .ant-table-row-expand-icon:hover {
+          color: @colorActivated;
+        }
+      }
+
+      .ant-progress-text{
+        color: @colorForeground;
+      }
+    }
+  }
+
+  .ant-pagination {
+    .ant-pagination-prev,
+    .ant-pagination-next,
+    .ant-pagination-jump-next,
+    .ant-pagination-jump-prev {
+      button,
+      .ant-pagination-item-container {
+        background: @colorControlNormal;
+        border: 1px solid @listDivider;
+
+        svg {
+          fill: @colorForeground;
+        }
+
+        .ant-pagination-item-ellipsis {
+          color: @colorForeground;
+        }
+      }
+    }
+
+    .ant-pagination-item {
+      background: @colorControlNormal;
+      border: 1px solid @listDivider;
+
+      a,
+      span {
+        color: @colorForeground;
+      }
+    }
+
+    .ant-pagination-item-active {
+      border: 1px solid @colorActivated;
+
+      a {
+        color: @colorActivated;
+      }
+    }
+
+    .ant-select:not(.ant-select-customize-input) .ant-select-selector {
+      background: @colorControlNormal;
+    }
+
+    .ant-select-single.ant-select-show-arrow .ant-select-selection-item {
+      text-align: center;
+      padding-right: 20px;
+    }
+
+    .ant-select-arrow {
+      color: @colorForeground;
+    }
+  }
+
+  .chart-div {
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .pull-right {
+    float: right;
+    margin-bottom: 5px;
+    margin-right: 16px;
+    .ant-btn {
+      border-radius: 20px;
+    }
+  }
+
+  .ant-table-expanded-row-fixed{
+    margin-bottom: 0px;
+  }
+
+  .import_failed_modal{
+    .ant-modal-content {
+      .ant-modal-body {
+        padding-bottom: 8px;
+        .ant-table {
+          background-color: transparent;
+          border-radius: 8px;
+          border: 1px solid @listDivider;
+          .ant-table-body {
+            border-bottom-left-radius: 7px;
+          }
+          .ant-table-thead > tr > th {
+            padding: 2px;
+            background-color: @colorControlNormal;
+            color: @colorForeground;
+            font-size: 14px;
+            line-height: 24px;
+            border-color: @listDivider;
+          }
+          .ant-table-tbody > tr > td {
+            padding: 2px;
+            line-height: 24px;
+            border: none;
+            background-color: transparent;
+            .ant-table-cell {
+              background-color: transparent;;
+            }
+          }
+          .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+            background: @colorFocusedFgTertiary;
+          }
+          .ant-table-header{
+            border-top-left-radius: 7px;
+            border-top-right-radius: 7px;
+            background: @colorControlNormal;
+          }
+          .ant-table-thead {
+            .ant-table-cell-ellipsis:nth-child(1) {
+              padding-left: 40px;
+            }
+          }
+  
+          .ant-table-tbody {
+            font-size: 14px;
+            color: @colorForeground;
+            background-color: @colorBackground;
+          }
+  
+          .ant-table-column-sorters,
+          .ant-table-cell-scrollbar {
+            box-shadow: 0 0 0 0;
+          }
+          .ant-table-row-expand-icon {
+            background: @body-background;
+            color: @colorForeground;
+          }
+  
+          .ant-table-row-expand-icon:hover {
+            color: @colorActivated;
+          }
+        }
+  
+        .ant-progress-text{
+          color: @colorForeground;
+        }
+      }
+    }
+  }
+
+  
+}
+
+.ant-dropdown {
+  .ant-table-filter-dropdown {
+    background-color: @colorBackground;
+    .sum-item {
+      width: 100%;
+      height: 300px;
+      overflow: auto;
+    }
+    .ant-checkbox-wrapper {
+      color: @colorForeground;
+    }
+  }
+}
+
+.ant-modal {
+  .ant-modal-footer {
+    text-align: right;
+    padding-bottom: 8px;
+  }
+}
+
+.ant-space-vertical {
+  .ant-space-item {
+    min-width: 460px !important;
+  }
+}
+
+.right-content {
+  flex: 1 !important;
+  min-width: 320px !important;
+}
+
+.left-content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: auto !important;
+  min-width: 130px !important;
+}
+
+.project-wizard {
+  .ant-col {
+    width: 100%;
+  }
+  p {
+    margin-bottom: 0px;
+  }
+}
+
+.ant-checkbox-disabled {
+  .ant-checkbox-inner {
+    background-color: @checkbox-disabled !important;
+    border-color: @checkbox-border-disabled !important;
+  }
+}
+
+.ant-input-group {
+  .ant-input {
+    border-top-left-radius: 8px !important;
+    border-bottom-left-radius: 8px !important;
+  }
+}
+
+.browse {
+  width: 37px;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  &:disabled {
+    background-color: #5291ff;
+    border-color: #5291ff;
+    opacity: 0.4;
+    &:hover {
+      background-color: #5291ff;
+      border-color: #5291ff;
+    }
+  }
+}
+
+.choosedSDKpath {
+  color: @colorForeground !important;
+}
+
+.ant-anchor-link-title {
+  color: @colorForeground;
+  font-family: MicrosoftYaHei;
+  opacity: 0.9;
+}
+.projectBox{
+  position: absolute; 
+  top: 0;
+  bottom: 0;
+}
+.projectImport {
+  .not-show-expande {
+    .ant-table-expanded-row{
+      .ant-table-cell{
+        height: auto !important;
+        padding: 0px 0px 0px 8px !important;
+        border-bottom: 1px solid @listDivider !important;
+      }
+      span{
+        color:red;
+        font-size: 12px;
+      }
+    }
+  }
+}
