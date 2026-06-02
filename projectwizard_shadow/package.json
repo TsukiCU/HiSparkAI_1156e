@@ -38,7 +38,6 @@
     "vscode:package":       "vsce package"
   },
   "devDependencies": {
-    "@vscode/vsce":                   "2.21.1",
     "@babel/core":                    "7.22.9",
     "@babel/plugin-transform-runtime":"7.22.9",
     "@babel/preset-env":              "7.22.9",
@@ -66,9 +65,6 @@
     "typescript":                     "4.9.5",
     "webpack":                        "5.88.2",
     "webpack-cli":                    "4.10.0"
-  },
-  "overrides": {
-    "cheerio": "1.0.0-rc.12"
   },
   "dependencies": {
     "antd":           "4.24.16",
