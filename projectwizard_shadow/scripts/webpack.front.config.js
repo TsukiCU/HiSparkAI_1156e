@@ -33,6 +33,9 @@ module.exports = {
     filename: 'bundle.js',
     path:     path.join(rootDir, 'dist'),
   },
+  // VSCode webview bundles are not served over the network, so size hints
+  // are not meaningful here.
+  performance: { hints: false },
   devtool: 'nosources-source-map',
   resolve: {
     extensions: ['.wasm', '.mjs', '.js', '.json', '.tsx', '.ts'],

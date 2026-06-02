@@ -2,10 +2,8 @@
  * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
  * Licensed under the Apache License, Version 2.0
  */
-import * as React    from 'react';
-import * as ReactDOM from 'react-dom';
-import { Provider }  from 'react-redux';
-import { hot }       from 'react-hot-loader/root';
+import * as React from 'react';
+import { Provider } from 'react-redux';
 
 import ProjectWizard from './projectWizard';
 import ProjectImport from './projectImport/projectImport';
@@ -86,6 +84,3 @@ document.addEventListener('contextmenu', (event: MouseEvent) => {
   event.preventDefault();
 });
 
-// 保留原 import 时，避免 noUnusedLocals 报 ReactDOM/hot 未使用
-void ReactDOM;
-void hot;
