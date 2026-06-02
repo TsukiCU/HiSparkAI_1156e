@@ -34,9 +34,11 @@
     "build-frontend-light": "cross-env theme=light webpack --config ./scripts/webpack.front.config.js --mode production",
     "build-backend":        "webpack --config ./scripts/webpack.pro.config.js",
     "build":                "npm run build-frontend-dark && npm run build-frontend-light && npm run build-backend",
-    "watch":                "cross-env theme=dark webpack --config ./scripts/webpack.front.config.js --watch"
+    "watch":                "cross-env theme=dark webpack --config ./scripts/webpack.front.config.js --watch",
+    "vscode:package":       "vsce package"
   },
   "devDependencies": {
+    "@vscode/vsce":                   "2.26.1",
     "@babel/core":                    "7.22.9",
     "@babel/plugin-transform-runtime":"7.22.9",
     "@babel/preset-env":              "7.22.9",
