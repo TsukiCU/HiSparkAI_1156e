@@ -67,6 +67,9 @@
     "webpack":                        "5.88.2",
     "webpack-cli":                    "4.10.0"
   },
+  "overrides": {
+    "cheerio": "1.0.0-rc.12"
+  },
   "dependencies": {
     "antd":           "4.24.16",
     "i18next":        "23.12.2",

@@ -11,6 +11,8 @@
   "NPU":                      "NPU",
   "projectName":              "工程名",
   "projectNameInputPrompt":   "请输入工程名",
+  "sdkPath":                  "SDK 路径",
+  "sdkPathInputPrompt":       "选择已有 SDK 文件夹",
   "projectPath":              "工程路径",
   "projectPathInputPrompt":   "选择工程存放路径",
   "finished":                 "完成",

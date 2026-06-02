@@ -167,28 +167,28 @@ export class Command {
   // ── Create project ─────────────────────────────────────────────────────────
 
   static async getProjectData(projectData: ShadowProjectData): Promise<void> {
-    if (!projectData.soc || !projectData.projectName || !projectData.projectPath) {
+    if (!projectData.soc || !projectData.projectName || !projectData.projectPath || !projectData.sdkPath) {
       showMessageModal({ content: res('fieldsMissing'), infoType: 'err' });
       return;
     }
 
-    // New layout:
-    //   {projectPath}/{name}/            ← SDK workspace folder (VSCode opens this)
-    //   {projectPath}/{name}_hiproj/     ← hiproj folder (.hiproj + aicache/)
-    const sdkDir    = path.join(projectData.projectPath, projectData.projectName);
+    // SDK folder is the user-selected existing directory (sdkPath).
+    // hiprojDir is always derived from projectPath + projectName, independent of sdkPath.
+    const sdkDir    = projectData.sdkPath;
     const hiprojDir = path.join(projectData.projectPath, `${projectData.projectName}_hiproj`);
 
-    // Check for conflicts on EITHER folder before creating anything.
-    if (fs.existsSync(sdkDir) || fs.existsSync(hiprojDir)) {
+    // Bug 1 fix: only check hiprojDir for conflicts — sdkDir is an existing folder
+    // chosen by the user, so it will always exist.
+    if (fs.existsSync(hiprojDir)) {
       callback('thisProjectExists', new Date().getTime());
       return;
     }
 
+    // Bug 2 fix: only create hiprojDir — sdkDir already exists (user selected it).
     try {
-      fs.mkdirSync(sdkDir,    { recursive: true });
       fs.mkdirSync(hiprojDir, { recursive: true });
     } catch {
-      showMessageModal({ content: res('createFolderFailed', [sdkDir]), infoType: 'err' });
+      showMessageModal({ content: res('createFolderFailed', [hiprojDir]), infoType: 'err' });
       return;
     }
 

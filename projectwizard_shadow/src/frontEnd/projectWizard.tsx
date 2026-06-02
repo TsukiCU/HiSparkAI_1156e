@@ -40,6 +40,7 @@ const ProjectWizard = (): JSX.Element => {
   const [soc,             setSoc]              = useState('');
   const [platform,        setPlatform]         = useState<'CPU'|'NPU'|''>('');
   const [platformFixed,   setPlatformFixed]    = useState(false);
+  const [sdkPath,         setSdkPath]          = useState('');
   const [projectPath,     setProjectPath]      = useState('');
   const [projectName,     setProjectName]      = useState('');
   const [projectPathWrong, setProjectPathWrong] = useState(false);
@@ -47,6 +48,7 @@ const ProjectWizard = (): JSX.Element => {
   // Redux state
   const chipList: SocGroupItem[]  = useSelector((s: any) => s.entities.chipList  ?? []);
   const userConfig: any           = useSelector((s: any) => s.entities.userConfig ?? null);
+  const sdkPathInfo: any          = useSelector((s: any) => s.entities.sdkPathInfo);
   const projectPathInfo: any      = useSelector((s: any) => s.entities.projectPathInfo);
   const projectPathRightInfo: any = useSelector((s: any) => s.entities.projectPathRightInfo);
   const projectPathWrongInfo: any = useSelector((s: any) => s.entities.projectPathWrongInfo);
@@ -80,6 +82,14 @@ const ProjectWizard = (): JSX.Element => {
       setProjectPath(userConfig.projectCreate_last_projectPath);
     }
   }, [userConfig]);
+
+  // sdk path selected via dialog
+  useEffect(() => {
+    if (sdkPathInfo) {
+      form.setFieldsValue({ sdkPath: sdkPathInfo });
+      setSdkPath(sdkPathInfo);
+    }
+  }, [sdkPathInfo]);
 
   // path selected via dialog
   useEffect(() => {
@@ -130,6 +140,16 @@ const ProjectWizard = (): JSX.Element => {
     dispatch(getInfo(op));
   };
 
+  // ── Browse SDK path ─────────────────────────────────────────────────────────
+  const onBrowseSdkPath = (): void => {
+    const op: OperateStruct = {
+      operationType: 'selectFolderPath',
+      paramData: { key: 'sdkPathInfo', currentValue: sdkPath },
+      source: 'wizard',
+    };
+    dispatch(getInfo(op));
+  };
+
   // ── Browse project path ─────────────────────────────────────────────────────
   const onBrowsePath = (): void => {
     const op: OperateStruct = {
@@ -151,6 +171,7 @@ const ProjectWizard = (): JSX.Element => {
           platform,
           projectName,
           projectPath,
+          sdkPath,
         },
       }));
     }).catch(() => { /* validation failed, show inline errors */ });
@@ -250,7 +271,34 @@ const ProjectWizard = (): JSX.Element => {
             </Col>
           </Row>
 
-          {/* ── Row 2: Project Name ── */}
+          {/* ── Row 2: SDK Path (temporary — future: auto-download SDK) ── */}
+          <Row>
+            <Col span={24}>
+              <Form.Item
+                label={t('sdkPath')}
+                name="sdkPath"
+                rules={[{ required: true, message: t('fieldCannotEmpty', { field: t('sdkPath') }) }]}
+              >
+                <Input.Group compact>
+                  <Input
+                    readOnly
+                    style={{ width: 'calc(100% - 37px)' }}
+                    placeholder={t('sdkPathInputPrompt')}
+                    value={sdkPath}
+                    onClick={onBrowseSdkPath}
+                  />
+                  <Button
+                    type="primary"
+                    style={{ paddingLeft: 10 }}
+                    onClick={onBrowseSdkPath}
+                    icon={<FolderOpenOutlined style={{ color: '#fff' }} />}
+                  />
+                </Input.Group>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* ── Row 3: Project Name ── */}
           <Row>
             <Col span={24}>
               <Form.Item label={t('projectName')} name="projectName" rules={nameRules}>
@@ -263,7 +311,7 @@ const ProjectWizard = (): JSX.Element => {
             </Col>
           </Row>
 
-          {/* ── Row 3: Project Path ── */}
+          {/* ── Row 4: Project Path ── */}
           <Row>
             <Col span={24}>
               <Form.Item label={t('projectPath')} name="projectPath" rules={pathRules}>

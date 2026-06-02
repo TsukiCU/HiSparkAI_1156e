@@ -11,6 +11,8 @@
   "NPU":                      "NPU",
   "projectName":              "Project Name",
   "projectNameInputPrompt":   "Enter a project name",
+  "sdkPath":                  "SDK Path",
+  "sdkPathInputPrompt":       "Select an existing SDK folder",
   "projectPath":              "Project Path",
   "projectPathInputPrompt":   "Select the path to store the project",
   "finished":                 "Finish",
