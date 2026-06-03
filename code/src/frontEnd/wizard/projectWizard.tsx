@@ -283,7 +283,7 @@ const ProjectWizard = (): JSX.Element => {
                   onChange={(v: string) => setBoard(v)}
                 >
                   {boardList.map((b) => (
-                    <Option key={b} value={b}>{b.toUpperCase()}</Option>
+                    <Option key={b} value={b}>{b}</Option>
                   ))}
                 </Select>
               </Form.Item>

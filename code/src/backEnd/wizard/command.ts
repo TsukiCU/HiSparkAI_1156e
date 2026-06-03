@@ -44,20 +44,43 @@ function callback(key: string, data: any, target: 'wizard' | 'import' = 'wizard'
 
 // ─── SDK path validation ──────────────────────────────────────────────────────
 
+// Files that live flat in build/config/target_config/ rather than a sub-folder.
+// Mirrors projectwizard's inTargetAndHasConfigChipJsons constant.
+const inTargetAndHasConfigChipJsons = ['hi2113.json', 'hi2131.json', 'hi2131c.json'];
+
+// Full required-file list from projectwizard — any one present means valid CFBB SDK.
+const CFBB_REQUIRED_FILES = [
+  'bs20.json', 'bs21.json', 'bs21a.json', 'bs20c.json', 'bs20h.json',
+  'bs21e.json', 'bs22.json', 'bs25.json', 'bs26.json',
+  'ws53.json', 'ws63.json', 'socmn2.json', '3322.json',
+  'brandy.json', 'nb17.json', 'nb17e.json', 'nb18.json',
+  'hi2131.json', 'hi2131c.json', 'hi2113.json',
+  'bs27a.json', 'sw21.json',
+];
+
 /**
- * Validate that sdkPath is a legitimate SDK for the given chip.
- * For ws63 and 3322, we check for the chip-specific JSON config file that
- * code/extension.ts uses to detect the target (detectTargetFromWorkspace).
- * For other chips validation is skipped (returns true).
+ * Reproduce projectwizard's validateCfbbSdkPath logic exactly.
+ * Returns true if ANY of the required chip JSON files is found and valid.
+ * For chips other than ws63 / 3322 validation is skipped.
  */
 function validateSdkForChip(soc: string, sdkPath: string): boolean {
   if (!sdkPath || !fs.existsSync(sdkPath)) { return false; }
-  if (soc === 'ws63' || soc === '3322') {
-    const configPath = path.join(sdkPath, 'build', 'config', 'target_config', soc, `${soc}.json`);
-    if (!fs.existsSync(configPath)) { return false; }
-    try { JSON.parse(fs.readFileSync(configPath, 'utf-8')); return true; } catch { return false; }
+  if (soc !== 'ws63' && soc !== '3322') { return true; }
+
+  for (const fileName of CFBB_REQUIRED_FILES) {
+    let jsonPath: string;
+    if (fileName.includes('nb')) {
+      jsonPath = path.join(sdkPath, 'build', 'target_config', fileName);
+    } else if (inTargetAndHasConfigChipJsons.includes(fileName)) {
+      jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', fileName);
+    } else {
+      jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', fileName.replace('.json', ''), fileName);
+    }
+    if (fs.existsSync(jsonPath)) {
+      try { JSON.parse(fs.readFileSync(jsonPath, 'utf-8')); return true; } catch { continue; }
+    }
   }
-  return true;
+  return false;
 }
 
 // ─── Minimal .hiproj writer ───────────────────────────────────────────────────

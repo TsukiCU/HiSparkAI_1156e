@@ -18,7 +18,7 @@
   "sdkWrongInfo":             "Invalid SDK directory. A valid {{chip}} SDK must contain build/config/target_config/{{chip}}/{{chip}}.json",
   "projectPath":              "Project Path",
   "projectPathInputPrompt":   "Select the path to store the project",
-  "finished":                 "Finished",
+  "finished":                 "Finish",
   "cancel":                   "Cancel",
   "fieldCannotEmpty":         "{{field}} cannot be empty",
   "nameRule":                 "Project name does not support Chinese or special characters",
