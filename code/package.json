@@ -54,6 +54,16 @@
         "command": "HisparkAI-studio.manageToolchain",
         "title": "Download Toolchain",
         "icon": "resources/28px_AI.svg"
+      },
+      {
+        "command": "showProjectWizard",
+        "title": "New Project",
+        "category": "HisparkAI"
+      },
+      {
+        "command": "showProjectImport",
+        "title": "Import Project",
+        "category": "HisparkAI"
       }
     ],
     "viewsContainers": {
@@ -165,7 +175,9 @@
     "build-frontend-dark-pro": "cross-env theme=dark webpack --config ./scripts/webpack.front.config.js --mode production",
     "build-frontend-light-pro": "cross-env theme=light webpack --config ./scripts/webpack.front.config.js --mode production",
     "pre-launch": "yarn build-frontend-light-dev && yarn build-frontend-dark-dev && yarn build-dev",
-    "compile": "yarn build-frontend-light-pro && yarn build-frontend-dark-pro && yarn build-pro",
+    "build-wizard-dark-pro": "cross-env theme=dark webpack --config ./scripts/webpack.wizard.config.js --mode production",
+    "build-wizard-light-pro": "cross-env theme=light webpack --config ./scripts/webpack.wizard.config.js --mode production",
+    "compile": "yarn build-wizard-light-pro && yarn build-wizard-dark-pro && yarn build-frontend-light-pro && yarn build-frontend-dark-pro && yarn build-pro",
     "watch": "cross-env theme=dark webpack --config ./scripts/webpack.front.config.js ./scripts/webpack.dev.config.js --mode development --watch",
     "start": "cross-env theme=dark webpack server --open --config ./scripts/webpack.front.config.js --mode development --hot",
     "package": "webpack --mode production --devtool hidden-source-map",

@@ -66,6 +66,16 @@ export const icon = {
 };
 
 /**
+ * Wizard webview HTML (separate bundle from the main AI pipeline webview)
+ */
+export const wizardHtml = {
+  index: {
+    path: 'wizard.html',
+    location: ResourceLocation.WEB,
+  },
+};
+
+/**
  * HTML资源定义
  */
 export const html = {

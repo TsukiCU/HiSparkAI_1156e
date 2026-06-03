@@ -1,3 +1,4 @@
+dist/_wizard_noop.js
 .vscode/**
 .vscode-test/**
 out/**

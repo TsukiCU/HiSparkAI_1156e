@@ -32,6 +32,9 @@ import { checkPythonDepsInstalledLater, downloadFileWithRetry, extractZipFile, g
 import { addPythonFile, mkdirPath, modifyPythonFile, updateToolChainJson } from './backEnd/utils/downloadPython';
 import { SerialPortWatcher } from './backEnd/watchers/SerialPortWatcher';
 import { RemoteHeartbeatWatcher } from './backEnd/watchers/RemoteHeartbeatWatcher';
+import { WizardContext }   from './backEnd/wizard/context';
+import { WizardPanel }     from './backEnd/wizard/panels/wizardPanel';
+import { ImportPanel }     from './backEnd/wizard/panels/importPanel';
 
 const WALKTHROUGH_STRING = 'HiSpark.hisparkai#hisparkAI.basicGuide';
 
@@ -111,6 +114,10 @@ export default class Extension {
     } else {
       target = 'NONE'; // Present welcome page if no hiproj file is found.
     }
+
+    // Initialise wizard context so wizard commands can access extension globals.
+    WizardContext.globalStoragePath = context.globalStorageUri.fsPath;
+    WizardContext.extensionPath     = context.extensionPath;
 
     const homeTreeProvider = new HomeTreeDataProvider();
     vscode.window.registerTreeDataProvider('hisparkai-home', homeTreeProvider);
@@ -358,6 +365,23 @@ export default class Extension {
       return isEnvPath && buildPathExist;
     }
 
+    // ── Project Wizard commands ────────────────────────────────────────────────
+    const showProjectWizardCommand = vscode.commands.registerCommand('showProjectWizard', () => {
+      if (!WizardContext.wizardPanel?.panel) {
+        WizardContext.wizardPanel = new WizardPanel(context);
+      }
+      WizardContext.wizardPanel.toggle();
+      WizardContext.wizardPanel.panel?.reveal();
+    });
+
+    const showProjectImportCommand = vscode.commands.registerCommand('showProjectImport', () => {
+      if (!WizardContext.importPanel?.panel) {
+        WizardContext.importPanel = new ImportPanel(context);
+      }
+      WizardContext.importPanel.toggle();
+      WizardContext.importPanel.panel?.reveal();
+    });
+
     context.subscriptions.push(
       manageToolchainCommand,
       chipConfigCommand,
@@ -366,7 +390,9 @@ export default class Extension {
       openBasicWalkthroughCommand,
       connectServerCommand,
       sshCommand,
-      openReleaseNoteCommand, // 新增：注册ReleaseNote命令
+      openReleaseNoteCommand,
+      showProjectWizardCommand,
+      showProjectImportCommand,
     );
 
     context.subscriptions.push(RemoteHeartbeatWatcher.getInstance());
@@ -399,6 +425,8 @@ export default class Extension {
       },
     };
     this.chipConfigPanel?.postMessage(themeMessage);
+    WizardContext.postToWizard(themeMessage);
+    WizardContext.postToImport(themeMessage);
   }
 
   /**

@@ -1,0 +1,46 @@
+[
+  {
+    "value": "hisparkai",
+    "title": "HiSpark AI",
+    "selectable": false,
+    "key": "hisparkai",
+    "children": [
+      {
+        "value": "ws63",
+        "title": "WS63",
+        "key": "ws63",
+        "series": "shadow",
+        "boards": ["ws63"],
+        "defaultPlatform": "CPU",
+        "platformFixed": true
+      },
+      {
+        "value": "3322",
+        "title": "3322",
+        "key": "3322",
+        "series": "shadow",
+        "boards": ["3322"],
+        "defaultPlatform": "NPU",
+        "platformFixed": true
+      },
+      {
+        "value": "mcu",
+        "title": "MCU",
+        "key": "mcu",
+        "series": "shadow",
+        "boards": ["mcu"],
+        "defaultPlatform": "CPU",
+        "platformFixed": false
+      },
+      {
+        "value": "1156e",
+        "title": "1156E",
+        "key": "1156e",
+        "series": "shadow",
+        "boards": ["1156e"],
+        "defaultPlatform": "CPU",
+        "platformFixed": false
+      }
+    ]
+  }
+]
