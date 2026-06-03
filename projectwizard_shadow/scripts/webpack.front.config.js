@@ -94,11 +94,17 @@ module.exports = {
       chunkFilename: `themes/${theme}.css`,
       ignoreOrder:   false,
     }),
-    new HtmlWebpackPlugin({
-      template: path.join(rootDir, 'src', 'frontEnd', 'index.html'),
-      filename: 'index.html',
-      inject:   true,
-      theme,
-    }),
+    // Only emit index.html for the dark build. The light build is CSS-only
+    // (its entry has no JS), so HtmlWebpackPlugin would produce an index.html
+    // without a <script> tag, overwriting the one the dark build just wrote.
+    ...(theme === 'dark'
+      ? [new HtmlWebpackPlugin({
+          template: path.join(rootDir, 'src', 'frontEnd', 'index.html'),
+          filename: 'index.html',
+          inject:   true,
+          theme,
+        })]
+      : []
+    ),
   ],
 };

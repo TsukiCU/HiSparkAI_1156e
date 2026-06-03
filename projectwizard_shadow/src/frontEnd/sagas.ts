@@ -2,13 +2,13 @@
  * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
  * Licensed under the Apache License, Version 2.0
  */
-import { takeLatest } from 'redux-saga/effects';
+import { takeEvery, takeLatest } from 'redux-saga/effects';
 import * as actions   from './actions';
 import type { Message } from '../backEnd/interface/api';
 import { vscode }     from './index';
 
 function* watchGetInfo(): Generator<any, any, any> {
-  yield takeLatest(actions.GET_INFO, function* (params: any) {
+  yield takeEvery(actions.GET_INFO, function* (params: any) {
     try {
       const msg: Message = {
         method: params.operate.operationType,
