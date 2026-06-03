@@ -9,8 +9,6 @@ import type { WebviewPanel } from 'vscode';
 import type { Message } from '../../interface/api';
 import { WizardCommand } from '../command';
 import { res }           from '../i18n/backEndTrans';
-import { getResource }   from '../../resourceManage/resourceManager';
-import { wizardHtml }    from '../../resourceManage/resourcePath';
 
 export class WizardPanel {
   public panel: WebviewPanel | undefined;
@@ -23,14 +21,17 @@ export class WizardPanel {
 
   toggle(): void {
     if (!this.panel) { return; }
-    const htmlPath = getResource.get(wizardHtml.index);
-    const htmlDir  = path.dirname(htmlPath);
+    // Use context.extensionPath directly — same pattern as code's ChipConfigPanel.
+    // getResource.setConfig is never called in code's extension.ts, so we cannot
+    // rely on the getResource singleton here.
+    const distDir  = path.join(this.context.extensionPath, 'dist');
+    const htmlPath = path.join(distDir, 'wizard.html');
     this.panel.webview.html = fs
       .readFileSync(htmlPath, 'utf-8')
       .replace(
         /(?<prefix><link.+?href="|<script.+?src="|<img.+?src=")(?<src>.+?)"/g,
         (m, $1, $2) =>
-          `${$1 + this.panel?.webview.asWebviewUri(vscode.Uri.file(path.resolve(htmlDir, $2)))}"`,
+          `${$1 + this.panel?.webview.asWebviewUri(vscode.Uri.file(path.resolve(distDir, $2)))}"`,
       )
       .replace('flagdefault', 'flagCreate');
   }

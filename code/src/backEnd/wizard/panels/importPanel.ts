@@ -9,8 +9,6 @@ import type { WebviewPanel } from 'vscode';
 import type { Message } from '../../interface/api';
 import { WizardCommand } from '../command';
 import { res }           from '../i18n/backEndTrans';
-import { getResource }   from '../../resourceManage/resourceManager';
-import { wizardHtml }    from '../../resourceManage/resourcePath';
 
 export class ImportPanel {
   public panel: WebviewPanel | undefined;
@@ -23,14 +21,14 @@ export class ImportPanel {
 
   toggle(): void {
     if (!this.panel) { return; }
-    const htmlPath = getResource.get(wizardHtml.index);
-    const htmlDir  = path.dirname(htmlPath);
+    const distDir  = path.join(this.context.extensionPath, 'dist');
+    const htmlPath = path.join(distDir, 'wizard.html');
     this.panel.webview.html = fs
       .readFileSync(htmlPath, 'utf-8')
       .replace(
         /(?<prefix><link.+?href="|<script.+?src="|<img.+?src=")(?<src>.+?)"/g,
         (m, $1, $2) =>
-          `${$1 + this.panel?.webview.asWebviewUri(vscode.Uri.file(path.resolve(htmlDir, $2)))}"`,
+          `${$1 + this.panel?.webview.asWebviewUri(vscode.Uri.file(path.resolve(distDir, $2)))}"`,
       )
       .replace('flagdefault', 'flagImport');
   }
