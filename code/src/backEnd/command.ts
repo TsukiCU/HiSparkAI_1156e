@@ -2266,12 +2266,6 @@ export class Command {
     if (!connected) {
       const availableCmds = await vscode.commands.getCommands(true);
 
-      if (!fs.existsSync(remoteBuildPath)) {
-        const msg = 'remote-build.json: File not found.';
-        extension.chipConfigPanel?.postMessage({ type: 'Error', params: { description: msg } });
-        return;
-      }
-
       let ret;
       if (availableCmds.includes(this.remoteCmdLib.connectCmd)) {
         ret = await vscode.commands.executeCommand(this.remoteCmdLib.connectCmd);
@@ -2284,6 +2278,12 @@ export class Command {
       }
       if (!ret) {
         vscode.window.showErrorMessage('Not connected to remote server.');
+        return;
+      }
+
+      if (!fs.existsSync(remoteBuildPath)) {
+        const msg = 'remote-build.json: File not found.';
+        extension.chipConfigPanel?.postMessage({ type: 'Error', params: { description: msg } });
         return;
       }
 
