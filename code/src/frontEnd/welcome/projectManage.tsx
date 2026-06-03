@@ -53,8 +53,8 @@ const ProjectManage: React.FC = (): React.JSX.Element => {
   return (
     <>
       <div id='project-manage'>
-        {projectManageAction('newProject', 'showProjectWizard', newProjectBg, newProjectIcon)}
-        {projectManageAction('importProject', 'showProjectImport', importProjectBg, importProjectIcon)}
+        {projectManageAction('newProject', 'HisparkAI.showProjectWizard', newProjectBg, newProjectIcon)}
+        {projectManageAction('importProject', 'HisparkAI.showProjectImport', importProjectBg, importProjectIcon)}
       </div>
     </>
   );

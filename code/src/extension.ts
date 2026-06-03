@@ -366,7 +366,7 @@ export default class Extension {
     }
 
     // ── Project Wizard commands ────────────────────────────────────────────────
-    const showProjectWizardCommand = vscode.commands.registerCommand('showProjectWizard', () => {
+    const showProjectWizardCommand = vscode.commands.registerCommand('HisparkAI.showProjectWizard', () => {
       if (!WizardContext.wizardPanel?.panel) {
         WizardContext.wizardPanel = new WizardPanel(context);
       }
@@ -374,7 +374,7 @@ export default class Extension {
       WizardContext.wizardPanel.panel?.reveal();
     });
 
-    const showProjectImportCommand = vscode.commands.registerCommand('showProjectImport', () => {
+    const showProjectImportCommand = vscode.commands.registerCommand('HisparkAI.showProjectImport', () => {
       if (!WizardContext.importPanel?.panel) {
         WizardContext.importPanel = new ImportPanel(context);
       }

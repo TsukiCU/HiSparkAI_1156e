@@ -56,12 +56,12 @@
         "icon": "resources/28px_AI.svg"
       },
       {
-        "command": "showProjectWizard",
+        "command": "HisparkAI.showProjectWizard",
         "title": "New Project",
         "category": "HisparkAI"
       },
       {
-        "command": "showProjectImport",
+        "command": "HisparkAI.showProjectImport",
         "title": "Import Project",
         "category": "HisparkAI"
       }
