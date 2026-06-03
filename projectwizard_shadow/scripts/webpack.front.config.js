@@ -30,7 +30,10 @@ module.exports = {
   mode:    'development',
   entry,
   output: {
-    filename: 'bundle.js',
+    // Light build has a CSS-only entry; webpack still emits a JS file, which
+    // would overwrite the dark build's bundle.js with 0 bytes. Redirect it to
+    // a harmless placeholder that is excluded from the .vsix by .vscodeignore.
+    filename: theme === 'dark' ? 'bundle.js' : '_noop.js',
     path:     path.join(rootDir, 'dist'),
   },
   // VSCode webview bundles are not served over the network, so size hints
