@@ -42,6 +42,24 @@ function callback(key: string, data: any, target: 'wizard' | 'import' = 'wizard'
   }
 }
 
+// ─── SDK path validation ──────────────────────────────────────────────────────
+
+/**
+ * Validate that sdkPath is a legitimate SDK for the given chip.
+ * For ws63 and 3322, we check for the chip-specific JSON config file that
+ * code/extension.ts uses to detect the target (detectTargetFromWorkspace).
+ * For other chips validation is skipped (returns true).
+ */
+function validateSdkForChip(soc: string, sdkPath: string): boolean {
+  if (!sdkPath || !fs.existsSync(sdkPath)) { return false; }
+  if (soc === 'ws63' || soc === '3322') {
+    const configPath = path.join(sdkPath, 'build', 'config', 'target_config', soc, `${soc}.json`);
+    if (!fs.existsSync(configPath)) { return false; }
+    try { JSON.parse(fs.readFileSync(configPath, 'utf-8')); return true; } catch { return false; }
+  }
+  return true;
+}
+
 // ─── Minimal .hiproj writer ───────────────────────────────────────────────────
 
 function writeHiproj(projectData: ShadowProjectData, hiprojDir: string, sdkDir: string): void {
@@ -123,6 +141,18 @@ export class WizardCommand {
         callback(key, result[0].fsPath);
       }
     });
+  }
+
+  // ── SDK validation ─────────────────────────────────────────────────────────
+
+  static updateSdkTips(operate: OperateStruct): void {
+    const { soc, sdkPath } = operate.paramData ?? {};
+    if (!sdkPath) { return; }
+    if (validateSdkForChip(soc, sdkPath)) {
+      callback('sdkPathRightInfo', sdkPath);
+    } else {
+      callback('sdkPathWrongInfo', sdkPath);
+    }
   }
 
   // ── Path validation ────────────────────────────────────────────────────────
