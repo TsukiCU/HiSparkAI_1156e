@@ -3350,11 +3350,12 @@ export class Command {
       }
       const extraPath1 = path.join(currentDir, 'tools', 'converter', 'lib');
       const extraPath2 = path.join(currentDir, 'tools', 'converter', 'converter');
-      const extraPath3 = path.join(toolsPath, 'tools', 'Windows', 'cc_riscv32_musl_win', 'riscv32-linux-musl', 'bin');
+      const extraPath3 = path.join(toolsPath, 'tools', 'Windows', 'cc_riscv32_musl_win', 'bin');
+      const extraPath4 = path.join(toolsPath, 'tools', 'Windows', 'cc_riscv32_musl_win', 'riscv32-linux-musl', 'bin');
 
       const env = {
         ...process.env,
-        PATH: `${extraPath1};${extraPath2};${extraPath3};${process.env.PATH}`,
+        PATH: `${extraPath1};${extraPath2};${extraPath3};${extraPath4};${process.env.PATH}`,
       };
 
       if (!fs.existsSync(scriptPath)) {
