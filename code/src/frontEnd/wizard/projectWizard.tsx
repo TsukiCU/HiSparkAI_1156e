@@ -23,9 +23,9 @@ const ALLOWED_SOCS = new Set(['ws63', '3322', '1156e']);
 
 // SOC-to-platform mapping (auto-set, not editable by user).
 const PLATFORM_MAP: Record<string, { platform: 'CPU' | 'NPU'; fixed: boolean }> = {
-  ws63:    { platform: 'CPU', fixed: true  },
-  '3322':  { platform: 'NPU', fixed: true  },
-  '1156e': { platform: 'CPU', fixed: false },
+  ws63:    { platform: 'CPU', fixed: true },
+  '3322':  { platform: 'NPU', fixed: true },
+  '1156e': { platform: 'NPU', fixed: true },
 };
 
 // Chips for which SDK path validation is performed.
@@ -180,7 +180,9 @@ const ProjectWizard = (): JSX.Element => {
 
   // ── browse handlers ───────────────────────────────────────────────────────
   const onBrowseSdkPath = (): void => {
-    dispatch(getInfo({ operationType: 'selectFolderPath', paramData: { key: 'sdkPathInfo', currentValue: sdkPath }, source: 'wizard' }));
+    // Pass the selected SOC so the backend can use the chip-specific SDK picker
+    // (e.g. QuickPick for 1156e instead of a local folder browser).
+    dispatch(getInfo({ operationType: 'selectFolderPath', paramData: { key: 'sdkPathInfo', currentValue: sdkPath, soc }, source: 'wizard' }));
   };
 
   const onBrowsePath = (): void => {

@@ -89,7 +89,7 @@ export default class Extension {
    */
   public async activate(context: vscode.ExtensionContext): Promise<void> {
     let target = detectTargetFromWorkspace();
-    let iniPath;
+    let iniPath: string | undefined;
     let isActiveProjectFound = false;
     const workspaceFolderPath = getWorkFolderPath();
     const storageDir = path.dirname(context.globalStorageUri.fsPath);
@@ -107,22 +107,43 @@ export default class Extension {
 
     if (isActiveProjectFound) {
       GlobalModel.instance.hiprojPath = iniPath;
-      // Derive the xxx_hiproj folder from the .hiproj file location.
-      // New layout: {projectPath}/{name}_hiproj/{name}.hiproj  → hiprojDir = {projectPath}/{name}_hiproj/
-      // Legacy layout: {workspaceFolder}/{name}.hiproj          → hiprojDir = workspaceFolder (backward-compat)
-      GlobalModel.instance.hiprojDir = path.dirname(iniPath);
-      // detectTargetFromWorkspace() only checks for ws63.json / 3322.json.
-      // If the SDK passes wizard validation via a different chip JSON, target stays NONE.
-      // Fall back to the platform field written into the .hiproj by the wizard.
-      if (target === 'NONE' && iniPath && fs.existsSync(iniPath)) {
+      GlobalModel.instance.hiprojDir = path.dirname(iniPath!);
+
+      if (iniPath && fs.existsSync(iniPath)) {
         try {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const ini = require('ini');
           const hiprojContent = ini.parse(fs.readFileSync(iniPath, 'utf-8'));
-          const platform = String(hiprojContent?.information?.platform ?? '').toUpperCase();
-          if (platform === 'CPU') { target = 'CPU'; }
-          else if (platform === 'NPU') { target = 'NPU'; }
-        } catch { /* keep NONE on read failure */ }
+
+          // Fall back to .hiproj platform when detectTargetFromWorkspace() returns NONE.
+          if (target === 'NONE') {
+            const platform = String(hiprojContent?.information?.platform ?? '').toUpperCase();
+            if (platform === 'CPU') { target = 'CPU'; }
+            else if (platform === 'NPU') { target = 'NPU'; }
+          }
+
+          // Restore connection type (wsl / linux) written by the wizard into the .hiproj
+          // so the AI pipeline can skip the connection prompt on first open.
+          const connType = String(hiprojContent?.information?.connection_type ?? '');
+          if (connType === 'wsl') {
+            GlobalModel.instance.source = 'wsl';
+            GlobalModel.instance.wslDistro = String(hiprojContent?.information?.wsl_distro ?? '');
+          } else if (connType === 'linux') {
+            GlobalModel.instance.source = 'linux';
+          }
+        } catch { /* keep defaults on read failure */ }
+      }
+
+      // Show both SDK folder and hiproj folder in the workspace explorer.
+      const hiprojDir = path.dirname(iniPath!);
+      const alreadyAdded = vscode.workspace.workspaceFolders?.some(
+        (f) => path.normalize(f.uri.fsPath) === path.normalize(hiprojDir),
+      );
+      if (!alreadyAdded && vscode.workspace.workspaceFolders) {
+        vscode.workspace.updateWorkspaceFolders(
+          vscode.workspace.workspaceFolders.length, 0,
+          { uri: vscode.Uri.file(hiprojDir), name: `${path.basename(hiprojDir)}` },
+        );
       }
     } else {
       target = 'NONE'; // Present welcome page if no hiproj file is found.
@@ -390,6 +411,31 @@ export default class Extension {
       return isEnvPath && buildPathExist;
     }
 
+    // ── openProjectByPath — called by main command.ts openProject handler ───────
+    // Opens the SDK folder (and shows the AI panel) when the user clicks "Open"
+    // in the welcome page project list.
+    const openProjectByPathCommand = vscode.commands.registerCommand(
+      'openProjectByPath',
+      async (folderPath: string, _reason?: string) => {
+        if (!folderPath || !fs.existsSync(folderPath)) {
+          vscode.window.showErrorMessage(`Project path does not exist: ${folderPath}`);
+          return;
+        }
+        const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
+        const same = path.normalize(currentWs).toLowerCase() === path.normalize(folderPath).toLowerCase();
+        if (same) {
+          // Workspace already open — no reload needed, just show the AI panel.
+          vscode.commands.executeCommand('HisparkAI.show');
+          return;
+        }
+        // Write marker so activate() shows the AI panel after reload.
+        if (WizardContext.pendingOpenMarkerPath) {
+          try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+        }
+        await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folderPath));
+      },
+    );
+
     // ── Project Wizard commands ────────────────────────────────────────────────
     const showProjectWizardCommand = vscode.commands.registerCommand('HisparkAI.showProjectWizard', () => {
       if (!WizardContext.wizardPanel?.panel) {
@@ -408,6 +454,7 @@ export default class Extension {
     });
 
     context.subscriptions.push(
+      openProjectByPathCommand,
       manageToolchainCommand,
       chipConfigCommand,
       chipHomeConfigCommand,

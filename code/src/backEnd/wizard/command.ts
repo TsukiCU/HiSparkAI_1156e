@@ -9,6 +9,7 @@ import * as fs    from 'fs';
 import * as path  from 'path';
 import * as vscode from 'vscode';
 import * as ini   from 'ini';
+import * as cp    from 'child_process';
 
 import { WizardContext }   from './context';
 import { res }             from './i18n/backEndTrans';
@@ -72,14 +73,16 @@ function writeHiproj(projectData: ShadowProjectData, hiprojDir: string, sdkDir: 
   const hiprojPath = path.join(hiprojDir, `${projectData.projectName}.hiproj`);
   const content = {
     information: {
-      'board_build.mcu': projectData.soc,
-      board:             projectData.board,
-      platform:          projectData.platform,
-      project_name:      projectData.projectName,
-      project_path:      hiprojDir,
-      sdk_path:          sdkDir,
-      series_name:       'shadow',
-      project_type:      'SHADOW',
+      'board_build.mcu':  projectData.soc,
+      board:              projectData.board,
+      platform:           projectData.platform,
+      project_name:       projectData.projectName,
+      project_path:       hiprojDir,
+      sdk_path:           sdkDir,
+      series_name:        'shadow',
+      project_type:       'SHADOW',
+      connection_type:    projectData.connectionType ?? '',
+      wsl_distro:         projectData.wslDistro ?? '',
     },
     compile: {},
     debug:   {},
@@ -125,13 +128,23 @@ export class WizardCommand {
   // ── User config ────────────────────────────────────────────────────────────
 
   static getUserConfig(_operate: OperateStruct): void {
-    callback('userConfig', { projectCreate_last_projectPath: getUserDir() });
+    // Return empty string — the wizard pre-fills no path so the user always
+    // makes an explicit choice. Within a session the folder dialog remembers
+    // the last directory via the currentValue parameter in selectFolderPath.
+    callback('userConfig', { projectCreate_last_projectPath: '' });
   }
 
-  // ── Project path dialog ────────────────────────────────────────────────────
+  // ── Project / SDK path dialog ──────────────────────────────────────────────
 
   static selectFolderPath(operate: OperateStruct): void {
-    const { key, currentValue } = operate.paramData ?? {};
+    const { key, currentValue, soc } = operate.paramData ?? {};
+
+    // 1156e SDK lives on a remote (Linux or WSL); use a specialised picker.
+    if (soc === '1156e' && key === 'sdkPathInfo') {
+      WizardCommand.selectSdkPathFor1156e(key);
+      return;
+    }
+
     const defaultUri = currentValue && fs.existsSync(currentValue)
       ? vscode.Uri.file(currentValue)
       : vscode.Uri.file(getUserDir());
@@ -147,6 +160,93 @@ export class WizardCommand {
         callback(key, result[0].fsPath);
       }
     });
+  }
+
+  // ── 1156e SDK picker (Linux remote or WSL) ────────────────────────────────
+
+  static async selectSdkPathFor1156e(key: string): Promise<void> {
+    const OPT_LINUX = 'Connect using Linux';
+    const OPT_WSL   = 'Connect using WSL';
+
+    const selection = await vscode.window.showQuickPick([OPT_LINUX, OPT_WSL], {
+      title:       'Select connection method for 1156E SDK',
+      placeHolder: 'Choose how the 1156E SDK is accessed...',
+    });
+    if (!selection) { return; }
+
+    if (selection === OPT_LINUX) {
+      // Connect to the remote Linux server first.
+      const availableCmds = await vscode.commands.getCommands(true);
+      if (!availableCmds.includes('remoteBuild.connectLite')) {
+        vscode.window.showWarningMessage('remoteBuild extension is not available. Please install HiSpark Studio.');
+        return;
+      }
+      const connected = await vscode.commands.executeCommand('remoteBuild.connectLite');
+      if (!connected) {
+        vscode.window.showWarningMessage('Failed to connect to remote server.');
+        return;
+      }
+      // Browse a directory on the remote server.
+      const remotePath = await vscode.commands.executeCommand<string | undefined>(
+        'remoteBuild.api.browseRemoteDirectory',
+      );
+      if (!remotePath) { return; }
+      WizardContext.pendingConnectionType = 'linux';
+      WizardContext.pendingWslDistro      = undefined;
+      callback(key, remotePath);
+
+    } else {
+      // WSL: let user choose a distribution, then pick a local folder.
+      const distros = await WizardCommand.getWslDistros();
+      if (!distros.length) {
+        vscode.window.showWarningMessage('No WSL distributions found. Please install WSL first.');
+        return;
+      }
+      const selectedDistro = await vscode.window.showQuickPick(distros, {
+        title:       'Select WSL Distribution',
+        placeHolder: 'Choose a WSL distro...',
+      });
+      if (!selectedDistro) { return; }
+
+      const result = await vscode.window.showOpenDialog({
+        canSelectFiles:   false,
+        canSelectFolders: true,
+        canSelectMany:    false,
+        defaultUri:       vscode.Uri.file(getUserDir()),
+        title:            `Select 1156E SDK folder (WSL: ${selectedDistro})`,
+      });
+      if (!result?.[0]?.fsPath) { return; }
+
+      WizardContext.pendingConnectionType = 'wsl';
+      WizardContext.pendingWslDistro      = selectedDistro;
+      callback(key, result[0].fsPath);
+    }
+  }
+
+  // ── WSL distro enumeration ────────────────────────────────────────────────
+
+  private static async getWslDistros(): Promise<string[]> {
+    return new Promise((resolve) => {
+      cp.exec('wsl --list --quiet', { encoding: 'buffer' }, (err, stdout) => {
+        if (err) { resolve([]); return; }
+        // wsl --list outputs UTF-16LE on Windows; strip null bytes then split.
+        const text = Buffer.isBuffer(stdout)
+          ? stdout.toString('utf16le')
+          : String(stdout);
+        const distros = text
+          .split('\n')
+          .map((d) => d.replace(/\r/g, '').replace(/\0/g, '').trim())
+          .filter(Boolean);
+        resolve(distros);
+      });
+    });
+  }
+
+  // ── 1156e SDK validation stub ──────────────────────────────────────────────
+  // TODO: implement chip-specific validation for 1156e.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  static verifySDK(_sdkPath: string, _connectionType: 'linux' | 'wsl'): boolean {
+    return true;
   }
 
   // ── SDK validation ─────────────────────────────────────────────────────────
@@ -184,6 +284,12 @@ export class WizardCommand {
     const sdkDir    = projectData.sdkPath;
     const hiprojDir = path.join(projectData.projectPath, `${projectData.projectName}_hiproj`);
 
+    // Attach the connection type captured during SDK selection (1156e only).
+    projectData.connectionType = WizardContext.pendingConnectionType;
+    projectData.wslDistro      = WizardContext.pendingWslDistro;
+    WizardContext.pendingConnectionType = undefined;
+    WizardContext.pendingWslDistro      = undefined;
+
     // Only check hiprojDir — sdkDir is an existing folder chosen by the user.
     if (fs.existsSync(hiprojDir)) {
       callback('thisProjectExists', new Date().getTime());
@@ -220,11 +326,24 @@ export class WizardCommand {
     }
 
     callback('thisProjectNotExists', new Date().getTime());
-    // Write the marker BEFORE openFolder so extension.ts can consume it on re-activation.
-    if (WizardContext.pendingOpenMarkerPath) {
-      try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+
+    const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
+    const sameWorkspace = path.normalize(currentWs).toLowerCase() === path.normalize(sdkDir).toLowerCase();
+
+    if (sameWorkspace) {
+      // SDK folder is already the active workspace. openFolder would do nothing;
+      // call HisparkAI.show directly so the user lands on the AI panel.
+      if (WizardContext.pendingOpenMarkerPath) {
+        try { fs.unlinkSync(WizardContext.pendingOpenMarkerPath); } catch { /* ignore */ }
+      }
+      vscode.commands.executeCommand('HisparkAI.show');
+    } else {
+      // Write the marker BEFORE openFolder so extension.ts consumes it on re-activation.
+      if (WizardContext.pendingOpenMarkerPath) {
+        try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+      }
+      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(sdkDir));
     }
-    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(sdkDir));
     WizardContext.deactivate('wizard');
   }
 
