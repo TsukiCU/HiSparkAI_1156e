@@ -26,6 +26,8 @@ import {
   getUserDir,
   upsertProjectDataJson,
   removeProjectDataJson,
+  upsertMainProjectList,
+  removeFromMainProjectList,
 } from './utils';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -230,6 +232,8 @@ export class WizardCommand {
       addItemsToProList([item], WizardContext.globalStoragePath);
       updateOneItemToLatestList(item, WizardContext.globalStoragePath);
       upsertProjectDataJson(sdkDir, hiprojFilePath, WizardContext.globalStoragePath);
+      // Also write to projectlist.json so the hisparkai welcome page shows this project.
+      upsertMainProjectList(item, WizardContext.globalStoragePath);
     }
 
     callback('thisProjectNotExists', new Date().getTime());
@@ -265,6 +269,8 @@ export class WizardCommand {
     if (sdkDir) {
       removeProjectDataJson(sdkDir, WizardContext.globalStoragePath);
     }
+    // Keep projectlist.json in sync.
+    removeFromMainProjectList(projectPath, WizardContext.globalStoragePath);
   }
 
   // ─── Import panel ─────────────────────────────────────────────────────────

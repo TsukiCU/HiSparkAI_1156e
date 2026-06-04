@@ -92,6 +92,35 @@ export function removeProjectDataJson(sdkDir: string, globalStoragePath: string)
   fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8');
 }
 
+// ─── Main plugin project list bridge ─────────────────────────────────────────
+// ChipConfigPanel.toggle() reads projectlist.json at
+//   path.join(context.globalStorageUri.fsPath, '../../../projectlist.json')
+// to populate the welcome page's project list (window.initialDemoData).
+// The wizard must also write to this file so created projects appear there.
+
+const MAIN_PROJECT_LIST = 'projectlist.json';
+
+function getMainListPath(globalStoragePath: string): string {
+  // globalStoragePath === context.globalStorageUri.fsPath
+  //   e.g. .../Code/User/globalStorage/HiSpark.hisparkai
+  // Three levels up lands at .../Code/ — same base as ChipConfigPanel.configPath.
+  return path.join(globalStoragePath, '../../..', MAIN_PROJECT_LIST);
+}
+
+export function upsertMainProjectList(item: ProjectListItem, globalStoragePath: string): void {
+  const filePath = getMainListPath(globalStoragePath);
+  const list: ProjectListItem[] = readJsonSafe(filePath);
+  const idx = list.findIndex((x) => x.path === item.path);
+  if (idx >= 0) { list[idx] = item; } else { list.push(item); }
+  try { fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8'); } catch { /* ignore */ }
+}
+
+export function removeFromMainProjectList(targetPath: string, globalStoragePath: string): void {
+  const filePath = getMainListPath(globalStoragePath);
+  const list = readJsonSafe(filePath).filter((x: any) => x.path !== targetPath);
+  try { fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8'); } catch { /* ignore */ }
+}
+
 // ─── hiproj helpers ───────────────────────────────────────────────────────────
 
 export function getHiprojContent(hiprojPath: string): any {

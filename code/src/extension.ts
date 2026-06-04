@@ -111,6 +111,19 @@ export default class Extension {
       // New layout: {projectPath}/{name}_hiproj/{name}.hiproj  → hiprojDir = {projectPath}/{name}_hiproj/
       // Legacy layout: {workspaceFolder}/{name}.hiproj          → hiprojDir = workspaceFolder (backward-compat)
       GlobalModel.instance.hiprojDir = path.dirname(iniPath);
+      // detectTargetFromWorkspace() only checks for ws63.json / 3322.json.
+      // If the SDK passes wizard validation via a different chip JSON, target stays NONE.
+      // Fall back to the platform field written into the .hiproj by the wizard.
+      if (target === 'NONE' && iniPath && fs.existsSync(iniPath)) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const ini = require('ini');
+          const hiprojContent = ini.parse(fs.readFileSync(iniPath, 'utf-8'));
+          const platform = String(hiprojContent?.information?.platform ?? '').toUpperCase();
+          if (platform === 'CPU') { target = 'CPU'; }
+          else if (platform === 'NPU') { target = 'NPU'; }
+        } catch { /* keep NONE on read failure */ }
+      }
     } else {
       target = 'NONE'; // Present welcome page if no hiproj file is found.
     }
