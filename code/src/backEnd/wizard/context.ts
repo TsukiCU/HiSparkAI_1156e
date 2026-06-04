@@ -10,7 +10,15 @@ type PanelLike = { postMessage(msg: any): void; onPanelDisposed(): void; toggle(
 
 export class WizardContext {
   static globalStoragePath: string | undefined;
-  static extensionPath: string | undefined;
+  static extensionPath:     string | undefined;
+
+  // Path to projectlist.json — set in extension.ts using the SAME calculation as
+  // ChipConfigPanel.configPath so both always point to the same file.
+  static mainProjectListPath: string | undefined;
+
+  // Path to the "wizard opened this folder" marker file.
+  // When present at activation time, HisparkAI.show is called and the file is deleted.
+  static pendingOpenMarkerPath: string | undefined;
 
   static wizardPanel: PanelLike | undefined;
   static importPanel: PanelLike | undefined;

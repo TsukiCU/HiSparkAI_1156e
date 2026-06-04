@@ -46,43 +46,24 @@ function callback(key: string, data: any, target: 'wizard' | 'import' = 'wizard'
 
 // ─── SDK path validation ──────────────────────────────────────────────────────
 
-// Files that live flat in build/config/target_config/ rather than a sub-folder.
-// Mirrors projectwizard's inTargetAndHasConfigChipJsons constant.
-const inTargetAndHasConfigChipJsons = ['hi2113.json', 'hi2131.json', 'hi2131c.json'];
-
-// Full required-file list from projectwizard — any one present means valid CFBB SDK.
-const CFBB_REQUIRED_FILES = [
-  'bs20.json', 'bs21.json', 'bs21a.json', 'bs20c.json', 'bs20h.json',
-  'bs21e.json', 'bs22.json', 'bs25.json', 'bs26.json',
-  'ws53.json', 'ws63.json', 'socmn2.json', '3322.json',
-  'brandy.json', 'nb17.json', 'nb17e.json', 'nb18.json',
-  'hi2131.json', 'hi2131c.json', 'hi2113.json',
-  'bs27a.json', 'sw21.json',
-];
-
 /**
- * Reproduce projectwizard's validateCfbbSdkPath logic exactly.
- * Returns true if ANY of the required chip JSON files is found and valid.
- * For chips other than ws63 / 3322 validation is skipped.
+ * Validate that sdkPath is a correct SDK for the given chip.
+ *
+ * Rules (strict, chip-specific):
+ *   ws63  → build/config/target_config/ws63/ws63.json must exist
+ *   3322  → build/config/target_config/3322/3322.json must exist
+ *   other → no validation (always valid)
+ *
+ * This mirrors detectTargetFromWorkspace() in extension.ts so the SDK the
+ * wizard accepts is guaranteed to be recognised by the main plugin.
  */
 function validateSdkForChip(soc: string, sdkPath: string): boolean {
   if (!sdkPath || !fs.existsSync(sdkPath)) { return false; }
-  if (soc !== 'ws63' && soc !== '3322') { return true; }
-
-  for (const fileName of CFBB_REQUIRED_FILES) {
-    let jsonPath: string;
-    if (fileName.includes('nb')) {
-      jsonPath = path.join(sdkPath, 'build', 'target_config', fileName);
-    } else if (inTargetAndHasConfigChipJsons.includes(fileName)) {
-      jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', fileName);
-    } else {
-      jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', fileName.replace('.json', ''), fileName);
-    }
-    if (fs.existsSync(jsonPath)) {
-      try { JSON.parse(fs.readFileSync(jsonPath, 'utf-8')); return true; } catch { continue; }
-    }
+  if (soc === 'ws63' || soc === '3322') {
+    const jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', soc, `${soc}.json`);
+    return fs.existsSync(jsonPath);
   }
-  return false;
+  return true;
 }
 
 // ─── Minimal .hiproj writer ───────────────────────────────────────────────────
@@ -233,10 +214,16 @@ export class WizardCommand {
       updateOneItemToLatestList(item, WizardContext.globalStoragePath);
       upsertProjectDataJson(sdkDir, hiprojFilePath, WizardContext.globalStoragePath);
       // Also write to projectlist.json so the hisparkai welcome page shows this project.
-      upsertMainProjectList(item, WizardContext.globalStoragePath);
+      if (WizardContext.mainProjectListPath) {
+        upsertMainProjectList(item, WizardContext.mainProjectListPath);
+      }
     }
 
     callback('thisProjectNotExists', new Date().getTime());
+    // Write the marker BEFORE openFolder so extension.ts can consume it on re-activation.
+    if (WizardContext.pendingOpenMarkerPath) {
+      try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+    }
     await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(sdkDir));
     WizardContext.deactivate('wizard');
   }
@@ -270,7 +257,9 @@ export class WizardCommand {
       removeProjectDataJson(sdkDir, WizardContext.globalStoragePath);
     }
     // Keep projectlist.json in sync.
-    removeFromMainProjectList(projectPath, WizardContext.globalStoragePath);
+    if (WizardContext.mainProjectListPath) {
+      removeFromMainProjectList(projectPath, WizardContext.mainProjectListPath);
+    }
   }
 
   // ─── Import panel ─────────────────────────────────────────────────────────
@@ -359,6 +348,9 @@ export class WizardCommand {
 
     if (!sdkDir) { sdkDir = path.dirname(hiprojPath); }
 
+    if (WizardContext.pendingOpenMarkerPath) {
+      try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+    }
     await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(sdkDir));
   }
 

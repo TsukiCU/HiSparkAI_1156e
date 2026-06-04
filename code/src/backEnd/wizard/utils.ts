@@ -93,32 +93,22 @@ export function removeProjectDataJson(sdkDir: string, globalStoragePath: string)
 }
 
 // ─── Main plugin project list bridge ─────────────────────────────────────────
-// ChipConfigPanel.toggle() reads projectlist.json at
-//   path.join(context.globalStorageUri.fsPath, '../../../projectlist.json')
-// to populate the welcome page's project list (window.initialDemoData).
-// The wizard must also write to this file so created projects appear there.
+// ChipConfigPanel.toggle() reads projectlist.json (path stored as ChipConfigPanel.configPath)
+// to populate window.initialDemoData for the welcome page's project list.
+// The wizard writes to the SAME file using the path pre-computed in extension.ts
+// (WizardContext.mainProjectListPath) so there is no independent path calculation that
+// could drift from ChipConfigPanel's path on non-standard IDE installs.
 
-const MAIN_PROJECT_LIST = 'projectlist.json';
-
-function getMainListPath(globalStoragePath: string): string {
-  // globalStoragePath === context.globalStorageUri.fsPath
-  //   e.g. .../Code/User/globalStorage/HiSpark.hisparkai
-  // Three levels up lands at .../Code/ — same base as ChipConfigPanel.configPath.
-  return path.join(globalStoragePath, '../../..', MAIN_PROJECT_LIST);
-}
-
-export function upsertMainProjectList(item: ProjectListItem, globalStoragePath: string): void {
-  const filePath = getMainListPath(globalStoragePath);
-  const list: ProjectListItem[] = readJsonSafe(filePath);
+export function upsertMainProjectList(item: ProjectListItem, mainProjectListPath: string): void {
+  const list: ProjectListItem[] = readJsonSafe(mainProjectListPath);
   const idx = list.findIndex((x) => x.path === item.path);
   if (idx >= 0) { list[idx] = item; } else { list.push(item); }
-  try { fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8'); } catch { /* ignore */ }
+  try { fs.writeFileSync(mainProjectListPath, JSON.stringify(list, null, 2), 'utf-8'); } catch { /* ignore */ }
 }
 
-export function removeFromMainProjectList(targetPath: string, globalStoragePath: string): void {
-  const filePath = getMainListPath(globalStoragePath);
-  const list = readJsonSafe(filePath).filter((x: any) => x.path !== targetPath);
-  try { fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8'); } catch { /* ignore */ }
+export function removeFromMainProjectList(targetPath: string, mainProjectListPath: string): void {
+  const list = readJsonSafe(mainProjectListPath).filter((x: any) => x.path !== targetPath);
+  try { fs.writeFileSync(mainProjectListPath, JSON.stringify(list, null, 2), 'utf-8'); } catch { /* ignore */ }
 }
 
 // ─── hiproj helpers ───────────────────────────────────────────────────────────

@@ -128,9 +128,21 @@ export default class Extension {
       target = 'NONE'; // Present welcome page if no hiproj file is found.
     }
 
+    // Consume the "wizard-triggered open" marker written before vscode.openFolder.
+    // The marker distinguishes an explicit project open (show AI panel) from a
+    // plain window reload (stay on welcome page).
+    const pendingMarkerPath = path.join(storageDir, 'wizard_pending_open.json');
+    const wizardPendingOpen = fs.existsSync(pendingMarkerPath);
+    if (wizardPendingOpen) {
+      try { fs.unlinkSync(pendingMarkerPath); } catch { /* ignore */ }
+    }
+
     // Initialise wizard context so wizard commands can access extension globals.
-    WizardContext.globalStoragePath = context.globalStorageUri.fsPath;
-    WizardContext.extensionPath     = context.extensionPath;
+    WizardContext.globalStoragePath    = context.globalStorageUri.fsPath;
+    WizardContext.extensionPath        = context.extensionPath;
+    // Computed identically to ChipConfigPanel.configPath so both point to the same file.
+    WizardContext.mainProjectListPath  = path.join(context.globalStorageUri.fsPath, '../../../projectlist.json');
+    WizardContext.pendingOpenMarkerPath = pendingMarkerPath;
 
     const homeTreeProvider = new HomeTreeDataProvider();
     vscode.window.registerTreeDataProvider('hisparkai-home', homeTreeProvider);
@@ -414,8 +426,9 @@ export default class Extension {
     // on theme change
     vscode.window.onDidChangeActiveColorTheme(this.onThemeChange.bind(this));
 
-    // set target and activate.
-    if (target !== 'NONE') {
+    // Show the AI panel only when the wizard explicitly opened this workspace.
+    // Plain reloads (e.g. Developer: Reload Window) must NOT auto-jump.
+    if (target !== 'NONE' && wizardPendingOpen) {
       vscode.commands.executeCommand('HisparkAI.show');
     }
   }
