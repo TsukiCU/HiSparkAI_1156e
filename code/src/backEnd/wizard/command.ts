@@ -202,11 +202,13 @@ export class WizardCommand {
     if (selection === OPT_LINUX) {
       // Connect to the remote Linux server first.
       const availableCmds = await vscode.commands.getCommands(true);
-      if (!availableCmds.includes('remoteBuild.connectLite')) {
+      if (!availableCmds.includes('remoteBuild.connectFresh')) {
         vscode.window.showWarningMessage('remoteBuild extension is not available. Please install HiSpark Studio.');
         return;
       }
-      const connected = await vscode.commands.executeCommand('remoteBuild.connectLite');
+      // Use connectFresh (not connectLite) so the user always enters credentials
+      // fresh when creating a new project, regardless of any cached remote-build.json.
+      const connected = await vscode.commands.executeCommand('remoteBuild.connectFresh');
       if (!connected) {
         vscode.window.showWarningMessage('Failed to connect to remote server.');
         return;
