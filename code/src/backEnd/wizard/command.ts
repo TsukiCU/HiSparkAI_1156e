@@ -290,6 +290,15 @@ export class WizardCommand {
     WizardContext.pendingConnectionType = undefined;
     WizardContext.pendingWslDistro      = undefined;
 
+    // For Linux 1156e the SDK lives on a remote server; open the local hiproj folder
+    // instead of the remote SDK path (which doesn't exist on this machine).
+    const isLinuxRemote  = projectData.connectionType === 'linux';
+    // The folder VSCode will open as the workspace after project creation.
+    const folderToOpen   = isLinuxRemote ? hiprojDir : sdkDir;
+    // The key stored in projectdata.json — must match what getWorkFolderPath() returns
+    // after the workspace is opened, so extension.ts can find the project on activation.
+    const projectDataKey = isLinuxRemote ? hiprojDir : sdkDir;
+
     // Only check hiprojDir — sdkDir is an existing folder chosen by the user.
     if (fs.existsSync(hiprojDir)) {
       callback('thisProjectExists', new Date().getTime());
@@ -318,22 +327,25 @@ export class WizardCommand {
     if (WizardContext.globalStoragePath) {
       addItemsToProList([item], WizardContext.globalStoragePath);
       updateOneItemToLatestList(item, WizardContext.globalStoragePath);
-      upsertProjectDataJson(sdkDir, hiprojFilePath, WizardContext.globalStoragePath);
-      // Also write to projectlist.json so the hisparkai welcome page shows this project.
+      upsertProjectDataJson(projectDataKey, hiprojFilePath, WizardContext.globalStoragePath);
       if (WizardContext.mainProjectListPath) {
         upsertMainProjectList(item, WizardContext.mainProjectListPath);
       }
     }
 
+    // Pass platform and hiproj path to showFromWizard via context — avoids
+    // unreliable path-string comparison when detecting target after same-workspace open.
+    WizardContext.pendingPlatform   = projectData.platform;
+    WizardContext.pendingHiprojPath = hiprojFilePath;
+
     callback('thisProjectNotExists', new Date().getTime());
 
-    const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
-    const sameWorkspace = path.normalize(currentWs).toLowerCase() === path.normalize(sdkDir).toLowerCase();
+    const currentWs    = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
+    const sameWorkspace = path.normalize(currentWs).toLowerCase() === path.normalize(folderToOpen).toLowerCase();
 
     if (sameWorkspace) {
-      // SDK folder is already the active workspace — openFolder would be a no-op.
-      // Deactivate the wizard panel first (exactly one panel should be visible at a
-      // time), then re-detect the target from the freshly-written projectdata.json.
+      // Folder is already the active workspace — openFolder would be a no-op.
+      // Close the wizard panel first, then switch to the AI panel.
       if (WizardContext.pendingOpenMarkerPath) {
         try { fs.unlinkSync(WizardContext.pendingOpenMarkerPath); } catch { /* ignore */ }
       }
@@ -344,7 +356,7 @@ export class WizardCommand {
       if (WizardContext.pendingOpenMarkerPath) {
         try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
       }
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(sdkDir));
+      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folderToOpen));
     }
     WizardContext.deactivate('wizard');
   }

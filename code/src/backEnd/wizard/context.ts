@@ -14,6 +14,10 @@ export class WizardContext {
   static pendingConnectionType: 'linux' | 'wsl' | undefined;
   static pendingWslDistro:      string | undefined;
 
+  // Passed from getProjectData to showFromWizard to avoid unreliable path comparison.
+  static pendingPlatform:   string | undefined;  // 'CPU' | 'NPU'
+  static pendingHiprojPath: string | undefined;
+
   static wizardPanel: PanelLike | undefined;
   static importPanel: PanelLike | undefined;
 

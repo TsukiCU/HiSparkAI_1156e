@@ -417,40 +417,30 @@ export default class Extension {
     // Using HisparkAI.show directly would use the stale `target` from the activate()
     // closure (which was NONE when the workspace was first opened without a project).
     const showFromWizardCommand = vscode.commands.registerCommand('HisparkAI.showFromWizard', () => {
-      // Ensure all wizard panels are closed — only one panel should be visible.
+      // Close any open wizard panels — only one panel visible at a time.
       WizardContext.deactivate('wizard');
       WizardContext.deactivate('import');
 
-      // Re-read projectdata.json to pick up the entry the wizard just wrote.
-      let freshTarget = detectTargetFromWorkspace();
-      const wsFolderPath2 = getWorkFolderPath();
-      if (fs.existsSync(cachePath)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-          for (const item of data) {
-            if (item.SDK === wsFolderPath2 && item.active) {
-              GlobalModel.instance.hiprojPath = item.active;
-              GlobalModel.instance.hiprojDir  = path.dirname(item.active);
-              // Fall back to .hiproj platform when workspace scan gives NONE.
-              if (freshTarget === 'NONE' && fs.existsSync(item.active)) {
-                try {
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  const ini = require('ini');
-                  const c = ini.parse(fs.readFileSync(item.active, 'utf-8'));
-                  const p = String(c?.information?.platform ?? '').toUpperCase();
-                  if (p === 'CPU') { freshTarget = 'CPU'; }
-                  else if (p === 'NPU') { freshTarget = 'NPU'; }
-                } catch { /* ignore */ }
-              }
-              break;
-            }
-          }
-        } catch { /* ignore */ }
-      }
+      // Read the platform and hiproj path written by getProjectData via WizardContext.
+      // This avoids fragile path-string comparisons against projectdata.json.
+      const pendingPlatform   = WizardContext.pendingPlatform;
+      const pendingHiprojPath = WizardContext.pendingHiprojPath;
+      WizardContext.pendingPlatform   = undefined;
+      WizardContext.pendingHiprojPath = undefined;
+
+      let freshTarget: Target = 'NONE';
+      if (pendingPlatform === 'CPU') { freshTarget = 'CPU'; }
+      else if (pendingPlatform === 'NPU') { freshTarget = 'NPU'; }
 
       if (freshTarget === 'NONE') { return; }
 
-      // Dispose any existing AI panel and open a fresh one with the detected target.
+      // Update GlobalModel so the AI panel has the correct hiproj context.
+      if (pendingHiprojPath) {
+        GlobalModel.instance.hiprojPath = pendingHiprojPath;
+        GlobalModel.instance.hiprojDir  = path.dirname(pendingHiprojPath);
+      }
+
+      // Dispose any existing AI panel and open a fresh one with the correct target.
       if (this.chipConfigPanel?.panel) { this.chipConfigPanel.onPanelDisposed(); }
       this.chipConfigPanel = new ChipConfigPanel(context, freshTarget);
       this.chipConfigPanel.toggle();
