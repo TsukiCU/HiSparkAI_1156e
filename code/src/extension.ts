@@ -411,6 +411,51 @@ export default class Extension {
       return isEnvPath && buildPathExist;
     }
 
+    // ── HisparkAI.showFromWizard ──────────────────────────────────────────────────
+    // Called when the wizard creates/opens a project in the SAME workspace so that
+    // the AI panel is shown with a freshly-detected target.
+    // Using HisparkAI.show directly would use the stale `target` from the activate()
+    // closure (which was NONE when the workspace was first opened without a project).
+    const showFromWizardCommand = vscode.commands.registerCommand('HisparkAI.showFromWizard', () => {
+      // Ensure all wizard panels are closed — only one panel should be visible.
+      WizardContext.deactivate('wizard');
+      WizardContext.deactivate('import');
+
+      // Re-read projectdata.json to pick up the entry the wizard just wrote.
+      let freshTarget = detectTargetFromWorkspace();
+      const wsFolderPath2 = getWorkFolderPath();
+      if (fs.existsSync(cachePath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+          for (const item of data) {
+            if (item.SDK === wsFolderPath2 && item.active) {
+              GlobalModel.instance.hiprojPath = item.active;
+              GlobalModel.instance.hiprojDir  = path.dirname(item.active);
+              // Fall back to .hiproj platform when workspace scan gives NONE.
+              if (freshTarget === 'NONE' && fs.existsSync(item.active)) {
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  const ini = require('ini');
+                  const c = ini.parse(fs.readFileSync(item.active, 'utf-8'));
+                  const p = String(c?.information?.platform ?? '').toUpperCase();
+                  if (p === 'CPU') { freshTarget = 'CPU'; }
+                  else if (p === 'NPU') { freshTarget = 'NPU'; }
+                } catch { /* ignore */ }
+              }
+              break;
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (freshTarget === 'NONE') { return; }
+
+      // Dispose any existing AI panel and open a fresh one with the detected target.
+      if (this.chipConfigPanel?.panel) { this.chipConfigPanel.onPanelDisposed(); }
+      this.chipConfigPanel = new ChipConfigPanel(context, freshTarget);
+      this.chipConfigPanel.toggle();
+    });
+
     // ── openProjectByPath — called by main command.ts openProject handler ───────
     // Opens the SDK folder (and shows the AI panel) when the user clicks "Open"
     // in the welcome page project list.
@@ -424,8 +469,8 @@ export default class Extension {
         const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
         const same = path.normalize(currentWs).toLowerCase() === path.normalize(folderPath).toLowerCase();
         if (same) {
-          // Workspace already open — no reload needed, just show the AI panel.
-          vscode.commands.executeCommand('HisparkAI.show');
+          // Workspace already open — re-detect target and show the AI panel.
+          vscode.commands.executeCommand('HisparkAI.showFromWizard');
           return;
         }
         // Write marker so activate() shows the AI panel after reload.
@@ -454,6 +499,7 @@ export default class Extension {
     });
 
     context.subscriptions.push(
+      showFromWizardCommand,
       openProjectByPathCommand,
       manageToolchainCommand,
       chipConfigCommand,

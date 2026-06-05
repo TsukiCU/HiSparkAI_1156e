@@ -250,11 +250,15 @@ const ProjectWizard = (): JSX.Element => {
         }
       >
         <div style={{ marginBottom: 20 }}>
-          <strong style={{ fontSize: 16 }}>{t('projectCreateTitle')}</strong>
-          <p style={{ margin: '4px 0 0', color: '#a3a3a3', fontSize: 13 }}>{t('projectCreateDescription')}</p>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: 4 }}>
+            {t('projectCreateTitle')}
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+            {t('projectCreateDescription')}
+          </div>
         </div>
 
-        <Form layout="vertical" form={form} autoComplete="off">
+        <Form layout="vertical" form={form} autoComplete="off" requiredMark={false}>
 
           {/* ── Row 1: SOC + Board + Platform ── */}
           <Row gutter={16}>

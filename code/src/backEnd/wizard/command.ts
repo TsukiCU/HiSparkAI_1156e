@@ -331,12 +331,14 @@ export class WizardCommand {
     const sameWorkspace = path.normalize(currentWs).toLowerCase() === path.normalize(sdkDir).toLowerCase();
 
     if (sameWorkspace) {
-      // SDK folder is already the active workspace. openFolder would do nothing;
-      // call HisparkAI.show directly so the user lands on the AI panel.
+      // SDK folder is already the active workspace — openFolder would be a no-op.
+      // Deactivate the wizard panel first (exactly one panel should be visible at a
+      // time), then re-detect the target from the freshly-written projectdata.json.
       if (WizardContext.pendingOpenMarkerPath) {
         try { fs.unlinkSync(WizardContext.pendingOpenMarkerPath); } catch { /* ignore */ }
       }
-      vscode.commands.executeCommand('HisparkAI.show');
+      WizardContext.deactivate('wizard');
+      vscode.commands.executeCommand('HisparkAI.showFromWizard');
     } else {
       // Write the marker BEFORE openFolder so extension.ts consumes it on re-activation.
       if (WizardContext.pendingOpenMarkerPath) {

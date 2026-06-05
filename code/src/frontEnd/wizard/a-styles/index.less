@@ -56,6 +56,19 @@ h1, h2, h3, h4, h5, h6 { color: @colorForeground; font-family: MicrosoftYaHei; }
 .ant-input { background-color: @input-background-color; border-color: @input-border-color; border-radius: 8px; color: @colorForeground; &::placeholder { color: @textColorPlaceholder; } }
 .ant-input[disabled] { background-color: @input-background-color; border-color: @input-border-color; }
 
+// Form label color — match projectwizard's lighter gray tone (not pure white).
+.ant-form-item-label > label {
+  color: rgba(255, 255, 255, 0.65) !important;
+  font-size: 13px;
+}
+
+// Ensure no required-field asterisk appears (requiredMark={false} handles React-side,
+// this guards against any CSS-level injection).
+.ant-form-item-required::before,
+.ant-form-item-required::after {
+  display: none !important;
+}
+
 // antd error state resets input bg to @input-bg (#fff) via .ant-form-item-has-error.
 // Inputs inside Input.Group don't receive the status-error class, so we must
 // override the form-item-has-error cascade explicitly.
