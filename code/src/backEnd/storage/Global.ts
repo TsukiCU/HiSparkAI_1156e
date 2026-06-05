@@ -37,6 +37,9 @@ export class GlobalModel {
   // wsl specific.
   private _wslDistro?: string | undefined;
 
+  // SOC identifier ('ws63', '3322', '1156e', …) read from .hiproj on activation.
+  private _soc?: string | undefined;
+
   private constructor() { }
 
   public static get instance(): GlobalModel {
@@ -117,6 +120,9 @@ export class GlobalModel {
   set wslDistro(value: string | undefined) {
     this._wslDistro = value;
   }
+
+  get soc(): string | undefined { return this._soc; }
+  set soc(value: string | undefined) { this._soc = value; }
 }
 
 export enum targetPlatform {

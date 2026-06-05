@@ -122,6 +122,10 @@ export default class Extension {
             else if (platform === 'NPU') { target = 'NPU'; }
           }
 
+          // Restore SOC so command.ts can skip the source-selection dialog for 1156e.
+          const soc = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
+          if (soc) { GlobalModel.instance.soc = soc; }
+
           // Restore connection type (wsl / linux) written by the wizard into the .hiproj
           // so the AI pipeline can skip the connection prompt on first open.
           const connType = String(hiprojContent?.information?.connection_type ?? '');
@@ -456,14 +460,41 @@ export default class Extension {
           vscode.window.showErrorMessage(`Project path does not exist: ${folderPath}`);
           return;
         }
+
+        // For 1156e: read the connection type from the .hiproj and connect first.
+        // folderPath is the hiproj folder (sdk_path = hiprojDir for 1156e Linux).
+        try {
+          const hiprojFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('.hiproj'));
+          if (hiprojFiles.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const ini = require('ini');
+            const hiprojContent = ini.parse(fs.readFileSync(path.join(folderPath, hiprojFiles[0]), 'utf-8'));
+            const chipSoc     = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
+            const connType    = String(hiprojContent?.information?.connection_type ?? '');
+            if (chipSoc === '1156e') {
+              if (connType === 'linux') {
+                // Reconnect to the Linux remote server before opening the workspace.
+                const availableCmds = await vscode.commands.getCommands(true);
+                if (availableCmds.includes('remoteBuild.connectLite')) {
+                  await vscode.commands.executeCommand('remoteBuild.connectLite');
+                }
+              } else if (connType === 'wsl') {
+                const distro = String(hiprojContent?.information?.wsl_distro ?? '');
+                if (distro) {
+                  GlobalModel.instance.wslDistro = distro;
+                  GlobalModel.instance.source    = 'wsl';
+                }
+              }
+            }
+          }
+        } catch { /* ignore — still open the folder even if hiproj read fails */ }
+
         const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
         const same = path.normalize(currentWs).toLowerCase() === path.normalize(folderPath).toLowerCase();
         if (same) {
-          // Workspace already open — re-detect target and show the AI panel.
           vscode.commands.executeCommand('HisparkAI.showFromWizard');
           return;
         }
-        // Write marker so activate() shows the AI panel after reload.
         if (WizardContext.pendingOpenMarkerPath) {
           try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
         }

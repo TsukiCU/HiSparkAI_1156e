@@ -69,8 +69,17 @@ function validateSdkForChip(soc: string, sdkPath: string): boolean {
 
 // ─── Minimal .hiproj writer ───────────────────────────────────────────────────
 
-function writeHiproj(projectData: ShadowProjectData, hiprojDir: string, sdkDir: string): void {
+function writeHiproj(
+  projectData: ShadowProjectData,
+  hiprojDir: string,
+  sdkDir: string,
+  opts?: { remoteIp?: string; remotePort?: string },
+): void {
   const hiprojPath = path.join(hiprojDir, `${projectData.projectName}.hiproj`);
+  // For Linux 1156e the SDK lives on a remote server; store hiprojDir as sdk_path so
+  // that openProject (main command.ts) opens the correct local workspace. The actual
+  // remote path is kept in remote_sdk_path for reference.
+  const isLinux = projectData.connectionType === 'linux';
   const content = {
     information: {
       'board_build.mcu':  projectData.soc,
@@ -78,11 +87,14 @@ function writeHiproj(projectData: ShadowProjectData, hiprojDir: string, sdkDir: 
       platform:           projectData.platform,
       project_name:       projectData.projectName,
       project_path:       hiprojDir,
-      sdk_path:           sdkDir,
+      sdk_path:           isLinux ? hiprojDir : sdkDir,
+      remote_sdk_path:    isLinux ? sdkDir : '',
       series_name:        'shadow',
       project_type:       'SHADOW',
       connection_type:    projectData.connectionType ?? '',
       wsl_distro:         projectData.wslDistro ?? '',
+      remote_ip:          opts?.remoteIp ?? '',
+      remote_port:        opts?.remotePort ?? '',
     },
     compile: {
       bin_path:    '',
@@ -205,6 +217,21 @@ export class WizardCommand {
       if (!remotePath) { return; }
       WizardContext.pendingConnectionType = 'linux';
       WizardContext.pendingWslDistro      = undefined;
+
+      // Capture the remote-build.json written by remoteBuild into the current workspace.
+      // We copy it into the hiproj folder after project creation so it's available there.
+      const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
+      const rbPath = path.join(currentWs, '.vscode', 'remote-build.json');
+      if (fs.existsSync(rbPath)) {
+        try {
+          const rbContent = fs.readFileSync(rbPath, 'utf-8');
+          WizardContext.pendingRemoteBuildJsonContent = rbContent;
+          const rbParsed = JSON.parse(rbContent);
+          WizardContext.pendingRemoteIp   = String(rbParsed?.servers?.host ?? rbParsed?.host ?? '');
+          WizardContext.pendingRemotePort = String(rbParsed?.servers?.port ?? rbParsed?.port ?? '22');
+        } catch { /* ignore parse errors */ }
+      }
+
       callback(key, remotePath);
 
     } else {
@@ -326,16 +353,33 @@ export class WizardCommand {
       return;
     }
 
-    writeHiproj(projectData, hiprojDir, sdkDir);
+    writeHiproj(projectData, hiprojDir, sdkDir, {
+      remoteIp:   WizardContext.pendingRemoteIp,
+      remotePort: WizardContext.pendingRemotePort,
+    });
+    WizardContext.pendingRemoteIp   = undefined;
+    WizardContext.pendingRemotePort = undefined;
+
+    // For Linux 1156e: copy the remote-build.json captured at connection time into
+    // the hiproj folder's .vscode/ so it's present when the project is reopened.
+    if (isLinuxRemote && WizardContext.pendingRemoteBuildJsonContent) {
+      const vscodeDir = path.join(hiprojDir, '.vscode');
+      try {
+        fs.mkdirSync(vscodeDir, { recursive: true });
+        fs.writeFileSync(path.join(vscodeDir, 'remote-build.json'), WizardContext.pendingRemoteBuildJsonContent, 'utf-8');
+      } catch { /* ignore */ }
+      WizardContext.pendingRemoteBuildJsonContent = undefined;
+    }
 
     const hiprojFilePath = path.join(hiprojDir, `${projectData.projectName}.hiproj`);
     const item = {
-      name:     projectData.projectName,
-      path:     hiprojFilePath,
-      chip:     projectData.soc,
-      board:    projectData.board,
-      platform: projectData.platform,
-      time:     new Date().toLocaleString('zh-CN'),
+      name:      projectData.projectName,
+      path:      hiprojFilePath,
+      chip:      projectData.soc,
+      board:     projectData.board,
+      platform:  projectData.platform,
+      time:      new Date().toLocaleString('zh-CN'),
+      timestamp: Date.now(),
     };
 
     if (WizardContext.globalStoragePath) {

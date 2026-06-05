@@ -73,7 +73,7 @@ export default class ChipConfigPanel implements Panel {
     try {
       const data = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
       jsonData = Array.isArray(data)
-        ? data.filter((item: any) => item.chip === '3322' || item.chip === 'ws63' || item.chip === 'WS63')
+        ? data.filter((item: any) => item.chip === '3322' || item.chip === 'ws63' || item.chip === 'WS63' || item.chip === '1156e')
         : [];
     } catch (e) {
       logger.error(`Failed to load config: ${e}`);

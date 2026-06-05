@@ -100,6 +100,21 @@ export class RemoteHeartbeatWatcher implements vscode.Disposable {
     this.stop();
   }
 
+  /** True if the watcher is running (i.e. a Linux connection was established this session). */
+  get isRunning(): boolean { return !!this.timer; }
+
+  /** True if the last heartbeat check succeeded. */
+  get lastConnectionState(): boolean { return this.lastConnected; }
+
+  /** Execute the heartbeat function once and return whether the server is reachable. */
+  async checkOnce(): Promise<boolean> {
+    if (!this.checkHeartbeat) { return false; }
+    try {
+      const ret = await this.checkHeartbeat();
+      return ret?.exitCode === 0;
+    } catch { return false; }
+  }
+
   // Connection lost
   private handleDisconnect(): void {
     if (this.lastConnected) {

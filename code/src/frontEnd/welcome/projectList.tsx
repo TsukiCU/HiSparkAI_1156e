@@ -32,8 +32,16 @@ declare global {
   }
 }
 const ProjectList: React.FC = () => {
-  const [projectList, setProjectList] = useState<ProjectData[]>(window.initialDemoData ?? []);
-  const [projectListShow, setProjectListShow] = useState<ProjectData[]>(window.initialDemoData ?? []);
+  const sortByTimeDesc = (list: ProjectData[]): ProjectData[] =>
+    [...list].sort((a: any, b: any) => {
+      // Use numeric `timestamp` if available (wizard-created), fall back to time string.
+      const ta = (a as any).timestamp ?? new Date(a.time ?? 0).getTime();
+      const tb = (b as any).timestamp ?? new Date(b.time ?? 0).getTime();
+      return tb - ta;
+    });
+
+  const [projectList, setProjectList] = useState<ProjectData[]>(sortByTimeDesc(window.initialDemoData ?? []));
+  const [projectListShow, setProjectListShow] = useState<ProjectData[]>(sortByTimeDesc(window.initialDemoData ?? []));
   const [keyword, setKeyword] = useState<string>('');
   const [chipType, setChipType] = useState<string>('');
   const [chipTypeOptions, setChipTypeOptions] = useState<Array<{ value: string; label: string }>>([]);
@@ -61,8 +69,8 @@ const ProjectList: React.FC = () => {
     const data = window.initialDemoData.filter((item: any) => {
       return item.name !== project.name;
     });
-    setProjectList(data);
-    setProjectListShow(data);
+    setProjectList(sortByTimeDesc(data));
+    setProjectListShow(sortByTimeDesc(data));
   };
 
   const handleSelectChange = (value: string): void => {
@@ -156,15 +164,15 @@ const ProjectList: React.FC = () => {
 
   useEffect(() => {
     if (dataSource) {
-      setProjectList(dataSource);
-      setProjectListShow(dataSource);
+      setProjectList(sortByTimeDesc(dataSource));
+      setProjectListShow(sortByTimeDesc(dataSource));
       setChipType('All');
     }
   }, [dataSource]);
   useEffect(() => {
     if (deleteProjectCallBackData) {
-      setProjectList(deleteProjectCallBackData);
-      setProjectListShow(deleteProjectCallBackData);
+      setProjectList(sortByTimeDesc(deleteProjectCallBackData));
+      setProjectListShow(sortByTimeDesc(deleteProjectCallBackData));
       setChipType('All');
     }
   }, [deleteProjectCallBackData]);

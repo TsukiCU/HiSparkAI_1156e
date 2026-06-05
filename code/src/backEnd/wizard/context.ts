@@ -18,6 +18,11 @@ export class WizardContext {
   static pendingPlatform:   string | undefined;  // 'CPU' | 'NPU'
   static pendingHiprojPath: string | undefined;
 
+  // Captured from remote-build.json after Linux 1156e connection (before project creation).
+  static pendingRemoteBuildJsonContent: string | undefined;
+  static pendingRemoteIp:   string | undefined;
+  static pendingRemotePort: string | undefined;
+
   static wizardPanel: PanelLike | undefined;
   static importPanel: PanelLike | undefined;
 

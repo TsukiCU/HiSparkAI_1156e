@@ -1000,8 +1000,81 @@ export class Command {
     });
   }
 
+  // ── 1156e: skip source-selection dialog, do connection health check instead ──
+
+  static async newModelFor1156e(target: string): Promise<void> {
+    const source    = GlobalModel.instance.source;
+    const watcher   = RemoteHeartbeatWatcher.getInstance();
+
+    if (source === 'linux') {
+      const rbPath = path.join(common.getWorkFolderPath(), '.vscode', 'remote-build.json');
+
+      // Case 1: remote-build.json was deleted — must reconnect from scratch.
+      if (!fs.existsSync(rbPath)) {
+        vscode.window.showWarningMessage(
+          'Remote connection config not found (.vscode/remote-build.json was deleted). Please reconnect.',
+        );
+        extension.chipConfigPanel?.postMessage({ type: 'ConnectToRemote' });
+        return;
+      }
+
+      // Case 2: connection not established this session (fresh window) — remoteHome is unset.
+      const remoteHome = GlobalModel.instance.remoteHome;
+      if (!remoteHome) {
+        vscode.window.showWarningMessage('Remote server not connected. Reconnecting…');
+        extension.chipConfigPanel?.postMessage({ type: 'ConnectToRemote' });
+        return;
+      }
+
+      // Case 3: heartbeat watcher is running — check its last known state and do a probe.
+      if (watcher.isRunning) {
+        const alive = await watcher.checkOnce();
+        if (!alive) {
+          vscode.window.showWarningMessage('Remote server unreachable. Please reconnect.');
+          extension.chipConfigPanel?.postMessage({ type: 'ConnectToRemote' });
+          return;
+        }
+      }
+
+      // All checks passed — go directly to the remote file picker.
+      await Command.filePickerSelectModel();
+
+    } else if (source === 'wsl') {
+      const distro = GlobalModel.instance.wslDistro ?? '';
+      let distroOk = false;
+      try {
+        const list = await Command.getWslLists();
+        distroOk = list.includes(distro);
+      } catch { /* distroOk stays false */ }
+
+      if (!distroOk) {
+        vscode.window.showWarningMessage(
+          `WSL distro '${distro}' is not available. Please reconnect.`,
+        );
+        extension.chipConfigPanel?.postMessage({ type: 'ConnectToWsl' });
+        return;
+      }
+
+      // Distro is available — go directly to the WSL file picker.
+      await Command.filePickerWslSelectModel();
+    } else {
+      // Fallback: source not set yet, use normal picker.
+      await Command.newModelPicker({ target });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   static async newModelPicker(message: any): Promise<void> {
     const { target } = message;
+
+    // 1156e projects have their connection type pre-set at project creation.
+    // Skip the "Choose from remote / WSL / local" dialog and use a health check instead.
+    if (GlobalModel.instance.soc === '1156e') {
+      await Command.newModelFor1156e(target);
+      return;
+    }
+
     const filePickItems: Record<string, vscode.QuickPickItem[]> = {
       CPU: [
         { label: 'Choose files from remote', detail: '' },
