@@ -228,9 +228,11 @@ export class WizardCommand {
           const rbContent = fs.readFileSync(rbPath, 'utf-8');
           WizardContext.pendingRemoteBuildJsonContent = rbContent;
           const rbParsed = JSON.parse(rbContent);
-          // Read host/port using the same keys as remote-build.json and .hiproj [information].
-          WizardContext.pendingRemoteHost = String(rbParsed?.servers?.host ?? rbParsed?.host ?? '');
-          WizardContext.pendingRemotePort = String(rbParsed?.servers?.port ?? rbParsed?.port ?? '22');
+          // remote-build.json format: { "servers": [{ "host": "...", "port": 22, ... }] }
+          // servers is an array; take the first entry.
+          const server = Array.isArray(rbParsed?.servers) ? rbParsed.servers[0] : rbParsed?.servers;
+          WizardContext.pendingRemoteHost = String(server?.host ?? '');
+          WizardContext.pendingRemotePort = String(server?.port ?? '22');
         } catch { /* ignore parse errors */ }
       }
 
