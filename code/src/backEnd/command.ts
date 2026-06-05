@@ -1026,10 +1026,13 @@ export class Command {
         return;
       }
 
-      // Case 3: heartbeat watcher is running — check its last known state and do a probe.
+      // Case 3: heartbeat watcher is running — probe the server once.
       if (watcher.isRunning) {
+        Command.outputLogger.handleLogInfo('[1156e] Checking Linux server connection (heartbeat)...', 'info');
         const alive = await watcher.checkOnce();
-        if (!alive) {
+        if (alive) {
+          Command.outputLogger.handleLogInfo('[1156e] Server is alive.', 'info');
+        } else {
           vscode.window.showWarningMessage('Remote server unreachable. Please reconnect.');
           extension.chipConfigPanel?.postMessage({ type: 'ConnectToRemote' });
           return;
@@ -1037,6 +1040,7 @@ export class Command {
       }
 
       // All checks passed — go directly to the remote file picker.
+      Command.outputLogger.handleLogInfo('[1156e] Connection verified — opening remote file picker.', 'info');
       await Command.filePickerSelectModel();
 
     } else if (source === 'wsl') {

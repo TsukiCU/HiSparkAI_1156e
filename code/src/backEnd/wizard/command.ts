@@ -73,7 +73,7 @@ function writeHiproj(
   projectData: ShadowProjectData,
   hiprojDir: string,
   sdkDir: string,
-  opts?: { remoteIp?: string; remotePort?: string },
+  opts?: { host?: string; port?: string },
 ): void {
   const hiprojPath = path.join(hiprojDir, `${projectData.projectName}.hiproj`);
   // For Linux 1156e the SDK lives on a remote server; store hiprojDir as sdk_path so
@@ -93,8 +93,9 @@ function writeHiproj(
       project_type:       'SHADOW',
       connection_type:    projectData.connectionType ?? '',
       wsl_distro:         projectData.wslDistro ?? '',
-      remote_ip:          opts?.remoteIp ?? '',
-      remote_port:        opts?.remotePort ?? '',
+      // host/port match remote-build.json servers.host / servers.port (Linux 1156e only).
+      host:               opts?.host ?? '',
+      port:               opts?.port ?? '',
     },
     compile: {
       bin_path:    '',
@@ -227,7 +228,8 @@ export class WizardCommand {
           const rbContent = fs.readFileSync(rbPath, 'utf-8');
           WizardContext.pendingRemoteBuildJsonContent = rbContent;
           const rbParsed = JSON.parse(rbContent);
-          WizardContext.pendingRemoteIp   = String(rbParsed?.servers?.host ?? rbParsed?.host ?? '');
+          // Read host/port using the same keys as remote-build.json and .hiproj [information].
+          WizardContext.pendingRemoteHost = String(rbParsed?.servers?.host ?? rbParsed?.host ?? '');
           WizardContext.pendingRemotePort = String(rbParsed?.servers?.port ?? rbParsed?.port ?? '22');
         } catch { /* ignore parse errors */ }
       }
@@ -354,19 +356,35 @@ export class WizardCommand {
     }
 
     writeHiproj(projectData, hiprojDir, sdkDir, {
-      remoteIp:   WizardContext.pendingRemoteIp,
-      remotePort: WizardContext.pendingRemotePort,
+      host: WizardContext.pendingRemoteHost,
+      port: WizardContext.pendingRemotePort,
     });
-    WizardContext.pendingRemoteIp   = undefined;
+    WizardContext.pendingRemoteHost = undefined;
     WizardContext.pendingRemotePort = undefined;
 
-    // For Linux 1156e: copy the remote-build.json captured at connection time into
-    // the hiproj folder's .vscode/ so it's present when the project is reopened.
-    if (isLinuxRemote && WizardContext.pendingRemoteBuildJsonContent) {
-      const vscodeDir = path.join(hiprojDir, '.vscode');
+    // For Linux 1156e: set up .vscode/ in the hiproj folder.
+    if (isLinuxRemote) {
+      const vscodeDir    = path.join(hiprojDir, '.vscode');
+      const vscodeDirNew = !fs.existsSync(vscodeDir);
       try {
         fs.mkdirSync(vscodeDir, { recursive: true });
-        fs.writeFileSync(path.join(vscodeDir, 'remote-build.json'), WizardContext.pendingRemoteBuildJsonContent, 'utf-8');
+        // Create an empty launch.json only when we are creating .vscode for the first
+        // time. This suppresses VSCode's "Generate launch.json" prompt.
+        if (vscodeDirNew && !fs.existsSync(path.join(vscodeDir, 'launch.json'))) {
+          fs.writeFileSync(
+            path.join(vscodeDir, 'launch.json'),
+            JSON.stringify({ version: '0.2.0', configurations: [] }, null, 4),
+            'utf-8',
+          );
+        }
+        // Write the remote-build.json captured from the connection step.
+        if (WizardContext.pendingRemoteBuildJsonContent) {
+          fs.writeFileSync(
+            path.join(vscodeDir, 'remote-build.json'),
+            WizardContext.pendingRemoteBuildJsonContent,
+            'utf-8',
+          );
+        }
       } catch { /* ignore */ }
       WizardContext.pendingRemoteBuildJsonContent = undefined;
     }

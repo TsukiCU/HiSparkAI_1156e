@@ -19,9 +19,10 @@ export class WizardContext {
   static pendingHiprojPath: string | undefined;
 
   // Captured from remote-build.json after Linux 1156e connection (before project creation).
+  // Field names match remote-build.json and .hiproj [information] section.
   static pendingRemoteBuildJsonContent: string | undefined;
-  static pendingRemoteIp:   string | undefined;
-  static pendingRemotePort: string | undefined;
+  static pendingRemoteHost: string | undefined;  // servers.host in remote-build.json
+  static pendingRemotePort: string | undefined;  // servers.port in remote-build.json
 
   static wizardPanel: PanelLike | undefined;
   static importPanel: PanelLike | undefined;

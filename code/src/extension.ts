@@ -32,9 +32,12 @@ import { checkPythonDepsInstalledLater, downloadFileWithRetry, extractZipFile, g
 import { addPythonFile, mkdirPath, modifyPythonFile, updateToolChainJson } from './backEnd/utils/downloadPython';
 import { SerialPortWatcher } from './backEnd/watchers/SerialPortWatcher';
 import { RemoteHeartbeatWatcher } from './backEnd/watchers/RemoteHeartbeatWatcher';
+import { OutputChannelManager } from './backEnd/output/channelManager';
 import { WizardContext }   from './backEnd/wizard/context';
 import { WizardPanel }     from './backEnd/wizard/panels/wizardPanel';
 import { ImportPanel }     from './backEnd/wizard/panels/importPanel';
+
+const HISPARKAI_CHANNEL = 'HiSpark Studio AI';
 
 const WALKTHROUGH_STRING = 'HiSpark.hisparkai#hisparkAI.basicGuide';
 
@@ -105,9 +108,13 @@ export default class Extension {
       }
     }
 
+    // Connection type read from .hiproj — used later in the wizardPendingOpen block.
+    let hiprojConnType = '';
+    let hiprojSocId    = '';
+
     if (isActiveProjectFound) {
       GlobalModel.instance.hiprojPath = iniPath;
-      GlobalModel.instance.hiprojDir = path.dirname(iniPath!);
+      GlobalModel.instance.hiprojDir  = path.dirname(iniPath!);
 
       if (iniPath && fs.existsSync(iniPath)) {
         try {
@@ -123,16 +130,15 @@ export default class Extension {
           }
 
           // Restore SOC so command.ts can skip the source-selection dialog for 1156e.
-          const soc = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
-          if (soc) { GlobalModel.instance.soc = soc; }
+          hiprojSocId = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
+          if (hiprojSocId) { GlobalModel.instance.soc = hiprojSocId; }
 
-          // Restore connection type (wsl / linux) written by the wizard into the .hiproj
-          // so the AI pipeline can skip the connection prompt on first open.
-          const connType = String(hiprojContent?.information?.connection_type ?? '');
-          if (connType === 'wsl') {
-            GlobalModel.instance.source = 'wsl';
+          // Restore connection type (wsl / linux) from .hiproj.
+          hiprojConnType = String(hiprojContent?.information?.connection_type ?? '');
+          if (hiprojConnType === 'wsl') {
+            GlobalModel.instance.source    = 'wsl';
             GlobalModel.instance.wslDistro = String(hiprojContent?.information?.wsl_distro ?? '');
-          } else if (connType === 'linux') {
+          } else if (hiprojConnType === 'linux') {
             GlobalModel.instance.source = 'linux';
           }
         } catch { /* keep defaults on read failure */ }
@@ -461,29 +467,40 @@ export default class Extension {
           return;
         }
 
-        // For 1156e: read the connection type from the .hiproj and connect first.
-        // folderPath is the hiproj folder (sdk_path = hiprojDir for 1156e Linux).
+        // For 1156e: read the connection info from the .hiproj, restore GlobalModel,
+        // and connect before opening the workspace so the output channel shows activity.
         try {
           const hiprojFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('.hiproj'));
           if (hiprojFiles.length > 0) {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const ini = require('ini');
             const hiprojContent = ini.parse(fs.readFileSync(path.join(folderPath, hiprojFiles[0]), 'utf-8'));
-            const chipSoc     = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
-            const connType    = String(hiprojContent?.information?.connection_type ?? '');
+            const chipSoc    = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
+            const connType   = String(hiprojContent?.information?.connection_type ?? '');
+            const storedHost = String(hiprojContent?.information?.host ?? '');
+            const storedPort = String(hiprojContent?.information?.port ?? '22');
+
             if (chipSoc === '1156e') {
+              const ch = OutputChannelManager.get(HISPARKAI_CHANNEL);
               if (connType === 'linux') {
-                // Reconnect to the Linux remote server before opening the workspace.
+                // Reconnect to the Linux server using the stored host/port.
+                ch.info(`[1156e] Opening project — connecting to Linux server (${storedHost}:${storedPort})...`);
+                ch.show(true);
+                GlobalModel.instance.source = 'linux';
                 const availableCmds = await vscode.commands.getCommands(true);
                 if (availableCmds.includes('remoteBuild.connectLite')) {
                   await vscode.commands.executeCommand('remoteBuild.connectLite');
+                  ch.info('[1156e] Linux server connected. Opening workspace...');
+                } else {
+                  ch.warn('[1156e] remoteBuild not available — connect manually via SelectModel.');
                 }
               } else if (connType === 'wsl') {
                 const distro = String(hiprojContent?.information?.wsl_distro ?? '');
-                if (distro) {
-                  GlobalModel.instance.wslDistro = distro;
-                  GlobalModel.instance.source    = 'wsl';
-                }
+                ch.info(`[1156e] Opening project — restoring WSL connection (distro: ${distro})...`);
+                ch.show(true);
+                GlobalModel.instance.source    = 'wsl';
+                GlobalModel.instance.wslDistro = distro;
+                ch.info('[1156e] WSL distro restored. Connection will be verified at SelectModel.');
               }
             }
           }
@@ -543,6 +560,26 @@ export default class Extension {
     // Show the AI panel only when the wizard explicitly opened this workspace.
     // Plain reloads (e.g. Developer: Reload Window) must NOT auto-jump.
     if (target !== 'NONE' && wizardPendingOpen) {
+      // For 1156e Linux: reconnect to the server before showing the AI panel.
+      // This makes the connection visible in the output channel immediately after
+      // the project is opened, rather than waiting until the user clicks SelectModel.
+      if (hiprojSocId === '1156e' && hiprojConnType === 'linux') {
+        const ch = OutputChannelManager.get(HISPARKAI_CHANNEL);
+        ch.info('[1156e] Reconnecting to Linux server (from .hiproj)...');
+        ch.show(true);
+        const availCmds = await vscode.commands.getCommands(true);
+        if (availCmds.includes('remoteBuild.connectLite')) {
+          await vscode.commands.executeCommand('remoteBuild.connectLite');
+          ch.info('[1156e] Linux server connection established.');
+        } else {
+          ch.warn('[1156e] remoteBuild extension not available — connect manually via SelectModel.');
+        }
+      } else if (hiprojSocId === '1156e' && hiprojConnType === 'wsl') {
+        const ch = OutputChannelManager.get(HISPARKAI_CHANNEL);
+        ch.info(`[1156e] WSL project ready (distro: ${GlobalModel.instance.wslDistro ?? 'unknown'}). Connection will be verified at SelectModel.`);
+        ch.show(true);
+      }
+
       vscode.commands.executeCommand('HisparkAI.show');
     }
   }
