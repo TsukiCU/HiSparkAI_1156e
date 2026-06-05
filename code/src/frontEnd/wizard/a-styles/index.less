@@ -70,9 +70,10 @@ h1, h2, h3, h4, h5, h6 { color: @colorForeground; font-family: MicrosoftYaHei; }
 }
 
 // antd error state resets input bg to @input-bg (#fff) via .ant-form-item-has-error.
-// Inputs inside Input.Group don't receive the status-error class, so we must
-// override the form-item-has-error cascade explicitly.
+// Override for ALL inputs (standalone and inside Input.Group) within an error Form.Item.
 .ant-form-item-has-error {
+  .ant-input:not([disabled]),
+  .ant-input:not([disabled]):hover,
   .ant-input-group .ant-input,
   .ant-input-group .ant-input:hover,
   .ant-input-group .ant-input[readonly],

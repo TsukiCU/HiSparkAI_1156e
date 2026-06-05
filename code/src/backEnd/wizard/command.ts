@@ -84,7 +84,19 @@ function writeHiproj(projectData: ShadowProjectData, hiprojDir: string, sdkDir: 
       connection_type:    projectData.connectionType ?? '',
       wsl_distro:         projectData.wslDistro ?? '',
     },
-    compile: {},
+    compile: {
+      bin_path:    '',
+      protocol:    'serial',
+      port:        '',
+      baud:        '115200',
+      localip:     '',
+      ipaddr:      '',
+      subnetmask:  '',
+      gateway:     '',
+      eraseconfig: '',
+      pid:         '',
+      vid:         '',
+    },
     debug:   {},
   };
   fs.writeFileSync(hiprojPath, ini.stringify(content), 'utf-8');
@@ -307,6 +319,8 @@ export class WizardCommand {
 
     try {
       fs.mkdirSync(hiprojDir, { recursive: true });
+      // Pre-create the aicache subfolder so the AI pipeline can write results there.
+      fs.mkdirSync(path.join(hiprojDir, 'aicache'), { recursive: true });
     } catch {
       showMessageModal({ content: res('createFolderFailed', [hiprojDir]), infoType: 'err' });
       return;
