@@ -458,8 +458,13 @@ export default class Extension {
 
         // For 1156e: read the connection info from the .hiproj, restore GlobalModel,
         // and connect before opening the workspace so the output channel shows activity.
+        // Skip when folderPath is a .code-workspace file (non-1156e chips use workspace
+        // files; for 1156e Linux the path is always the hiprojDir folder directly).
+        const isWorkspaceFile = folderPath.endsWith('.code-workspace');
         try {
-          const hiprojFiles = fs.readdirSync(folderPath).filter((f) => f.endsWith('.hiproj'));
+          const hiprojFiles = isWorkspaceFile
+            ? []
+            : fs.readdirSync(folderPath).filter((f) => f.endsWith('.hiproj'));
           if (hiprojFiles.length > 0) {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const ini = require('ini');

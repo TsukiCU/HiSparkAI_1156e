@@ -5548,9 +5548,16 @@ export class Command {
     }
     if (project.path && fs.existsSync(project.path)) {
       const hiprojPath = project.path;
-      const content = fs.readFileSync(hiprojPath, 'utf-8');
+      const hiprojDir2  = path.dirname(hiprojPath);
+      const projName2   = path.basename(hiprojDir2).replace(/_hiproj$/, '');
+      const projPath2   = path.dirname(hiprojDir2);
+      const wsFile      = path.join(projPath2, `${projName2}.code-workspace`);
+
+      const content    = fs.readFileSync(hiprojPath, 'utf-8');
       const parsedData = ini.parse(content);
-      const pathToOpen = parsedData.information.sdk_path;
+      // Prefer the workspace file (multi-root with hiproj+sdk); fall back to sdk_path
+      // for legacy projects created before workspace-file support was added.
+      const pathToOpen = fs.existsSync(wsFile) ? wsFile : parsedData.information.sdk_path;
       vscode.commands.executeCommand('openProjectByPath', pathToOpen, 'openAfterCreate');
     }
   }

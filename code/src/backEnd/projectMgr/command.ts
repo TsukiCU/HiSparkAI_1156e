@@ -335,14 +335,36 @@ export class ProjectMgrCommand {
     ProjectMgrContext.pendingConnectionType = undefined;
     ProjectMgrContext.pendingWslDistro      = undefined;
 
-    // For Linux 1156e the SDK lives on a remote server; open the local hiproj folder
-    // instead of the remote SDK path (which doesn't exist on this machine).
-    const isLinuxRemote  = projectData.connectionType === 'linux';
-    // The folder VSCode will open as the workspace after project creation.
-    const folderToOpen   = isLinuxRemote ? hiprojDir : sdkDir;
-    // The key stored in projectdata.json — must match what getWorkFolderPath() returns
-    // after the workspace is opened, so extension.ts can find the project on activation.
-    const projectDataKey = isLinuxRemote ? hiprojDir : sdkDir;
+    // For Linux 1156e the SDK lives on a remote server; open only the local hiproj folder.
+    const isLinuxRemote = projectData.connectionType === 'linux';
+
+    // For all non-Linux cases, create a .code-workspace file so VS Code opens as
+    // multi-root from the start (hiprojDir first so remoteBuild writes
+    // remote-build.json there instead of sdkDir).
+    // Opening a workspace file never triggers the single→multi-root conversion that
+    // would restart the extension host, avoiding the message-routing breakage.
+    const workspaceFilePath = path.join(
+      projectData.projectPath,
+      `${projectData.projectName}.code-workspace`,
+    );
+
+    let pathToOpen: string;
+    if (isLinuxRemote) {
+      pathToOpen = hiprojDir;
+    } else {
+      try {
+        fs.writeFileSync(
+          workspaceFilePath,
+          JSON.stringify({ folders: [{ path: hiprojDir }, { path: sdkDir }] }, null, 2),
+          'utf-8',
+        );
+      } catch { /* ignore write failure — fall back to sdkDir */ }
+      pathToOpen = fs.existsSync(workspaceFilePath) ? workspaceFilePath : sdkDir;
+    }
+
+    // projectDataKey = hiprojDir in all cases: workspace[0] is always hiprojDir
+    // (either the only folder for Linux or the first folder in the workspace file).
+    const projectDataKey = hiprojDir;
 
     // Only check hiprojDir — sdkDir is an existing folder chosen by the user.
     if (fs.existsSync(hiprojDir)) {
@@ -408,40 +430,18 @@ export class ProjectMgrCommand {
       addItemsToProList([item], ProjectMgrContext.globalStoragePath);
       updateOneItemToLatestList(item, ProjectMgrContext.globalStoragePath);
       upsertProjectDataJson(projectDataKey, hiprojFilePath, ProjectMgrContext.globalStoragePath);
-      // Also index hiproj dir so activation can find the project when hiproj is workspace[0].
-      if (hiprojDir !== projectDataKey) {
-        upsertProjectDataJson(hiprojDir, hiprojFilePath, ProjectMgrContext.globalStoragePath);
-      }
       if (ProjectMgrContext.mainProjectListPath) {
         upsertMainProjectList(item, ProjectMgrContext.mainProjectListPath);
       }
     }
 
-    // Pass platform and hiproj path to showFromProjectMgr via context — avoids
-    // unreliable path-string comparison when detecting target after same-workspace open.
-    ProjectMgrContext.pendingPlatform   = projectData.platform;
-    ProjectMgrContext.pendingHiprojPath = hiprojFilePath;
-
     callback('thisProjectNotExists', new Date().getTime());
 
-    const currentWs    = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
-    const sameWorkspace = path.normalize(currentWs).toLowerCase() === path.normalize(folderToOpen).toLowerCase();
-
-    if (sameWorkspace) {
-      // Folder is already the active workspace — openFolder would be a no-op.
-      // Close the wizard panel first, then switch to the AI panel.
-      if (ProjectMgrContext.pendingOpenMarkerPath) {
-        try { fs.unlinkSync(ProjectMgrContext.pendingOpenMarkerPath); } catch { /* ignore */ }
-      }
-      ProjectMgrContext.deactivate('projectMgr');
-      vscode.commands.executeCommand('HisparkAI.showFromProjectMgr');
-    } else {
-      // Write the marker BEFORE openFolder so extension.ts consumes it on re-activation.
-      if (ProjectMgrContext.pendingOpenMarkerPath) {
-        try { fs.writeFileSync(ProjectMgrContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
-      }
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folderToOpen));
+    // Write the marker BEFORE opening so extension.ts can auto-show the AI panel.
+    if (ProjectMgrContext.pendingOpenMarkerPath) {
+      try { fs.writeFileSync(ProjectMgrContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
     }
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(pathToOpen));
     ProjectMgrContext.deactivate('projectMgr');
   }
 
