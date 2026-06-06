@@ -144,18 +144,6 @@ export default class Extension {
         } catch { /* keep defaults on read failure */ }
       }
 
-      // Show both SDK folder and hiproj folder in the workspace explorer.
-      const hiprojDir = path.dirname(iniPath!);
-      const alreadyAdded = vscode.workspace.workspaceFolders?.some(
-        (f) => path.normalize(f.uri.fsPath) === path.normalize(hiprojDir),
-      );
-      if (!alreadyAdded && vscode.workspace.workspaceFolders) {
-        // Insert hiproj at position 0 so remoteBuild writes remote-build.json there.
-        vscode.workspace.updateWorkspaceFolders(
-          0, 0,
-          { uri: vscode.Uri.file(hiprojDir), name: `${path.basename(hiprojDir)}` },
-        );
-      }
     } else {
       target = 'NONE'; // Present welcome page if no hiproj file is found.
     }
@@ -558,13 +546,9 @@ export default class Extension {
     // on theme change
     vscode.window.onDidChangeActiveColorTheme(this.onThemeChange.bind(this));
 
-    // Show the AI panel only when the wizard explicitly opened this workspace.
-    // Plain reloads (e.g. Developer: Reload Window) must NOT auto-jump.
-    if (target !== 'NONE' && projectMgrPendingOpen) {
-      // For 1156e Linux: reconnect to the server before showing the AI panel.
-      // This makes the connection visible in the output channel immediately after
-      // the project is opened, rather than waiting until the user clicks SelectModel.
-      if (hiprojSocId === '1156e' && hiprojConnType === 'linux') {
+    if (target !== 'NONE') {
+      // For 1156e Linux: reconnect before showing the AI panel.
+      if (hiprojSocId === '1156e' && hiprojConnType === 'linux' && projectMgrPendingOpen) {
         const ch = OutputChannelManager.get(HISPARKAI_CHANNEL);
         ch.info('[1156e] Reconnecting to Linux server (from .hiproj)...');
         ch.show(true);
@@ -575,7 +559,7 @@ export default class Extension {
         } else {
           ch.warn('[1156e] remoteBuild extension not available — connect manually via SelectModel.');
         }
-      } else if (hiprojSocId === '1156e' && hiprojConnType === 'wsl') {
+      } else if (hiprojSocId === '1156e' && hiprojConnType === 'wsl' && projectMgrPendingOpen) {
         const ch = OutputChannelManager.get(HISPARKAI_CHANNEL);
         ch.info(`[1156e] WSL project ready (distro: ${GlobalModel.instance.wslDistro ?? 'unknown'}). Connection will be verified at SelectModel.`);
         ch.show(true);
