@@ -238,7 +238,7 @@ const ProjectCreate = (): JSX.Element => {
   return (
     <>
       <Modal
-        title={<span style={{ fontWeight: 500, fontSize: 13 }}>{t('projectWizard')}</span>}
+        title={<span style={{ fontWeight: 500, fontSize: 14 }}>{t('projectWizard')}</span>}
         visible={isOpen}
         width={640}
         onCancel={onCancel}
@@ -250,10 +250,10 @@ const ProjectCreate = (): JSX.Element => {
         }
       >
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: 4 }}>
             {t('projectCreateTitle')}
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
             {t('projectCreateDescription')}
           </div>
         </div>
