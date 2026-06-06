@@ -61,14 +61,11 @@ export default class ChipConfigPanel implements Panel {
         return `${$1 + this.panel?.webview.asWebviewUri(vscode.Uri.file(path.resolve(dirPath, $2)))}"`;
       })
       .toString();
-    html = html = html.replace(
-      '</body>',
-      `<script>window.initialState = { target: "${this.target}" };</script></body>`
-    );
-    this.panel.webview.html = html;
-    // initial theme color
-    const dataScript = `<script>window.initialData = ${JSON.stringify(vscode.window.activeColorTheme)};</script>`;
-    this.panel.webview.html = this.panel.webview.html.replace('</body>', `${dataScript}</body>`);
+
+    // Collect all injected scripts, then write webview.html exactly ONCE.
+    // Multiple webview.html assignments each create a new webview session; the
+    // onDidReceiveMessage handler stays bound to the first session's channel,
+    // so messages from later sessions are silently dropped.
     let jsonData: any[] = [];
     try {
       const data = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
@@ -79,8 +76,14 @@ export default class ChipConfigPanel implements Panel {
       logger.error(`Failed to load config: ${e}`);
     }
 
-    const prodataScript = `<script>window.initialDemoData = ${JSON.stringify(jsonData)};</script>`;
-    this.panel.webview.html = this.panel.webview.html.replace('</body>', `${prodataScript}</body>`);
+    const injected = [
+      `<script>window.initialState = { target: "${this.target}" };</script>`,
+      `<script>window.initialData = ${JSON.stringify(vscode.window.activeColorTheme)};</script>`,
+      `<script>window.initialDemoData = ${JSON.stringify(jsonData)};</script>`,
+    ].join('');
+
+    this.panel.webview.html = html.replace('</body>', `${injected}</body>`);
+
     // set webview language environment
     const message: LanguageSetMessage = {
       method: ApiMethod.SET_LANGUAGE,
