@@ -1071,6 +1071,8 @@ export class Command {
 
   static async newModelPicker(message: any): Promise<void> {
     const { target } = message;
+    logger.info(`[Command] newModelPicker entered, target=${target}, soc=${GlobalModel.instance.soc}`);
+    vscode.window.showInformationMessage(`[debug] newModelPicker target=${target} soc=${GlobalModel.instance.soc}`);
 
     // 1156e projects have their connection type pre-set at project creation.
     // Skip the "Choose from remote / WSL / local" dialog and use a health check instead.

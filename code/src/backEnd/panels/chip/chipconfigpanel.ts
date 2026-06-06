@@ -110,8 +110,22 @@ export default class ChipConfigPanel implements Panel {
           await vscode.commands.executeCommand(commandId);
           return;
         }
-        const func = Reflect.get(Command, message.method);
-        await Reflect.apply(func, Command, [message]);
+        const method: string = message?.method ?? '(no method)';
+        logger.info(`[ChipConfigPanel] recv: ${method}`);
+        const func = Reflect.get(Command, method);
+        if (typeof func !== 'function') {
+          const err = `[ChipConfigPanel] No handler for "${method}"`;
+          logger.error(err);
+          vscode.window.showErrorMessage(err);
+          return;
+        }
+        try {
+          await Reflect.apply(func, Command, [message]);
+        } catch (e) {
+          const err = `[ChipConfigPanel] ${method} threw: ${e}`;
+          logger.error(err);
+          vscode.window.showErrorMessage(err);
+        }
       },
       undefined,
       this.context.subscriptions

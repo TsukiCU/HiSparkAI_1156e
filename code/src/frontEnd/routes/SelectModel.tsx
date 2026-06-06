@@ -314,6 +314,8 @@ function SelectModel(props: { target: Target; source: Source }): React.JSX.Eleme
 
   const handleNewModelClick = (): void => {
     clearReduxSaveId();
+    // eslint-disable-next-line no-console
+    console.log('[SelectModel] postMessage newModelPicker, target=', target);
     vscode.postMessage({ method: 'newModelPicker', target });
   };
 
