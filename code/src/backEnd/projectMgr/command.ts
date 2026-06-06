@@ -408,6 +408,10 @@ export class ProjectMgrCommand {
       addItemsToProList([item], ProjectMgrContext.globalStoragePath);
       updateOneItemToLatestList(item, ProjectMgrContext.globalStoragePath);
       upsertProjectDataJson(projectDataKey, hiprojFilePath, ProjectMgrContext.globalStoragePath);
+      // Also index hiproj dir so activation can find the project when hiproj is workspace[0].
+      if (hiprojDir !== projectDataKey) {
+        upsertProjectDataJson(hiprojDir, hiprojFilePath, ProjectMgrContext.globalStoragePath);
+      }
       if (ProjectMgrContext.mainProjectListPath) {
         upsertMainProjectList(item, ProjectMgrContext.mainProjectListPath);
       }

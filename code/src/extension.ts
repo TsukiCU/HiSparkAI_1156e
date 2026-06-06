@@ -150,8 +150,9 @@ export default class Extension {
         (f) => path.normalize(f.uri.fsPath) === path.normalize(hiprojDir),
       );
       if (!alreadyAdded && vscode.workspace.workspaceFolders) {
+        // Insert hiproj at position 0 so remoteBuild writes remote-build.json there.
         vscode.workspace.updateWorkspaceFolders(
-          vscode.workspace.workspaceFolders.length, 0,
+          0, 0,
           { uri: vscode.Uri.file(hiprojDir), name: `${path.basename(hiprojDir)}` },
         );
       }

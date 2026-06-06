@@ -28,7 +28,7 @@ type Target = 'CPU' | 'NPU' | 'NONE';
 type Source = 'wsl' | 'linux';
 
 function App(): React.JSX.Element {
-  const [target, setTarget] = useState<Target>('NONE');
+  const [target, setTarget] = useState<Target>((window as any).initialState?.target ?? 'NONE');
   const [source, setSource] = useState<Source>('linux');
 
   const messageHandler = useCallback((event: MessageEvent) => {
