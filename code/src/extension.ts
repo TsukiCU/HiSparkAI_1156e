@@ -456,11 +456,12 @@ export default class Extension {
           return;
         }
 
-        // For 1156e: read the connection info from the .hiproj, restore GlobalModel,
-        // and connect before opening the workspace so the output channel shows activity.
-        // Skip when folderPath is a .code-workspace file (non-1156e chips use workspace
-        // files; for 1156e Linux the path is always the hiprojDir folder directly).
+        // For 1156e Linux: read connection info and connect BEFORE opening the workspace.
+        // If the user cancels the connection prompt, abort entirely — do not open the project.
+        // Skip for .code-workspace files (non-1156e chips); for 1156e Linux the path is
+        // always the hiprojDir folder.
         const isWorkspaceFile = folderPath.endsWith('.code-workspace');
+        let abortOpen = false;
         try {
           const hiprojFiles = isWorkspaceFile
             ? []
@@ -477,14 +478,18 @@ export default class Extension {
             if (chipSoc === '1156e') {
               const ch = OutputChannelManager.get(HISPARKAI_CHANNEL);
               if (connType === 'linux') {
-                // Reconnect to the Linux server using the stored host/port.
                 ch.info(`[1156e] Opening project — connecting to Linux server (${storedHost}:${storedPort})...`);
                 ch.show(true);
                 GlobalModel.instance.source = 'linux';
                 const availableCmds = await vscode.commands.getCommands(true);
                 if (availableCmds.includes('remoteBuild.connectLite')) {
-                  await vscode.commands.executeCommand('remoteBuild.connectLite');
-                  ch.info('[1156e] Linux server connected. Opening workspace...');
+                  const connected = await vscode.commands.executeCommand('remoteBuild.connectLite');
+                  if (!connected) {
+                    ch.warn('[1156e] Connection cancelled or failed — project not opened.');
+                    abortOpen = true;
+                  } else {
+                    ch.info('[1156e] Linux server connected. Opening workspace...');
+                  }
                 } else {
                   ch.warn('[1156e] remoteBuild not available — connect manually via SelectModel.');
                 }
@@ -498,7 +503,9 @@ export default class Extension {
               }
             }
           }
-        } catch { /* ignore — still open the folder even if hiproj read fails */ }
+        } catch { /* ignore read errors — proceed normally for non-1156e projects */ }
+
+        if (abortOpen) { return; }
 
         const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
         const same = path.normalize(currentWs).toLowerCase() === path.normalize(folderPath).toLowerCase();
@@ -559,7 +566,11 @@ export default class Extension {
         ch.show(true);
         const availCmds = await vscode.commands.getCommands(true);
         if (availCmds.includes('remoteBuild.connectLite')) {
-          await vscode.commands.executeCommand('remoteBuild.connectLite');
+          const connected = await vscode.commands.executeCommand('remoteBuild.connectLite');
+          if (!connected) {
+            ch.warn('[1156e] Connection cancelled or failed — AI panel not opened.');
+            return;
+          }
           ch.info('[1156e] Linux server connection established.');
         } else {
           ch.warn('[1156e] remoteBuild extension not available — connect manually via SelectModel.');
