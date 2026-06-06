@@ -9,7 +9,7 @@
         "value": "ws63",
         "title": "WS63",
         "key": "ws63",
-        "series": "shadow",
+        "series": "projectMgr",
         "boards": ["ws63"],
         "defaultPlatform": "CPU",
         "platformFixed": true
@@ -18,7 +18,7 @@
         "value": "3322",
         "title": "3322",
         "key": "3322",
-        "series": "shadow",
+        "series": "projectMgr",
         "boards": ["3322"],
         "defaultPlatform": "NPU",
         "platformFixed": true
@@ -27,7 +27,7 @@
         "value": "mcu",
         "title": "MCU",
         "key": "mcu",
-        "series": "shadow",
+        "series": "projectMgr",
         "boards": ["mcu"],
         "defaultPlatform": "CPU",
         "platformFixed": false
@@ -36,7 +36,7 @@
         "value": "1156e",
         "title": "1156E",
         "key": "1156e",
-        "series": "shadow",
+        "series": "projectMgr",
         "boards": ["1156e"],
         "defaultPlatform": "CPU",
         "platformFixed": false

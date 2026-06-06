@@ -2,10 +2,10 @@
  * Webpack config for the Project Wizard webview bundle.
  *
  * Produces:
- *   dist/wizard.js               — React app (New Project + Import Project)
- *   dist/wizard-themes/dark.css  — dark theme CSS  (dark build only)
- *   dist/wizard-themes/light.css — light theme CSS (light build only)
- *   dist/wizard.html             — webview HTML     (dark build only)
+ *   dist/projectMgr.js               — React app (New Project + Import Project)
+ *   dist/projectMgr-themes/dark.css  — dark theme CSS  (dark build only)
+ *   dist/projectMgr-themes/light.css — light theme CSS (light build only)
+ *   dist/projectMgr.html             — webview HTML     (dark build only)
  *
  * Light build emits only the CSS; the placeholder JS is discarded by
  * .vscodeignore so it doesn't inflate the .vsix.
@@ -20,7 +20,7 @@ const theme   = process.env.theme || 'dark';
 
 // Read antd theme variables from Less so antd can be compiled with them.
 const str = fs.readFileSync(
-  path.join(rootDir, 'src', 'frontEnd', 'wizard', 'a-styles', 'themes', `${theme}.less`),
+  path.join(rootDir, 'src', 'frontEnd', 'projectMgr', 'a-styles', 'themes', `${theme}.less`),
   'utf8',
 );
 const themeVars = {};
@@ -33,10 +33,10 @@ str.split(/\r?\n/).forEach((line) => {
 
 const entry = theme === 'dark'
   ? [
-      path.join(rootDir, 'src', 'frontEnd', 'wizard', 'index.tsx'),
-      path.join(rootDir, 'src', 'frontEnd', 'wizard', 'a-styles', 'index.less'),
+      path.join(rootDir, 'src', 'frontEnd', 'projectMgr', 'index.tsx'),
+      path.join(rootDir, 'src', 'frontEnd', 'projectMgr', 'a-styles', 'index.less'),
     ]
-  : path.join(rootDir, 'src', 'frontEnd', 'wizard', 'a-styles', 'index.less');
+  : path.join(rootDir, 'src', 'frontEnd', 'projectMgr', 'a-styles', 'index.less');
 
 module.exports = {
   mode:    'development',
@@ -44,7 +44,7 @@ module.exports = {
   output: {
     // Light build has a CSS-only entry; redirect its empty JS to a noop file
     // so it does not overwrite the dark build's wizard.js.
-    filename: theme === 'dark' ? 'wizard.js' : '_wizard_noop.js',
+    filename: theme === 'dark' ? 'projectMgr.js' : '_projectMgr_noop.js',
     path:     path.join(rootDir, 'dist'),
   },
   performance: { hints: false },
@@ -104,16 +104,16 @@ module.exports = {
   },
   plugins: [
     new MiniCssExtractPlugin({
-      filename:      `wizard-themes/${theme}.css`,
-      chunkFilename: `wizard-themes/${theme}.css`,
+      filename:      `projectMgr-themes/${theme}.css`,
+      chunkFilename: `projectMgr-themes/${theme}.css`,
       ignoreOrder:   false,
     }),
     // Only emit wizard.html for the dark build (light is CSS-only; its HTML
     // would have no <script> tag and would overwrite the dark build's result).
     ...(theme === 'dark'
       ? [new HtmlWebPackPlugin({
-          template: path.join(rootDir, 'src', 'frontEnd', 'wizard', 'index.html'),
-          filename: 'wizard.html',
+          template: path.join(rootDir, 'src', 'frontEnd', 'projectMgr', 'index.html'),
+          filename: 'projectMgr.html',
           inject:   true,
           theme,
         })]

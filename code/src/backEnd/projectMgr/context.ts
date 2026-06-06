@@ -4,7 +4,7 @@
  */
 type PanelLike = { postMessage(msg: any): void; onPanelDisposed(): void; toggle(): void; panel: any };
 
-export class WizardContext {
+export class ProjectMgrContext {
   static globalStoragePath:     string | undefined;
   static extensionPath:         string | undefined;
   static mainProjectListPath:   string | undefined;
@@ -14,29 +14,29 @@ export class WizardContext {
   static pendingConnectionType: 'linux' | 'wsl' | undefined;
   static pendingWslDistro:      string | undefined;
 
-  // Passed from getProjectData to showFromWizard to avoid unreliable path comparison.
+  // Passed from getProjectData to showFromProjectMgr to avoid unreliable path comparison.
   static pendingPlatform:   string | undefined;  // 'CPU' | 'NPU'
   static pendingHiprojPath: string | undefined;
 
   // Captured from remote-build.json after Linux 1156e connection (before project creation).
-  // Field names match remote-build.json and .hiproj [information] section.
   static pendingRemoteBuildJsonContent: string | undefined;
-  static pendingRemoteHost: string | undefined;  // servers.host in remote-build.json
-  static pendingRemotePort: string | undefined;  // servers.port in remote-build.json
+  static pendingRemoteHost: string | undefined;
+  static pendingRemotePort: string | undefined;
 
-  static wizardPanel: PanelLike | undefined;
-  static importPanel: PanelLike | undefined;
+  // 'projectMgr' = New Project panel; 'import' = Import Project panel
+  static projectMgrPanel: PanelLike | undefined;
+  static importPanel:     PanelLike | undefined;
 
-  static postToWizard(msg: any): void { WizardContext.wizardPanel?.postMessage(msg); }
-  static postToImport(msg: any): void { WizardContext.importPanel?.postMessage(msg); }
+  static postToWizard(msg: any): void  { ProjectMgrContext.projectMgrPanel?.postMessage(msg); }
+  static postToImport(msg: any): void  { ProjectMgrContext.importPanel?.postMessage(msg); }
 
-  static deactivate(type: 'wizard' | 'import'): void {
-    if (type === 'wizard') {
-      WizardContext.wizardPanel?.onPanelDisposed();
-      WizardContext.wizardPanel = undefined;
+  static deactivate(type: 'projectMgr' | 'import'): void {
+    if (type === 'projectMgr') {
+      ProjectMgrContext.projectMgrPanel?.onPanelDisposed();
+      ProjectMgrContext.projectMgrPanel = undefined;
     } else {
-      WizardContext.importPanel?.onPanelDisposed();
-      WizardContext.importPanel = undefined;
+      ProjectMgrContext.importPanel?.onPanelDisposed();
+      ProjectMgrContext.importPanel = undefined;
     }
   }
 }

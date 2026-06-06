@@ -15,8 +15,8 @@ export function getUserDir(): string {
 
 // ─── Project list helpers ─────────────────────────────────────────────────────
 
-const PROJECT_LIST_FILE = 'shadow_projectlist.json';
-const LATEST_LIST_FILE  = 'shadow_latestlist.json';
+const PROJECT_LIST_FILE = 'projectMgr_list.json';
+const LATEST_LIST_FILE  = 'projectMgr_latestlist.json';
 
 function getListPath(globalStoragePath: string, file: string): string {
   return path.join(path.dirname(globalStoragePath), file);
@@ -96,7 +96,7 @@ export function removeProjectDataJson(sdkDir: string, globalStoragePath: string)
 // ChipConfigPanel.toggle() reads projectlist.json (path stored as ChipConfigPanel.configPath)
 // to populate window.initialDemoData for the welcome page's project list.
 // The wizard writes to the SAME file using the path pre-computed in extension.ts
-// (WizardContext.mainProjectListPath) so there is no independent path calculation that
+// (ProjectMgrContext.mainProjectListPath) so there is no independent path calculation that
 // could drift from ChipConfigPanel's path on non-standard IDE installs.
 
 export function upsertMainProjectList(item: ProjectListItem, mainProjectListPath: string): void {

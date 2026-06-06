@@ -12,7 +12,7 @@ export class Command {
   static changeTheme(message: ThemeChangeMessage): void {
     const link = document.getElementsByTagName('link')[0];
     if (link) {
-      link.href = link.href.replace(/wizard-themes\/.*\.css/, `wizard-themes/${message.params.theme}.css`);
+      link.href = link.href.replace(/projectMgr-themes\/.*\.css/, `projectMgr-themes/${message.params.theme}.css`);
     }
   }
 

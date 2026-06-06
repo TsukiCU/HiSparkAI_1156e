@@ -3,7 +3,7 @@
  * Licensed under the Apache License, Version 2.0
  */
 
-export interface ShadowProjectData {
+export interface ProjectMgrData {
   soc: string;
   board: string;
   platform: 'CPU' | 'NPU' | '';
@@ -25,7 +25,7 @@ export interface OperateStruct {
 
 export interface ProjectConfigStruct {
   operationType: string;
-  projectData?: ShadowProjectData;
+  projectData?: ProjectMgrData;
 }
 
 export interface SocChipItem {

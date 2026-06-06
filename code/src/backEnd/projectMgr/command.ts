@@ -11,10 +11,10 @@ import * as vscode from 'vscode';
 import * as ini   from 'ini';
 import * as cp    from 'child_process';
 
-import { WizardContext }   from './context';
+import { ProjectMgrContext }   from './context';
 import { res }             from './i18n/backEndTrans';
 import { WizardApiMethod, type GetInfoCallBack, type LanguageSetMessage } from './interface/api';
-import type { OperateStruct, ShadowProjectData } from './interface/model';
+import type { OperateStruct, ProjectMgrData } from './interface/model';
 import {
   addItemsToProList,
   updateOneItemToLatestList,
@@ -33,15 +33,15 @@ import {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function callback(key: string, data: any, target: 'wizard' | 'import' = 'wizard'): void {
+function callback(key: string, data: any, target: 'projectMgr' | 'import' = 'projectMgr'): void {
   const msg: GetInfoCallBack = {
     method: WizardApiMethod.GET_INFO_CALLBAK,
     params: { key, data },
   };
   if (target === 'import') {
-    WizardContext.postToImport(msg);
+    ProjectMgrContext.postToImport(msg);
   } else {
-    WizardContext.postToWizard(msg);
+    ProjectMgrContext.postToWizard(msg);
   }
 }
 
@@ -70,7 +70,7 @@ function validateSdkForChip(soc: string, sdkPath: string): boolean {
 // ─── Minimal .hiproj writer ───────────────────────────────────────────────────
 
 function writeHiproj(
-  projectData: ShadowProjectData,
+  projectData: ProjectMgrData,
   hiprojDir: string,
   sdkDir: string,
   opts?: { host?: string; port?: string },
@@ -89,8 +89,8 @@ function writeHiproj(
       project_path:       hiprojDir,
       sdk_path:           isLinux ? hiprojDir : sdkDir,
       remote_sdk_path:    isLinux ? sdkDir : '',
-      series_name:        'shadow',
-      project_type:       'SHADOW',
+      series_name:        'projectMgr',
+      project_type:       'PROJECT_MGR',
       connection_type:    projectData.connectionType ?? '',
       wsl_distro:         projectData.wslDistro ?? '',
       // host/port match remote-build.json servers.host / servers.port (Linux 1156e only).
@@ -117,7 +117,7 @@ function writeHiproj(
 
 // ─── Command class ────────────────────────────────────────────────────────────
 
-export class WizardCommand {
+export class ProjectMgrCommand {
 
   static closeProgress(): void { /* no-op */ }
 
@@ -129,9 +129,9 @@ export class WizardCommand {
       params: { language: vscode.env.language },
     };
     if (operate.source === 'import') {
-      WizardContext.postToImport(msg);
+      ProjectMgrContext.postToImport(msg);
     } else {
-      WizardContext.postToWizard(msg);
+      ProjectMgrContext.postToWizard(msg);
     }
   }
 
@@ -140,12 +140,12 @@ export class WizardCommand {
   static getJsonInfo(operate: OperateStruct): void {
     const { fileName } = operate.paramData ?? {};
     if (fileName === 'chiplist.json') {
-      const chiplistPath = path.join(WizardContext.extensionPath!, 'resources', 'chips', 'chiplist.json');
+      const chiplistPath = path.join(ProjectMgrContext.extensionPath!, 'resources', 'chips', 'chiplist.json');
       try {
         const data = JSON.parse(fs.readFileSync(chiplistPath, 'utf-8'));
-        callback('chipList', data, operate.source === 'import' ? 'import' : 'wizard');
+        callback('chipList', data, operate.source === 'import' ? 'import' : 'projectMgr');
       } catch {
-        callback('chipList', [], operate.source === 'import' ? 'import' : 'wizard');
+        callback('chipList', [], operate.source === 'import' ? 'import' : 'projectMgr');
       }
     }
   }
@@ -166,7 +166,7 @@ export class WizardCommand {
 
     // 1156e SDK lives on a remote (Linux or WSL); use a specialised picker.
     if (soc === '1156e' && key === 'sdkPathInfo') {
-      WizardCommand.selectSdkPathFor1156e(key);
+      ProjectMgrCommand.selectSdkPathFor1156e(key);
       return;
     }
 
@@ -218,8 +218,8 @@ export class WizardCommand {
         'remoteBuild.api.browseRemoteDirectory',
       );
       if (!remotePath) { return; }
-      WizardContext.pendingConnectionType = 'linux';
-      WizardContext.pendingWslDistro      = undefined;
+      ProjectMgrContext.pendingConnectionType = 'linux';
+      ProjectMgrContext.pendingWslDistro      = undefined;
 
       // Capture the remote-build.json written by remoteBuild into the current workspace.
       // We copy it into the hiproj folder after project creation so it's available there.
@@ -228,13 +228,13 @@ export class WizardCommand {
       if (fs.existsSync(rbPath)) {
         try {
           const rbContent = fs.readFileSync(rbPath, 'utf-8');
-          WizardContext.pendingRemoteBuildJsonContent = rbContent;
+          ProjectMgrContext.pendingRemoteBuildJsonContent = rbContent;
           const rbParsed = JSON.parse(rbContent);
           // remote-build.json format: { "servers": [{ "host": "...", "port": 22, ... }] }
           // servers is an array; take the first entry.
           const server = Array.isArray(rbParsed?.servers) ? rbParsed.servers[0] : rbParsed?.servers;
-          WizardContext.pendingRemoteHost = String(server?.host ?? '');
-          WizardContext.pendingRemotePort = String(server?.port ?? '22');
+          ProjectMgrContext.pendingRemoteHost = String(server?.host ?? '');
+          ProjectMgrContext.pendingRemotePort = String(server?.port ?? '22');
         } catch { /* ignore parse errors */ }
       }
 
@@ -242,7 +242,7 @@ export class WizardCommand {
 
     } else {
       // WSL: let user choose a distribution, then pick a local folder.
-      const distros = await WizardCommand.getWslDistros();
+      const distros = await ProjectMgrCommand.getWslDistros();
       if (!distros.length) {
         vscode.window.showWarningMessage('No WSL distributions found. Please install WSL first.');
         return;
@@ -262,8 +262,8 @@ export class WizardCommand {
       });
       if (!result?.[0]?.fsPath) { return; }
 
-      WizardContext.pendingConnectionType = 'wsl';
-      WizardContext.pendingWslDistro      = selectedDistro;
+      ProjectMgrContext.pendingConnectionType = 'wsl';
+      ProjectMgrContext.pendingWslDistro      = selectedDistro;
       callback(key, result[0].fsPath);
     }
   }
@@ -320,7 +320,7 @@ export class WizardCommand {
 
   // ── Create project ─────────────────────────────────────────────────────────
 
-  static async getProjectData(projectData: ShadowProjectData): Promise<void> {
+  static async getProjectData(projectData: ProjectMgrData): Promise<void> {
     if (!projectData.soc || !projectData.projectName || !projectData.projectPath || !projectData.sdkPath) {
       showMessageModal({ content: res('fieldsMissing'), infoType: 'err' });
       return;
@@ -330,10 +330,10 @@ export class WizardCommand {
     const hiprojDir = path.join(projectData.projectPath, `${projectData.projectName}_hiproj`);
 
     // Attach the connection type captured during SDK selection (1156e only).
-    projectData.connectionType = WizardContext.pendingConnectionType;
-    projectData.wslDistro      = WizardContext.pendingWslDistro;
-    WizardContext.pendingConnectionType = undefined;
-    WizardContext.pendingWslDistro      = undefined;
+    projectData.connectionType = ProjectMgrContext.pendingConnectionType;
+    projectData.wslDistro      = ProjectMgrContext.pendingWslDistro;
+    ProjectMgrContext.pendingConnectionType = undefined;
+    ProjectMgrContext.pendingWslDistro      = undefined;
 
     // For Linux 1156e the SDK lives on a remote server; open the local hiproj folder
     // instead of the remote SDK path (which doesn't exist on this machine).
@@ -360,11 +360,11 @@ export class WizardCommand {
     }
 
     writeHiproj(projectData, hiprojDir, sdkDir, {
-      host: WizardContext.pendingRemoteHost,
-      port: WizardContext.pendingRemotePort,
+      host: ProjectMgrContext.pendingRemoteHost,
+      port: ProjectMgrContext.pendingRemotePort,
     });
-    WizardContext.pendingRemoteHost = undefined;
-    WizardContext.pendingRemotePort = undefined;
+    ProjectMgrContext.pendingRemoteHost = undefined;
+    ProjectMgrContext.pendingRemotePort = undefined;
 
     // For Linux 1156e: set up .vscode/ in the hiproj folder.
     if (isLinuxRemote) {
@@ -382,15 +382,15 @@ export class WizardCommand {
           );
         }
         // Write the remote-build.json captured from the connection step.
-        if (WizardContext.pendingRemoteBuildJsonContent) {
+        if (ProjectMgrContext.pendingRemoteBuildJsonContent) {
           fs.writeFileSync(
             path.join(vscodeDir, 'remote-build.json'),
-            WizardContext.pendingRemoteBuildJsonContent,
+            ProjectMgrContext.pendingRemoteBuildJsonContent,
             'utf-8',
           );
         }
       } catch { /* ignore */ }
-      WizardContext.pendingRemoteBuildJsonContent = undefined;
+      ProjectMgrContext.pendingRemoteBuildJsonContent = undefined;
     }
 
     const hiprojFilePath = path.join(hiprojDir, `${projectData.projectName}.hiproj`);
@@ -404,19 +404,19 @@ export class WizardCommand {
       timestamp: Date.now(),
     };
 
-    if (WizardContext.globalStoragePath) {
-      addItemsToProList([item], WizardContext.globalStoragePath);
-      updateOneItemToLatestList(item, WizardContext.globalStoragePath);
-      upsertProjectDataJson(projectDataKey, hiprojFilePath, WizardContext.globalStoragePath);
-      if (WizardContext.mainProjectListPath) {
-        upsertMainProjectList(item, WizardContext.mainProjectListPath);
+    if (ProjectMgrContext.globalStoragePath) {
+      addItemsToProList([item], ProjectMgrContext.globalStoragePath);
+      updateOneItemToLatestList(item, ProjectMgrContext.globalStoragePath);
+      upsertProjectDataJson(projectDataKey, hiprojFilePath, ProjectMgrContext.globalStoragePath);
+      if (ProjectMgrContext.mainProjectListPath) {
+        upsertMainProjectList(item, ProjectMgrContext.mainProjectListPath);
       }
     }
 
-    // Pass platform and hiproj path to showFromWizard via context — avoids
+    // Pass platform and hiproj path to showFromProjectMgr via context — avoids
     // unreliable path-string comparison when detecting target after same-workspace open.
-    WizardContext.pendingPlatform   = projectData.platform;
-    WizardContext.pendingHiprojPath = hiprojFilePath;
+    ProjectMgrContext.pendingPlatform   = projectData.platform;
+    ProjectMgrContext.pendingHiprojPath = hiprojFilePath;
 
     callback('thisProjectNotExists', new Date().getTime());
 
@@ -426,52 +426,52 @@ export class WizardCommand {
     if (sameWorkspace) {
       // Folder is already the active workspace — openFolder would be a no-op.
       // Close the wizard panel first, then switch to the AI panel.
-      if (WizardContext.pendingOpenMarkerPath) {
-        try { fs.unlinkSync(WizardContext.pendingOpenMarkerPath); } catch { /* ignore */ }
+      if (ProjectMgrContext.pendingOpenMarkerPath) {
+        try { fs.unlinkSync(ProjectMgrContext.pendingOpenMarkerPath); } catch { /* ignore */ }
       }
-      WizardContext.deactivate('wizard');
-      vscode.commands.executeCommand('HisparkAI.showFromWizard');
+      ProjectMgrContext.deactivate('projectMgr');
+      vscode.commands.executeCommand('HisparkAI.showFromProjectMgr');
     } else {
       // Write the marker BEFORE openFolder so extension.ts consumes it on re-activation.
-      if (WizardContext.pendingOpenMarkerPath) {
-        try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+      if (ProjectMgrContext.pendingOpenMarkerPath) {
+        try { fs.writeFileSync(ProjectMgrContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
       }
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folderToOpen));
     }
-    WizardContext.deactivate('wizard');
+    ProjectMgrContext.deactivate('projectMgr');
   }
 
-  // ── Close wizard ───────────────────────────────────────────────────────────
+  // ── Close panel ───────────────────────────────────────────────────────────
 
-  static closeProjectWizard(_operate?: OperateStruct): void {
-    WizardContext.deactivate('wizard');
+  static closeProjectMgr(_operate?: OperateStruct): void {
+    ProjectMgrContext.deactivate('projectMgr');
   }
 
   // ─── Project list ──────────────────────────────────────────────────────────
 
   static getProjectList(_operate: OperateStruct): void {
-    if (!WizardContext.globalStoragePath) { callback('projectList', []); return; }
-    callback('projectList', getProjectList(WizardContext.globalStoragePath));
+    if (!ProjectMgrContext.globalStoragePath) { callback('projectList', []); return; }
+    callback('projectList', getProjectList(ProjectMgrContext.globalStoragePath));
   }
 
   static getLatestList(_operate: OperateStruct): void {
-    if (!WizardContext.globalStoragePath) { callback('latestList', []); return; }
-    callback('latestList', getLatestList(WizardContext.globalStoragePath));
+    if (!ProjectMgrContext.globalStoragePath) { callback('latestList', []); return; }
+    callback('latestList', getLatestList(ProjectMgrContext.globalStoragePath));
   }
 
   static deleteProject(operate: OperateStruct): void {
     const { projectPath } = operate.paramData ?? {};
-    if (!projectPath || !WizardContext.globalStoragePath) { return; }
-    deleteFromProjectList(projectPath, WizardContext.globalStoragePath);
+    if (!projectPath || !ProjectMgrContext.globalStoragePath) { return; }
+    deleteFromProjectList(projectPath, ProjectMgrContext.globalStoragePath);
 
     const content = getHiprojContent(projectPath);
     const sdkDir: string | undefined = content?.information?.sdk_path;
     if (sdkDir) {
-      removeProjectDataJson(sdkDir, WizardContext.globalStoragePath);
+      removeProjectDataJson(sdkDir, ProjectMgrContext.globalStoragePath);
     }
     // Keep projectlist.json in sync.
-    if (WizardContext.mainProjectListPath) {
-      removeFromMainProjectList(projectPath, WizardContext.mainProjectListPath);
+    if (ProjectMgrContext.mainProjectListPath) {
+      removeFromMainProjectList(projectPath, ProjectMgrContext.mainProjectListPath);
     }
   }
 
@@ -502,7 +502,7 @@ export class WizardCommand {
 
   static confirmImport(operate: OperateStruct): void {
     const selectedPaths: string[] = operate.paramData?.selectedPaths ?? [];
-    if (!WizardContext.globalStoragePath) { return; }
+    if (!ProjectMgrContext.globalStoragePath) { return; }
 
     const succeeded: string[] = [];
     const failed: string[] = [];
@@ -520,8 +520,8 @@ export class WizardCommand {
         platform: content?.information?.platform ?? '',
         time:     new Date().toLocaleString('zh-CN'),
       };
-      addItemsToProList([item], WizardContext.globalStoragePath!);
-      updateOneItemToLatestList(item, WizardContext.globalStoragePath!);
+      addItemsToProList([item], ProjectMgrContext.globalStoragePath!);
+      updateOneItemToLatestList(item, ProjectMgrContext.globalStoragePath!);
       succeeded.push(hiprojPath);
     }
 
@@ -533,7 +533,7 @@ export class WizardCommand {
       showMessageModal({ content: res('importPartialFailed', [String(failed.length)]), infoType: 'warn' });
     }
 
-    WizardContext.deactivate('import');
+    ProjectMgrContext.deactivate('import');
   }
 
   static async openProject(operate: OperateStruct): Promise<void> {
@@ -561,8 +561,8 @@ export class WizardCommand {
 
     if (!sdkDir) { sdkDir = path.dirname(hiprojPath); }
 
-    if (WizardContext.pendingOpenMarkerPath) {
-      try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+    if (ProjectMgrContext.pendingOpenMarkerPath) {
+      try { fs.writeFileSync(ProjectMgrContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
     }
     await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(sdkDir));
   }

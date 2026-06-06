@@ -68,9 +68,9 @@ export const icon = {
 /**
  * Wizard webview HTML (separate bundle from the main AI pipeline webview)
  */
-export const wizardHtml = {
+export const projectMgrHtml = {
   index: {
-    path: 'wizard.html',
+    path: 'projectMgr.html',
     location: ResourceLocation.WEB,
   },
 };

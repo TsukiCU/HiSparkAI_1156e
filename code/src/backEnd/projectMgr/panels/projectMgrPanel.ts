@@ -7,10 +7,10 @@ import * as path   from 'path';
 import * as fs     from 'fs';
 import type { WebviewPanel } from 'vscode';
 import type { Message } from '../../interface/api';
-import { WizardCommand } from '../command';
+import { ProjectMgrCommand } from '../command';
 import { res }           from '../i18n/backEndTrans';
 
-export class WizardPanel {
+export class ProjectMgrPanel {
   public panel: WebviewPanel | undefined;
   private context: vscode.ExtensionContext;
 
@@ -25,7 +25,7 @@ export class WizardPanel {
     // getResource.setConfig is never called in code's extension.ts, so we cannot
     // rely on the getResource singleton here.
     const distDir  = path.join(this.context.extensionPath, 'dist');
-    const htmlPath = path.join(distDir, 'wizard.html');
+    const htmlPath = path.join(distDir, 'projectMgr.html');
     this.panel.webview.html = fs
       .readFileSync(htmlPath, 'utf-8')
       .replace(
@@ -46,9 +46,9 @@ export class WizardPanel {
     panel.onDidDispose(this.onPanelDisposed, this, this.context.subscriptions);
     panel.webview.onDidReceiveMessage(
       (message) => {
-        const func = Reflect.get(WizardCommand, message.method);
+        const func = Reflect.get(ProjectMgrCommand, message.method);
         if (typeof func === 'function') {
-          Reflect.apply(func, WizardCommand, [message.params]);
+          Reflect.apply(func, ProjectMgrCommand, [message.params]);
         }
       },
       undefined,

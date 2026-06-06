@@ -7,7 +7,7 @@ import * as path   from 'path';
 import * as fs     from 'fs';
 import type { WebviewPanel } from 'vscode';
 import type { Message } from '../../interface/api';
-import { WizardCommand } from '../command';
+import { ProjectMgrCommand } from '../command';
 import { res }           from '../i18n/backEndTrans';
 
 export class ImportPanel {
@@ -22,7 +22,7 @@ export class ImportPanel {
   toggle(): void {
     if (!this.panel) { return; }
     const distDir  = path.join(this.context.extensionPath, 'dist');
-    const htmlPath = path.join(distDir, 'wizard.html');
+    const htmlPath = path.join(distDir, 'projectMgr.html');
     this.panel.webview.html = fs
       .readFileSync(htmlPath, 'utf-8')
       .replace(
@@ -43,9 +43,9 @@ export class ImportPanel {
     panel.onDidDispose(this.onPanelDisposed, this, this.context.subscriptions);
     panel.webview.onDidReceiveMessage(
       (message) => {
-        const func = Reflect.get(WizardCommand, message.method);
+        const func = Reflect.get(ProjectMgrCommand, message.method);
         if (typeof func === 'function') {
-          Reflect.apply(func, WizardCommand, [message.params]);
+          Reflect.apply(func, ProjectMgrCommand, [message.params]);
         }
       },
       undefined,

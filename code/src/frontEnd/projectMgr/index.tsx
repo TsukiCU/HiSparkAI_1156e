@@ -6,7 +6,7 @@ import * as React from 'react';
 import { Provider } from 'react-redux';
 import { createRoot } from 'react-dom/client';
 
-import ProjectWizard from './projectWizard';
+import ProjectCreate from './projectCreate';
 import ProjectImport from './projectImport/projectImport';
 import { Command }   from './core/command';
 import { IStore }    from './core/store/store';
@@ -33,7 +33,7 @@ const store = IStore.getStore();
 
 function createApp(): React.ReactElement {
   if (flagCreate) {
-    return <Provider store={store}><ProjectWizard /></Provider>;
+    return <Provider store={store}><ProjectCreate /></Provider>;
   }
   if (flagImport) {
     return <Provider store={store}><ProjectImport /></Provider>;

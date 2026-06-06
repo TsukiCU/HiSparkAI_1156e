@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import type { ColumnsType } from 'antd/es/table';
 
 import { getInfo, sendProjectData } from '../actions';
-import type { OperateStruct } from '../../../backEnd/wizard/interface/model';
+import type { OperateStruct } from '../../../backEnd/projectMgr/interface/model';
 import Drag from '../component/drag';
 import { vscode } from '../index';
 
@@ -64,7 +64,7 @@ const ProjectImport = (): JSX.Element => {
 
   const onCancel = (): void => {
     setIsOpen(false);
-    vscode.postMessage({ method: 'closeProjectWizard', params: {} });
+    vscode.postMessage({ method: 'closeProjectMgr', params: {} });
   };
 
   const columns: ColumnsType<ImportItem> = [

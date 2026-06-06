@@ -33,9 +33,9 @@ import { addPythonFile, mkdirPath, modifyPythonFile, updateToolChainJson } from 
 import { SerialPortWatcher } from './backEnd/watchers/SerialPortWatcher';
 import { RemoteHeartbeatWatcher } from './backEnd/watchers/RemoteHeartbeatWatcher';
 import { OutputChannelManager } from './backEnd/output/channelManager';
-import { WizardContext }   from './backEnd/wizard/context';
-import { WizardPanel }     from './backEnd/wizard/panels/wizardPanel';
-import { ImportPanel }     from './backEnd/wizard/panels/importPanel';
+import { ProjectMgrContext }   from './backEnd/projectMgr/context';
+import { ProjectMgrPanel }     from './backEnd/projectMgr/panels/projectMgrPanel';
+import { ImportPanel }     from './backEnd/projectMgr/panels/importPanel';
 
 const HISPARKAI_CHANNEL = 'HiSpark Studio AI';
 
@@ -108,7 +108,7 @@ export default class Extension {
       }
     }
 
-    // Connection type read from .hiproj — used later in the wizardPendingOpen block.
+    // Connection type read from .hiproj — used later in the projectMgrPendingOpen block.
     let hiprojConnType = '';
     let hiprojSocId    = '';
 
@@ -162,18 +162,18 @@ export default class Extension {
     // Consume the "wizard-triggered open" marker written before vscode.openFolder.
     // The marker distinguishes an explicit project open (show AI panel) from a
     // plain window reload (stay on welcome page).
-    const pendingMarkerPath = path.join(storageDir, 'wizard_pending_open.json');
-    const wizardPendingOpen = fs.existsSync(pendingMarkerPath);
-    if (wizardPendingOpen) {
+    const pendingMarkerPath = path.join(storageDir, 'projectMgr_pending_open.json');
+    const projectMgrPendingOpen = fs.existsSync(pendingMarkerPath);
+    if (projectMgrPendingOpen) {
       try { fs.unlinkSync(pendingMarkerPath); } catch { /* ignore */ }
     }
 
-    // Initialise wizard context so wizard commands can access extension globals.
-    WizardContext.globalStoragePath    = context.globalStorageUri.fsPath;
-    WizardContext.extensionPath        = context.extensionPath;
+    // Initialise projectMgr context so projectMgr commands can access extension globals.
+    ProjectMgrContext.globalStoragePath    = context.globalStorageUri.fsPath;
+    ProjectMgrContext.extensionPath        = context.extensionPath;
     // Computed identically to ChipConfigPanel.configPath so both point to the same file.
-    WizardContext.mainProjectListPath  = path.join(context.globalStorageUri.fsPath, '../../../projectlist.json');
-    WizardContext.pendingOpenMarkerPath = pendingMarkerPath;
+    ProjectMgrContext.mainProjectListPath  = path.join(context.globalStorageUri.fsPath, '../../../projectlist.json');
+    ProjectMgrContext.pendingOpenMarkerPath = pendingMarkerPath;
 
     const homeTreeProvider = new HomeTreeDataProvider();
     vscode.window.registerTreeDataProvider('hisparkai-home', homeTreeProvider);
@@ -421,22 +421,22 @@ export default class Extension {
       return isEnvPath && buildPathExist;
     }
 
-    // ── HisparkAI.showFromWizard ──────────────────────────────────────────────────
+    // ── HisparkAI.showFromProjectMgr ──────────────────────────────────────────────────
     // Called when the wizard creates/opens a project in the SAME workspace so that
     // the AI panel is shown with a freshly-detected target.
     // Using HisparkAI.show directly would use the stale `target` from the activate()
     // closure (which was NONE when the workspace was first opened without a project).
-    const showFromWizardCommand = vscode.commands.registerCommand('HisparkAI.showFromWizard', () => {
+    const showFromProjectMgrCommand = vscode.commands.registerCommand('HisparkAI.showFromProjectMgr', () => {
       // Close any open wizard panels — only one panel visible at a time.
-      WizardContext.deactivate('wizard');
-      WizardContext.deactivate('import');
+      ProjectMgrContext.deactivate('projectMgr');
+      ProjectMgrContext.deactivate('import');
 
-      // Read the platform and hiproj path written by getProjectData via WizardContext.
+      // Read the platform and hiproj path written by getProjectData via ProjectMgrContext.
       // This avoids fragile path-string comparisons against projectdata.json.
-      const pendingPlatform   = WizardContext.pendingPlatform;
-      const pendingHiprojPath = WizardContext.pendingHiprojPath;
-      WizardContext.pendingPlatform   = undefined;
-      WizardContext.pendingHiprojPath = undefined;
+      const pendingPlatform   = ProjectMgrContext.pendingPlatform;
+      const pendingHiprojPath = ProjectMgrContext.pendingHiprojPath;
+      ProjectMgrContext.pendingPlatform   = undefined;
+      ProjectMgrContext.pendingHiprojPath = undefined;
 
       let freshTarget: Target = 'NONE';
       if (pendingPlatform === 'CPU') { freshTarget = 'CPU'; }
@@ -509,35 +509,35 @@ export default class Extension {
         const currentWs = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
         const same = path.normalize(currentWs).toLowerCase() === path.normalize(folderPath).toLowerCase();
         if (same) {
-          vscode.commands.executeCommand('HisparkAI.showFromWizard');
+          vscode.commands.executeCommand('HisparkAI.showFromProjectMgr');
           return;
         }
-        if (WizardContext.pendingOpenMarkerPath) {
-          try { fs.writeFileSync(WizardContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
+        if (ProjectMgrContext.pendingOpenMarkerPath) {
+          try { fs.writeFileSync(ProjectMgrContext.pendingOpenMarkerPath, '1', 'utf-8'); } catch { /* ignore */ }
         }
         await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folderPath));
       },
     );
 
     // ── Project Wizard commands ────────────────────────────────────────────────
-    const showProjectWizardCommand = vscode.commands.registerCommand('HisparkAI.showProjectWizard', () => {
-      if (!WizardContext.wizardPanel?.panel) {
-        WizardContext.wizardPanel = new WizardPanel(context);
+    const showProjectProjectMgrCommand = vscode.commands.registerCommand('HisparkAI.showProjectWizard', () => {
+      if (!ProjectMgrContext.projectMgrPanel?.panel) {
+        ProjectMgrContext.projectMgrPanel = new ProjectMgrPanel(context);
       }
-      WizardContext.wizardPanel.toggle();
-      WizardContext.wizardPanel.panel?.reveal();
+      ProjectMgrContext.projectMgrPanel.toggle();
+      ProjectMgrContext.projectMgrPanel.panel?.reveal();
     });
 
-    const showProjectImportCommand = vscode.commands.registerCommand('HisparkAI.showProjectImport', () => {
-      if (!WizardContext.importPanel?.panel) {
-        WizardContext.importPanel = new ImportPanel(context);
+    const showProjectMgrImportCommand = vscode.commands.registerCommand('HisparkAI.showProjectImport', () => {
+      if (!ProjectMgrContext.importPanel?.panel) {
+        ProjectMgrContext.importPanel = new ImportPanel(context);
       }
-      WizardContext.importPanel.toggle();
-      WizardContext.importPanel.panel?.reveal();
+      ProjectMgrContext.importPanel.toggle();
+      ProjectMgrContext.importPanel.panel?.reveal();
     });
 
     context.subscriptions.push(
-      showFromWizardCommand,
+      showFromProjectMgrCommand,
       openProjectByPathCommand,
       manageToolchainCommand,
       chipConfigCommand,
@@ -547,8 +547,8 @@ export default class Extension {
       connectServerCommand,
       sshCommand,
       openReleaseNoteCommand,
-      showProjectWizardCommand,
-      showProjectImportCommand,
+      showProjectProjectMgrCommand,
+      showProjectMgrImportCommand,
     );
 
     context.subscriptions.push(RemoteHeartbeatWatcher.getInstance());
@@ -559,7 +559,7 @@ export default class Extension {
 
     // Show the AI panel only when the wizard explicitly opened this workspace.
     // Plain reloads (e.g. Developer: Reload Window) must NOT auto-jump.
-    if (target !== 'NONE' && wizardPendingOpen) {
+    if (target !== 'NONE' && projectMgrPendingOpen) {
       // For 1156e Linux: reconnect to the server before showing the AI panel.
       // This makes the connection visible in the output channel immediately after
       // the project is opened, rather than waiting until the user clicks SelectModel.
@@ -602,8 +602,8 @@ export default class Extension {
       },
     };
     this.chipConfigPanel?.postMessage(themeMessage);
-    WizardContext.postToWizard(themeMessage);
-    WizardContext.postToImport(themeMessage);
+    ProjectMgrContext.postToWizard(themeMessage);
+    ProjectMgrContext.postToImport(themeMessage);
   }
 
   /**

@@ -12,13 +12,13 @@ import { FolderOpenOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
 import { getInfo, sendProjectData } from './actions';
-import type { OperateStruct, SocChipItem, SocGroupItem } from '../../backEnd/wizard/interface/model';
+import type { OperateStruct, SocChipItem, SocGroupItem } from '../../backEnd/projectMgr/interface/model';
 import Drag from './component/drag';
 import { vscode } from './index';
 
 const { Option } = Select;
 
-// Chips available in the shadow wizard — MCU is excluded intentionally.
+// Chips available in the projectMgr — MCU is excluded intentionally.
 const ALLOWED_SOCS = new Set(['ws63', '3322', '1156e']);
 
 // SOC-to-platform mapping (auto-set, not editable by user).
@@ -33,7 +33,7 @@ const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322']);
 
 let drag: Drag | undefined;
 
-const ProjectWizard = (): JSX.Element => {
+const ProjectCreate = (): JSX.Element => {
   const { t }    = useTranslation();
   const dispatch = useDispatch();
   const [form]   = Form.useForm();
@@ -79,9 +79,9 @@ const ProjectWizard = (): JSX.Element => {
 
   // ── mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    dispatch(getInfo({ operationType: 'getLanguage',   paramData: '',                              source: 'wizard' }));
-    dispatch(getInfo({ operationType: 'getJsonInfo',   paramData: { fileName: 'chiplist.json' }, source: 'wizard' }));
-    dispatch(getInfo({ operationType: 'getUserConfig', paramData: '',                              source: 'wizard' }));
+    dispatch(getInfo({ operationType: 'getLanguage',   paramData: '',                              source: 'projectMgr' }));
+    dispatch(getInfo({ operationType: 'getJsonInfo',   paramData: { fileName: 'chiplist.json' }, source: 'projectMgr' }));
+    dispatch(getInfo({ operationType: 'getUserConfig', paramData: '',                              source: 'projectMgr' }));
   }, [dispatch]);
 
   // ── userConfig → pre-fill project path ────────────────────────────────────
@@ -100,7 +100,7 @@ const ProjectWizard = (): JSX.Element => {
     setSdkValidated(true);
     // Trigger backend validation for ws63 / 3322.
     if (soc && SDK_VALIDATED_CHIPS.has(soc)) {
-      dispatch(getInfo({ operationType: 'updateSdkTips', paramData: { soc, sdkPath: sdkPathInfo }, source: 'wizard' }));
+      dispatch(getInfo({ operationType: 'updateSdkTips', paramData: { soc, sdkPath: sdkPathInfo }, source: 'projectMgr' }));
     } else {
       // No validation needed for this chip — mark as valid.
       setSdkContentWrong(false);
@@ -169,24 +169,24 @@ const ProjectWizard = (): JSX.Element => {
 
     // Re-validate SDK if already set.
     if (sdkPath && SDK_VALIDATED_CHIPS.has(value)) {
-      dispatch(getInfo({ operationType: 'updateSdkTips', paramData: { soc: value, sdkPath }, source: 'wizard' }));
+      dispatch(getInfo({ operationType: 'updateSdkTips', paramData: { soc: value, sdkPath }, source: 'projectMgr' }));
     } else if (sdkPath) {
       setSdkContentWrong(false);
     }
 
     // Re-check project path.
-    dispatch(getInfo({ operationType: 'updateProjectTips', paramData: { needValidate: true, projectPath }, source: 'wizard' }));
+    dispatch(getInfo({ operationType: 'updateProjectTips', paramData: { needValidate: true, projectPath }, source: 'projectMgr' }));
   };
 
   // ── browse handlers ───────────────────────────────────────────────────────
   const onBrowseSdkPath = (): void => {
     // Pass the selected SOC so the backend can use the chip-specific SDK picker
     // (e.g. QuickPick for 1156e instead of a local folder browser).
-    dispatch(getInfo({ operationType: 'selectFolderPath', paramData: { key: 'sdkPathInfo', currentValue: sdkPath, soc }, source: 'wizard' }));
+    dispatch(getInfo({ operationType: 'selectFolderPath', paramData: { key: 'sdkPathInfo', currentValue: sdkPath, soc }, source: 'projectMgr' }));
   };
 
   const onBrowsePath = (): void => {
-    dispatch(getInfo({ operationType: 'selectFolderPath', paramData: { key: 'projectPathInfo', currentValue: projectPath }, source: 'wizard' }));
+    dispatch(getInfo({ operationType: 'selectFolderPath', paramData: { key: 'projectPathInfo', currentValue: projectPath }, source: 'projectMgr' }));
   };
 
   // ── finish ────────────────────────────────────────────────────────────────
@@ -201,7 +201,7 @@ const ProjectWizard = (): JSX.Element => {
 
   const onCancel = (): void => {
     setIsOpen(false);
-    vscode.postMessage({ method: 'closeProjectWizard', params: {} });
+    vscode.postMessage({ method: 'closeProjectMgr', params: {} });
   };
 
   // ── chip data ─────────────────────────────────────────────────────────────
@@ -394,4 +394,4 @@ const ProjectWizard = (): JSX.Element => {
   );
 };
 
-export default ProjectWizard;
+export default ProjectCreate;
