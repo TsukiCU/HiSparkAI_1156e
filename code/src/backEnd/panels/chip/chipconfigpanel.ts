@@ -23,6 +23,7 @@ import { logger } from '../../log4js';
 import type { LanguageSetMessage, Message } from '../../interface/api';
 import { Command } from '../../command';
 import { ApiMethod } from '../../interface/apiMethod';
+import { GlobalModel } from '../../storage/Global';
 
 /**
  * chip config panel
@@ -76,8 +77,9 @@ export default class ChipConfigPanel implements Panel {
       logger.error(`Failed to load config: ${e}`);
     }
 
+    const chipName = GlobalModel.instance.chipName ?? '';
     const injected = [
-      `<script>window.initialState = { target: "${this.target}" };</script>`,
+      `<script>window.initialState = { target: "${this.target}", chipName: "${chipName}" };</script>`,
       `<script>window.initialData = ${JSON.stringify(vscode.window.activeColorTheme)};</script>`,
       `<script>window.initialDemoData = ${JSON.stringify(jsonData)};</script>`,
     ].join('');

@@ -40,6 +40,9 @@ export class GlobalModel {
   // SOC identifier ('ws63', '3322', '1156e', …) read from .hiproj on activation.
   private _soc?: string | undefined;
 
+  // Board/chip name (the `board` field in .hiproj, e.g. 'ws63', '3322', '1156e').
+  private _chipName?: string | undefined;
+
   private constructor() { }
 
   public static get instance(): GlobalModel {
@@ -123,6 +126,9 @@ export class GlobalModel {
 
   get soc(): string | undefined { return this._soc; }
   set soc(value: string | undefined) { this._soc = value; }
+
+  get chipName(): string | undefined { return this._chipName; }
+  set chipName(value: string | undefined) { this._chipName = value; }
 }
 
 export enum targetPlatform {

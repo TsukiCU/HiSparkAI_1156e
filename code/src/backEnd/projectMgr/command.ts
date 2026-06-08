@@ -12,6 +12,7 @@ import * as ini   from 'ini';
 import * as cp    from 'child_process';
 
 import { ProjectMgrContext }   from './context';
+import { GlobalModel }         from '../storage/Global';
 import { res }             from './i18n/backEndTrans';
 import { WizardApiMethod, type GetInfoCallBack, type LanguageSetMessage } from './interface/api';
 import type { OperateStruct, ProjectMgrData } from './interface/model';
@@ -426,6 +427,11 @@ export class ProjectMgrCommand {
       timestamp: Date.now(),
     };
 
+    // Write chipName to GlobalModel immediately so command.ts can use it
+    // before the workspace reloads and activate() re-reads the .hiproj.
+    GlobalModel.instance.chipName = projectData.board;
+    GlobalModel.instance.soc      = projectData.soc;
+
     if (ProjectMgrContext.globalStoragePath) {
       addItemsToProList([item], ProjectMgrContext.globalStoragePath);
       updateOneItemToLatestList(item, ProjectMgrContext.globalStoragePath);
@@ -526,6 +532,10 @@ export class ProjectMgrCommand {
       };
       addItemsToProList([item], ProjectMgrContext.globalStoragePath!);
       updateOneItemToLatestList(item, ProjectMgrContext.globalStoragePath!);
+      // Keep GlobalModel in sync; the project that's actually opened later
+      // will be re-read by activate(), but set it now for immediate availability.
+      GlobalModel.instance.chipName = board || chip;
+      GlobalModel.instance.soc      = chip;
       succeeded.push(hiprojPath);
     }
 

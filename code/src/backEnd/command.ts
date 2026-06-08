@@ -3893,6 +3893,7 @@ export class Command {
         const config = [
           { key: 'compressionData', value: compConfigArr },
           { key: 'convertData', value: convConfigArr },
+          { key: 'chipName', value: GlobalModel.instance.chipName ?? '' },
         ];
         const frontEndConfigCallbackMessage: ConfigMessage = {
           method: ApiMethod.SAVE_CONFIG_CALLBACK,

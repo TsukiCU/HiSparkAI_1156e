@@ -133,6 +133,10 @@ export default class Extension {
           hiprojSocId = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
           if (hiprojSocId) { GlobalModel.instance.soc = hiprojSocId; }
 
+          // Restore chip/board name from .hiproj.
+          const boardName = String(hiprojContent?.information?.board ?? hiprojSocId ?? '');
+          if (boardName) { GlobalModel.instance.chipName = boardName; }
+
           // Restore connection type (wsl / linux) from .hiproj.
           hiprojConnType = String(hiprojContent?.information?.connection_type ?? '');
           if (hiprojConnType === 'wsl') {
