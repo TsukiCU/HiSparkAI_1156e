@@ -504,20 +504,8 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
           {layerConfigModal()}
         </div>
 
-        {/* ② Calibration Inputs table */}
+        {/* ② Calibration Inputs table (validation switch appears AFTER the table) */}
         <div className="app-common-font"><h2 className="section-title">{QUANT_TEXT.sections.calibrationInputs}</h2></div>
-        {selByKey(QUANT_KEYS.npu.ptq.validation) && (
-          <SwitchBoxComponent
-            selectBox={selByKey(QUANT_KEYS.npu.ptq.validation)!}
-            labelOrP={true} transmitStyle={true} labelWidth={65}
-            customEditableStyle={{ marginRight: '15px' }}
-            onChange={(checked, key): void => {
-              // Update state via updateSelect — never mutate local object.
-              updateSelect(checked ? 'FILE' : 'NONE', key);
-              setDisableBtn(!checked);
-            }}
-          />
-        )}
         <div className="inputs-class-table">
           <div className="row-ptq th-ptq">
             {CALIB_TABLE_HEADERS_NPU.map(h => (
@@ -539,17 +527,25 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
                 <SelectBoxComponent selectBox={dynSelects[i]} labelOrP={true} transmitStyle={true}
                   getSelected={updateSelect} />
               )}
-              {dynFiles[2 * i + 1] && (
-                <FileInputBoxComponent fileInputBox={dynFiles[2 * i + 1]} isShowInput={false}
-                  onInputChange={updateFile} filePickerType={pickType}
-                  inputPlaceholder="上传包含.npy文件的文件夹"
-                  customEditableStyle={{ display: 'flex', flexDirection: 'row', gap: '5px', marginLeft: '-100px' }} />
-              )}
+              {/* dynFiles[2*i+1] (calib output) goes to Validation Inputs table, NOT here */}
             </div>
           ))}
         </div>
 
-        {/* ③ Validation Inputs (when validation = FILE) */}
+        {/* ③ Validation switch — shown AFTER calibration table (matches original layout) */}
+        {selByKey(QUANT_KEYS.npu.ptq.validation) && (
+          <SwitchBoxComponent
+            selectBox={selByKey(QUANT_KEYS.npu.ptq.validation)!}
+            labelOrP={true} transmitStyle={true} labelWidth={65}
+            customEditableStyle={{ marginRight: '15px' }}
+            onChange={(checked, key): void => {
+              updateSelect(checked ? 'FILE' : 'NONE', key);
+              setDisableBtn(!checked);
+            }}
+          />
+        )}
+
+        {/* ④ Validation Inputs table (when validation = FILE) */}
         {!disableBtn && (
           <>
             <div className="app-common-font"><h2 className="section-title">{QUANT_TEXT.sections.validationInputs}</h2></div>
@@ -572,17 +568,27 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
           </>
         )}
 
-        {/* ④ Validation Labels + vi2_file (when validation = FILE) */}
-        {!disableBtn && renderValidationLabelsRow()}
-        {!disableBtn && filByKey(QUANT_KEYS.npu.ptq.validationFile) && (
-          <FileInputBoxComponent
-            fileInputBox={filByKey(QUANT_KEYS.npu.ptq.validationFile)!}
-            labelWidth={135} isShowInput={false} fileExt="csv"
-            onInputChange={updateFile} filePickerType={pickType}
-            disableByOthers={selectedOutput === 'None'}
-            customEditableStyle={{ marginLeft: '-120px' }}
-            inputPlaceholder="需传入输入文件与label的对应关系" />
-        )}
+        {/* ⑤ Validation Labels + vi2_file inline in same row (when validation = FILE) */}
+        <div className="row-ptq">
+          {!disableBtn && (
+            <div style={{ marginLeft: '0', display: 'flex', gap: '50px', alignItems: 'center' }}>
+              <label>{QUANT_TEXT.validationLabels.label}</label>
+              <Select style={{ width: 170 }} placeholder={QUANT_TEXT.validationLabels.placeholder}
+                value={selectedOutput} onChange={setSelectedOutput} disabled={outputNames.length === 0}>
+                {outputNames.map(n => <Select.Option key={n} value={n}>{n}</Select.Option>)}
+              </Select>
+              {filByKey(QUANT_KEYS.npu.ptq.validationFile) && (
+                <FileInputBoxComponent
+                  fileInputBox={filByKey(QUANT_KEYS.npu.ptq.validationFile)!}
+                  labelWidth={135} isShowInput={false} fileExt="csv"
+                  onInputChange={updateFile} filePickerType={pickType}
+                  disableByOthers={selectedOutput === 'None'}
+                  customEditableStyle={{ marginLeft: '-120px' }}
+                  inputPlaceholder="需传入输入文件与label的对应关系" />
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ⑤ Advanced Options + Quantize button */}
         <div>
@@ -655,21 +661,7 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
           </div>
         </div>
 
-        <div className="row-qat threeQat">
-          {selByKey(QUANT_KEYS.npu.qat.configFile) && (
-            <SelectBoxComponent selectBox={selByKey(QUANT_KEYS.npu.qat.configFile)!}
-              labelOrP={true} transmitStyle={true}
-              getSelected={(v, k): void => updateSelect(v, k, true)} />
-          )}
-          {filByKey(QUANT_KEYS.npu.qat.modelPath) && (
-            <FileInputBoxComponent fileInputBox={filByKey(QUANT_KEYS.npu.qat.modelPath)!}
-              isShowInput={false} onInputChange={updateFile} filePickerType={pickType} />
-          )}
-          {inpByKey(QUANT_KEYS.npu.qat.trainCode) && (
-            <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.trainCode)!}
-              labelOrP={true} transmitStyle={true} getInputed={updateInput} />
-          )}
-        </div>
+        {/* configFile, modelPath, trainCode are in the payload but not shown in the original UI */}
 
         <div className="row-qat threeQat">
           {inpByKey(QUANT_KEYS.npu.qat.epochNum)     && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.epochNum)!}     labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
@@ -728,25 +720,11 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
               {selByKey(QUANT_KEYS.cpu.quantType) && <div className="gutter-row"><SelectBoxComponent selectBox={selByKey(QUANT_KEYS.cpu.quantType)!} labelOrP={true} labelWidth={97}  transmitStyle={true} getSelected={updateSelect} /></div>}
             </div>
 
-            {/* Calibration Inputs table */}
+            {/* Calibration Inputs table.
+                batchNum is in the payload but NOT shown (matches original behaviour).
+                Validation switch appears AFTER the table, not inside it. */}
             <div className="inputs-class-cpu">
               <div className="app-common-font"><h2 className="section-title">{QUANT_TEXT.sections.calibrationInputs}</h2></div>
-              {inpByKey(QUANT_KEYS.cpu.batchNum) && (
-                <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.cpu.batchNum)!}
-                  labelOrP={true} labelWidth={120} transmitStyle={true}
-                  getInputed={updateInput} validate={validateBatchNum} />
-              )}
-              {selByKey(QUANT_KEYS.cpu.validation) && (
-                <SwitchBoxComponent
-                  selectBox={selByKey(QUANT_KEYS.cpu.validation)!}
-                  labelOrP={true} transmitStyle={true} labelWidth={65}
-                  customEditableStyle={{ marginRight: '15px' }}
-                  onChange={(checked, key): void => {
-                    updateSelect(checked ? 'FILE' : 'NONE', key);
-                    setDisableBtn(!checked);
-                  }}
-                />
-              )}
               <div className="row-ptq th-cpu">
                 <div className="th-cpu first-cpu">
                   {CALIB_TABLE_HEADERS_CPU.map(h => <span key={h.label} style={h.style}>{h.label}</span>)}
@@ -767,6 +745,19 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
                 </div>
               ))}
             </div>
+
+            {/* Validation switch — AFTER calibration table (matches original) */}
+            {selByKey(QUANT_KEYS.cpu.validation) && (
+              <SwitchBoxComponent
+                selectBox={selByKey(QUANT_KEYS.cpu.validation)!}
+                labelOrP={true} transmitStyle={true} labelWidth={65}
+                customEditableStyle={{ marginRight: '15px' }}
+                onChange={(checked, key): void => {
+                  updateSelect(checked ? 'FILE' : 'NONE', key);
+                  setDisableBtn(!checked);
+                }}
+              />
+            )}
 
             {/* Validation Inputs (when validation = FILE) */}
             {!disableBtn && (
@@ -789,27 +780,28 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
               </div>
             )}
 
-            {/* Validation Labels */}
-            {!disableBtn && renderValidationLabelsRow()}
-            {!disableBtn && selByKey(QUANT_KEYS.cpu.validationLabels) && (
-              <SwitchBoxComponent
-                selectBox={selByKey(QUANT_KEYS.cpu.validationLabels)!}
-                labelOrP={true} transmitStyle={true} labelWidth={128}
-                customEditableStyle={{ marginRight: '15px' }}
-                onChange={(checked, key): void => {
-                  updateSelect(checked ? 'Choose from File System' : 'NONE', key);
-                }}
-              />
-            )}
-            {!disableBtn && filByKey(QUANT_KEYS.cpu.validationFile) && (
-              <FileInputBoxComponent
-                fileInputBox={filByKey(QUANT_KEYS.cpu.validationFile)!}
-                validationStatus={disableBtn} labelWidth={131} isShowInput={false}
-                {...(pickType === 'local' ? { fileExt: 'csv' } : {})}
-                onInputChange={updateFile} filePickerType={pickType}
-                disableByOthers={selectedOutput === 'None'}
-                customEditableStyle={{ marginBottom: '8px' }}
-                inputPlaceholder="上传.csv文件" />
+            {/* Validation Labels + val_out_cpu inline in same row (when validation = FILE).
+                validation_labels_cpu switch is NOT shown (matches original). */}
+            {!disableBtn && (
+              <div className="row-ptq">
+                <label>{QUANT_TEXT.validationLabels.label}</label>
+                <Select style={{ width: 170 }} placeholder={QUANT_TEXT.validationLabels.placeholder}
+                  value={selectedOutput} onChange={setSelectedOutput} disabled={outputNames.length === 0}>
+                  {outputNames.map(n => <Select.Option key={n} value={n}>{n}</Select.Option>)}
+                </Select>
+                {filByKey(QUANT_KEYS.cpu.validationFile) && (
+                  <div style={{ marginLeft: '-135px' }}>
+                    <FileInputBoxComponent
+                      fileInputBox={filByKey(QUANT_KEYS.cpu.validationFile)!}
+                      validationStatus={disableBtn} labelWidth={131} isShowInput={false}
+                      {...(pickType === 'local' ? { fileExt: 'csv' } : {})}
+                      onInputChange={updateFile} filePickerType={pickType}
+                      disableByOthers={selectedOutput === 'None'}
+                      customEditableStyle={{ marginBottom: '8px' }}
+                      inputPlaceholder="上传.csv文件" />
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Quantize button */}
