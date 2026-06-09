@@ -3904,12 +3904,17 @@ export class Command {
         extension.mockLocalStorage?.setItem('compDataBackup',  compDefaults);
       }
 
-      if (!extension.mockLocalStorage?.getItem('convertData') ||
-          common.parseArray(extension.mockLocalStorage.getItem('convertData')).length === 0) {
-        // updateConvertConfig checks `convertData.length % 2 === 0` for parity.
-        // Seeding [Output_Type] gives length=1 (odd) so it correctly computes nodeNum=0.
+      // Output_Type is NPU-only (QuantizeConfig.txt had target:'npu').
+      // CPU: keep convertData as [] so updateConvertConfig handles the even-length
+      // case the same way as before (it expects [] for CPU models).
+      // NPU: seed with [Output_Type] so updateConvertConfig length parity check passes
+      // (length=1 is odd, nodeNum=0, no-op loop, but avoids the "convertData not
+      //  exists" error when a model is first loaded).
+      if (tgt !== 'cpu' &&
+          (!extension.mockLocalStorage?.getItem('convertData') ||
+           common.parseArray(extension.mockLocalStorage.getItem('convertData')).length === 0)) {
         const convDefaults = [{
-          target: tgt, page: 'convert', kind: 'select', group: 'Convert',
+          target: 'npu', page: 'convert', kind: 'select', group: 'Convert',
           key: 'Output_Type', title: 'Output Type',
           content: ['float16', 'uint8', 'int8'], defaultValue: 'float16', disabled: false,
         }];

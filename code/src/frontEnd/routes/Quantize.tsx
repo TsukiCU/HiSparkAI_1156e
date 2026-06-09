@@ -108,7 +108,8 @@ function buildState(
   });
   const mergedFiles = fixedFiles.map(fil => {
     const saved = dataMap.get(fil.key);
-    return saved ? { ...fil, content: String(saved.content ?? fil.content), disabled: Boolean(saved.disabled) } : fil;
+    // Keep original content type (string | string[]) — backend may access content[0].
+    return saved ? { ...fil, content: saved.content ?? fil.content, disabled: Boolean(saved.disabled) } : fil;
   });
 
   // ── 3. Dynamic items (per-node data, not in any fixed set) ─────────────
@@ -123,7 +124,7 @@ function buildState(
   const dynSelects = dynamic.filter(d => d.kind === 'select')
     .map(d => ({ group: d.group, key: d.key, title: d.title, content: d.content, defaultValue: String(d.defaultValue ?? ''), disabled: Boolean(d.disabled) }));
   const dynFiles   = dynamic.filter(d => d.kind === 'file')
-    .map(d => ({ group: d.group, key: d.key, title: d.title, content: String(d.content ?? ''), folder: Boolean(d.folder), disabled: Boolean(d.disabled) }));
+    .map(d => ({ group: d.group, key: d.key, title: d.title, content: d.content ?? '', folder: Boolean(d.folder), disabled: Boolean(d.disabled) }));
 
   return {
     inputs:  [...mergedInputs,  ...dynInputs]  as InputBoxProps[],
@@ -318,7 +319,7 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
     }
     for (const b of fileBoxes) {
       if (!existingKeys.has(b.key)) {
-        updated.push({ target: target.toLowerCase(), page: 'quant', type: itemType(b.key), kind: 'file', group: b.group, key: b.key, title: b.title, content: String(b.content ?? ''), defaultValue: String(b.content ?? ''), disabled: Boolean(b.disabled) });
+        updated.push({ target: target.toLowerCase(), page: 'quant', type: itemType(b.key), kind: 'file', group: b.group, key: b.key, title: b.title, content: b.content ?? '', defaultValue: b.content ?? '', disabled: Boolean(b.disabled) });
         existingKeys.add(b.key);
       }
     }
@@ -602,7 +603,8 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
                   {dynFiles[2 * i + 1] && (
                     <FileInputBoxComponent fileInputBox={dynFiles[2 * i + 1]} isShowInput={false}
                       onInputChange={updateFile} filePickerType={pickType}
-                      inputPlaceholder="上传包含.npy文件的文件夹" />
+                      inputPlaceholder="上传包含.npy文件的文件夹"
+                      customEditableStyle={{ marginLeft: '-100px' }} />
                   )}
                 </div>
               ))}

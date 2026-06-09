@@ -21,11 +21,12 @@ const { Option } = Select;
 // Chips available in the projectMgr — MCU is excluded intentionally.
 const ALLOWED_SOCS = new Set(['ws63', '3322', '1156e']);
 
-// SOC-to-platform mapping (auto-set, not editable by user).
+// SOC-to-platform mapping.  fixed=true locks the platform dropdown.
+// 1156e is intentionally absent so both CPU and NPU can be selected
+// (chiplist.json: defaultPlatform='CPU', platformFixed=false).
 const PLATFORM_MAP: Record<string, { platform: 'CPU' | 'NPU'; fixed: boolean }> = {
-  ws63:    { platform: 'CPU', fixed: true },
-  '3322':  { platform: 'NPU', fixed: true },
-  '1156e': { platform: 'NPU', fixed: true },
+  ws63:   { platform: 'CPU', fixed: true },
+  '3322': { platform: 'NPU', fixed: true },
 };
 
 // Chips for which SDK path validation is performed.
