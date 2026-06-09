@@ -20,9 +20,7 @@
 
 import type { CSSProperties } from 'react';
 
-// ─── Key mappings (must match backend / QuantizeConfig.txt) ────────────────
-// These are the ONLY place that binds frontend rendering to backend data keys.
-// If the backend renames a key, update it here and nowhere else.
+// ─── Key mappings ─────────────────────────────────────────────────────────
 export const CONVERT_KEYS = {
   /** The "Output Type" select shown below the node table (NPU only). */
   outputType: 'Output_Type',
@@ -40,6 +38,19 @@ export const NODE_TABLE_HEADERS: Array<{ label: string; style?: CSSProperties }>
   { label: 'Shape',     style: { marginLeft: '-85px' } },
   { label: 'Data Type', style: { marginLeft:  '73px'  } },
 ];
+
+// ─── Static field definitions (replaces QuantizeConfig.txt for Convert) ───
+// Frontend-owned defaults for the Output Type select (NPU only).
+// If the backend renames the key or changes options, update CONVERT_KEYS and here.
+export const CONVERT_FIELD_SPECS = {
+  outputType: {
+    kind:         'select' as const,
+    group:        'Convert',
+    title:        'Output Type',
+    options:      ['float16', 'uint8', 'int8'] as string[],
+    defaultValue: 'float16',
+  },
+};
 
 // ─── UI text ───────────────────────────────────────────────────────────────
 export const CONVERT_TEXT = {

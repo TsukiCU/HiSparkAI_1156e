@@ -2,25 +2,24 @@
  * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
  * Licensed under the Apache License, Version 2.0
  *
- * Quantize page layout configuration — single source of truth for all key
- * mappings and UI text.
+ * Quantize page — single source of truth for layout, key mappings, and
+ * static field definitions.
  *
  * ┌──────────────────────────────────────────────────────────────────────────┐
- * │  HOW TO CHANGE THE QUANTIZE PAGE LAYOUT                                  │
+ * │  HOW TO CHANGE THE QUANTIZE PAGE                                         │
  * │                                                                          │
- * │  • Rename a backend data key          → update QUANT_KEYS.*             │
- * │  • Change table column headers        → update TABLE_HEADERS.*           │
- * │  • Rename a button / section title    → update QUANT_TEXT.*             │
- * │  • Add/remove an NPU / CPU field      → update renderNpuPtq / renderCpu │
- * │    in Quantize.tsx (one place only)                                      │
+ * │  • Rename a backend key         → QUANT_KEYS.*                          │
+ * │  • Change a field default/opts  → QUANT_FIELD_SPECS.*                   │
+ * │  • Change column headers        → CALIB/VALID/QAT_*_HEADERS             │
+ * │  • Change button/section text   → QUANT_TEXT.*                          │
+ * │  • Add/remove a fixed field     → QUANT_KEYS + QUANT_FIELD_SPECS +      │
+ * │    FIXED_KEYS + render function in Quantize.tsx                         │
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
 import type { CSSProperties } from 'react';
 
 // ─── Key mappings ──────────────────────────────────────────────────────────
-// ALL backend data keys are defined here. If the backend renames a key,
-// update it in ONE place and no other file needs to change.
 
 export const QUANT_KEYS = {
   npu: {
@@ -29,81 +28,92 @@ export const QUANT_KEYS = {
       validation:       'validation_npu',
       bitNum:           'bit_num_npu',
       validationLabels: 'validation_labels_npu',
-      validationFile:   'vi2_file',       // CSV label file shown when validation = FILE
+      validationFile:   'vi2_file',
     },
     qat: {
-      trainCode:        'retrain_code',
-      networkStruct:    'network_structure',
-      retrainInputs:    'retrain_inputs',
-      validInputs:      'validation_inputs',
-      configFile:       'config_file',
-      retrainOutput:    'retrain_output',
-      validOutput:      'valid_output',
-      modelPath:        'Model Path',
-      epochNum:         'epoch_num',
-      batchSize:        'batch_size',
-      learningRate:     'learning_rate',
+      trainCode:     'retrain_code',
+      networkStruct: 'network_structure',
+      retrainInputs: 'retrain_inputs',
+      validInputs:   'validation_inputs',
+      configFile:    'config_file',
+      retrainOutput: 'retrain_output',
+      validOutput:   'valid_output',
+      modelPath:     'Model Path',
+      epochNum:      'epoch_num',
+      batchSize:     'batch_size',
+      learningRate:  'learning_rate',
     },
   },
   cpu: {
-    batchNum:           'batch_num',
-    validation:         'validation_cpu',
-    bitNum:             'bit_num_cpu',
-    quantType:          'quant_type',
-    validationLabels:   'validation_labels_cpu',
-    validationFile:     'val_out_cpu',
+    batchNum:         'batch_num',
+    validation:       'validation_cpu',
+    bitNum:           'bit_num_cpu',
+    quantType:        'quant_type',
+    validationLabels: 'validation_labels_cpu',
+    validationFile:   'val_out_cpu',
   },
-
-  // Used to identify Advanced Options switch data (NPU only).
-  switchGroup:          'switch_config',
-  switchStatus:         'switch_status',
-  switchInput:          'switch_input_value',
-
-  // Output node selection key (appended in payload, not in config file).
-  selectedOutput:       'selectedOutputNode',
+  switchGroup:    'switch_config',
+  switchStatus:   'switch_status',
+  switchInput:    'switch_input_value',
+  selectedOutput: 'selectedOutputNode',
 } as const;
 
-// ─── "Fixed" key sets used to derive dynamic items ─────────────────────────
-// Dynamic items (node shapes, per-node selects, calibration paths) are
-// anything in the data that is NOT one of these fixed keys.
+// ─── Static field definitions (replaces QuantizeConfig.txt) ───────────────
+// These define the complete spec of every FIXED field.
+// The frontend uses these to initialise state without needing the backend to
+// send them from a config file.
 
-const NPU_FIXED_INPUT_KEYS = new Set([
-  QUANT_KEYS.npu.ptq.batchNum,
-  QUANT_KEYS.npu.qat.trainCode,
-  QUANT_KEYS.npu.qat.epochNum,
-  QUANT_KEYS.npu.qat.batchSize,
-  QUANT_KEYS.npu.qat.learningRate,
-]);
+export interface FieldSpec {
+  kind:         'input' | 'select' | 'file';
+  group:        string;
+  title:        string;
+  defaultValue: string;
+  options?:     string[];       // only for 'select'
+  folder?:      boolean;        // only for 'file'
+  disabled?:    boolean;
+}
 
-const NPU_FIXED_SELECT_KEYS = new Set([
-  QUANT_KEYS.npu.ptq.validation,
-  QUANT_KEYS.npu.ptq.bitNum,
-  QUANT_KEYS.npu.ptq.validationLabels,
-  QUANT_KEYS.npu.qat.configFile,
-]);
+export const QUANT_FIELD_SPECS: Record<string, FieldSpec> = {
+  // ── NPU PTQ ──────────────────────────────────────────────────────────
+  [QUANT_KEYS.npu.ptq.batchNum]:         { kind: 'input',  group: 'Quantization', title: 'batch_num',         defaultValue: '1' },
+  [QUANT_KEYS.npu.ptq.validation]:       { kind: 'select', group: 'Quantization', title: 'Validation',        defaultValue: 'NONE',  options: ['NONE', 'FILE'] },
+  [QUANT_KEYS.npu.ptq.bitNum]:           { kind: 'select', group: 'Quantization', title: 'Quantized Data Type', defaultValue: 'int8', options: ['int8', 'int16'] },
+  [QUANT_KEYS.npu.ptq.validationLabels]: { kind: 'select', group: 'Quantization', title: 'Validation Labels', defaultValue: 'None', options: ['None', 'Choose from File System'] },
+  [QUANT_KEYS.npu.ptq.validationFile]:   { kind: 'file',   group: 'Quantization', title: '',                  defaultValue: ' ', folder: false },
 
-const NPU_FIXED_FILE_KEYS = new Set([
-  QUANT_KEYS.npu.ptq.validationFile,
-  QUANT_KEYS.npu.qat.networkStruct,
-  QUANT_KEYS.npu.qat.retrainInputs,
-  QUANT_KEYS.npu.qat.validInputs,
-  QUANT_KEYS.npu.qat.retrainOutput,
-  QUANT_KEYS.npu.qat.validOutput,
-  QUANT_KEYS.npu.qat.modelPath,
-]);
+  // ── NPU QAT ──────────────────────────────────────────────────────────
+  [QUANT_KEYS.npu.qat.trainCode]:        { kind: 'input',  group: 'Quantization', title: 'Train Code',         defaultValue: 'import this', disabled: true },
+  [QUANT_KEYS.npu.qat.networkStruct]:    { kind: 'file',   group: 'Quantization', title: 'Network Structure',  defaultValue: ' ', folder: false },
+  [QUANT_KEYS.npu.qat.retrainInputs]:    { kind: 'file',   group: 'Quantization', title: 'Input_0',            defaultValue: ' ', folder: true  },
+  [QUANT_KEYS.npu.qat.validInputs]:      { kind: 'file',   group: 'Quantization', title: 'Validation Inputs',  defaultValue: ' ', folder: true  },
+  [QUANT_KEYS.npu.qat.configFile]:       { kind: 'select', group: 'Quantization', title: 'Config File',        defaultValue: 'Default', options: ['Default', 'Custom'] },
+  [QUANT_KEYS.npu.qat.retrainOutput]:    { kind: 'file',   group: 'Quantization', title: 'Output_0',           defaultValue: ' ', folder: false },
+  [QUANT_KEYS.npu.qat.validOutput]:      { kind: 'file',   group: 'Quantization', title: 'Validation Outputs', defaultValue: ' ', folder: false },
+  [QUANT_KEYS.npu.qat.modelPath]:        { kind: 'file',   group: 'Quantization', title: 'Model Path',         defaultValue: ' ', folder: false },
+  [QUANT_KEYS.npu.qat.epochNum]:         { kind: 'input',  group: 'Quantization', title: 'Epoch Num',          defaultValue: '1' },
+  [QUANT_KEYS.npu.qat.batchSize]:        { kind: 'input',  group: 'Quantization', title: 'Batch Size',         defaultValue: '4' },
+  [QUANT_KEYS.npu.qat.learningRate]:     { kind: 'input',  group: 'Quantization', title: 'Learning Rate',      defaultValue: '0.00001' },
 
-const CPU_FIXED_INPUT_KEYS = new Set([QUANT_KEYS.cpu.batchNum]);
+  // ── CPU ──────────────────────────────────────────────────────────────
+  [QUANT_KEYS.cpu.batchNum]:             { kind: 'input',  group: 'Quantization', title: 'batch_num',          defaultValue: '1' },
+  [QUANT_KEYS.cpu.validation]:           { kind: 'select', group: 'Quantization', title: 'Validation',         defaultValue: 'NONE', options: ['NONE', 'FILE'] },
+  [QUANT_KEYS.cpu.bitNum]:               { kind: 'select', group: 'Quantization', title: 'Quantized Data Type', defaultValue: 'int8', options: ['int8'] },
+  [QUANT_KEYS.cpu.quantType]:            { kind: 'select', group: 'Quantization', title: 'Quant Type',          defaultValue: 'FULL_QUANT', options: ['FULL_QUANT'] },
+  [QUANT_KEYS.cpu.validationLabels]:     { kind: 'select', group: 'Quantization', title: 'Validation Labels',  defaultValue: 'None', options: ['None', 'Choose from File System'] },
+  [QUANT_KEYS.cpu.validationFile]:       { kind: 'file',   group: 'Quantization', title: '',                   defaultValue: ' ', folder: false },
+};
 
-const CPU_FIXED_SELECT_KEYS = new Set([
-  QUANT_KEYS.cpu.validation,
-  QUANT_KEYS.cpu.bitNum,
-  QUANT_KEYS.cpu.quantType,
-  QUANT_KEYS.cpu.validationLabels,
-]);
+// ─── Fixed key sets ────────────────────────────────────────────────────────
+// Dynamic items (per-node shapes, paths, type-selects) are everything
+// NOT in these sets.
 
-const CPU_FIXED_FILE_KEYS = new Set([QUANT_KEYS.cpu.validationFile]);
+const NPU_FIXED_INPUT_KEYS  = new Set([QUANT_KEYS.npu.ptq.batchNum, QUANT_KEYS.npu.qat.trainCode,  QUANT_KEYS.npu.qat.epochNum,  QUANT_KEYS.npu.qat.batchSize, QUANT_KEYS.npu.qat.learningRate]);
+const NPU_FIXED_SELECT_KEYS = new Set([QUANT_KEYS.npu.ptq.validation, QUANT_KEYS.npu.ptq.bitNum, QUANT_KEYS.npu.ptq.validationLabels, QUANT_KEYS.npu.qat.configFile]);
+const NPU_FIXED_FILE_KEYS   = new Set([QUANT_KEYS.npu.ptq.validationFile, QUANT_KEYS.npu.qat.networkStruct, QUANT_KEYS.npu.qat.retrainInputs, QUANT_KEYS.npu.qat.validInputs, QUANT_KEYS.npu.qat.retrainOutput, QUANT_KEYS.npu.qat.validOutput, QUANT_KEYS.npu.qat.modelPath]);
+const CPU_FIXED_INPUT_KEYS  = new Set([QUANT_KEYS.cpu.batchNum]);
+const CPU_FIXED_SELECT_KEYS = new Set([QUANT_KEYS.cpu.validation, QUANT_KEYS.cpu.bitNum, QUANT_KEYS.cpu.quantType, QUANT_KEYS.cpu.validationLabels]);
+const CPU_FIXED_FILE_KEYS   = new Set([QUANT_KEYS.cpu.validationFile]);
 
-// Typed as Set<string> so `.has(anyString)` works without type errors.
 export const FIXED_KEYS: {
   npu: { inputs: Set<string>; selects: Set<string>; files: Set<string> };
   cpu: { inputs: Set<string>; selects: Set<string>; files: Set<string> };
@@ -112,18 +122,18 @@ export const FIXED_KEYS: {
   cpu: { inputs: CPU_FIXED_INPUT_KEYS, selects: CPU_FIXED_SELECT_KEYS, files: CPU_FIXED_FILE_KEYS },
 };
 
-// ─── Table column headers ──────────────────────────────────────────────────
+// ─── Table headers ─────────────────────────────────────────────────────────
 
 export const CALIB_TABLE_HEADERS_NPU: Array<{ label: string; style?: CSSProperties }> = [
   { label: 'Input Node' },
-  { label: 'Path',       style: { marginLeft: '-49px' } },
-  { label: 'Shape',      style: { marginLeft: '110px' } },
-  { label: 'Data Type',  style: { marginLeft:  '71px' } },
+  { label: 'Path',      style: { marginLeft: '-49px'  } },
+  { label: 'Shape',     style: { marginLeft: '110px'  } },
+  { label: 'Data Type', style: { marginLeft:  '71px'  } },
 ];
 
 export const CALIB_TABLE_HEADERS_CPU: Array<{ label: string; style?: CSSProperties }> = [
   { label: 'Input Node' },
-  { label: 'Path',  style: { marginLeft: '-54px' } },
+  { label: 'Path', style: { marginLeft: '-54px' } },
 ];
 
 export const VALID_TABLE_HEADERS: Array<{ label: string; style?: CSSProperties }> = [
@@ -153,16 +163,14 @@ export const QUANT_TEXT = {
   },
   tabs: { ptq: 'PTQ', qat: 'QAT' },
   buttons: {
-    quantize:          'Quantize',
-    quantizing:        'Processing...',
-    abort:             'Abort',
-    layerwiseConfig:   'Layerwise Config',
-    nextWithout:       'Next Without Quantization',
-    editTrainScript:   'Edit Train Script',
-    editTrainConfig:   'Edit Train Config',
+    quantize:        'Quantize',
+    quantizing:      'Processing...',
+    abort:           'Abort',
+    layerwiseConfig: 'Layerwise Config',
+    nextWithout:     'Next Without Quantization',
   },
   advancedOptions: {
-    ptq: { label: 'Advanced', placeholder: 'Ascend Config' },
+    ptq: { label: 'Advanced',          placeholder: 'Ascend Config' },
     qat: { label: 'Advanced Settings', placeholder: 'Ascend Config' },
   },
   validationLabels: {
@@ -170,11 +178,11 @@ export const QUANT_TEXT = {
     placeholder: '请选择输出节点',
   },
   validation: {
-    shapeErrorMsg:  'Shapes should only contain numbers and commas.',
-    batchNumError:  'Batch Number should only contain integer not smaller than 1.',
-    advancedEmpty:  'Advanced options are enabled. Additional arguments are required.',
-    notSupported:   'Not supported for the selected file.',
-    inProgress:     'Quantization already in progress... Check the output panel for details.',
+    shapeErrorMsg:    'Shapes should only contain numbers and commas.',
+    batchNumError:    'Batch Number should only contain integer not smaller than 1.',
+    advancedEmpty:    'Advanced options are enabled. Additional arguments are required.',
+    notSupported:     'Not supported for the selected file.',
+    inProgress:       'Quantization already in progress... Check the output panel for details.',
     unexpectedTarget: 'Unexpected Entrance : Quantize.',
   },
 } as const;

@@ -39,7 +39,7 @@ import SwitchInput from './utils/SwitchInput';
 import { notify } from '../common';
 import { ImageInfo } from '../component/ImageInfo';
 import CommonCard from '@src/frontEnd/component/commonTemplate/common';
-import { CONVERT_KEYS, CONVERT_TEXT, NODE_TABLE_HEADERS } from './convertConfig';
+import { CONVERT_KEYS, CONVERT_TEXT, NODE_TABLE_HEADERS, CONVERT_FIELD_SPECS } from './convertConfig';
 
 type Target = 'CPU' | 'NPU' | 'NONE';
 type Source = 'wsl' | 'linux';
@@ -331,11 +331,23 @@ function Convert(props: { target: Target; source: Source }): React.JSX.Element {
 
   // ─── Populate fields from Redux convertData ────────────────────────────
   useEffect(() => {
-    if (!convertData || convertData.length === 0) { return; }
+    const spec = CONVERT_FIELD_SPECS.outputType;
+    // Schema default for Output_Type — used when backend sends no static config.
+    const schemaOutputType: SelectBoxProps = {
+      group: spec.group, key: CONVERT_KEYS.outputType, title: spec.title,
+      content: spec.options, defaultValue: spec.defaultValue, disabled: false,
+    };
+
+    if (!convertData || convertData.length === 0) {
+      // No saved data — initialise Output_Type from schema only.
+      setOutputTypeSelect(schemaOutputType);
+      return;
+    }
     const split = splitConvertData(convertData);
     setShapeInputs(split.shapeInputs);
     setNodeTypeSelects(split.nodeTypeSelects);
-    setOutputTypeSelect(split.outputTypeSelect);
+    // Fall back to schema default if backend didn't send Output_Type.
+    setOutputTypeSelect(split.outputTypeSelect ?? schemaOutputType);
     setFileBoxes(split.fileBoxes);
     setSwitchStatus(split.switchStatus);
     setSwitchInputValue(split.switchInputValue);

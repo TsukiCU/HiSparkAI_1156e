@@ -41,10 +41,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as os from 'os';
-import { getChipConfigPath, getUserGuidePath } from './file/modelConfig';
+import { getUserGuidePath } from './file/modelConfig';
 import { PanelType } from '@src/backEnd/interface/model';
 import type { HistoryInfo, Release } from '@src/backEnd/interface/model';
-import { GlobalModel, remoteRootDir, DEFAULT_WSL_DISTRO, remotePython, targetPlatform, LAST_SELECTED_PATH } from './storage/Global';
+import { GlobalModel, remoteRootDir, DEFAULT_WSL_DISTRO, remotePython, LAST_SELECTED_PATH } from './storage/Global';
 
 import { res } from '@src/i18n/backEndTrans';
 import * as common from './common';
@@ -3861,49 +3861,37 @@ export class Command {
   static async importConfigandTarget(): Promise<void> {
     const target = extension.chipConfigPanel?.target;
     try {
-      let fileString;
-      const filePath: string = getChipConfigPath();
-      fileString = fs.readFileSync(filePath, 'utf8');
-      const newFileJson = JSON.parse(fileString);
-      fileString = newFileJson;
-      // filter config data based on target platform.
-      switch (target) {
-        case targetPlatform.CPU: {
-          fileString = fileString?.filter((item: { target: string }) => item.target.toLowerCase() === 'cpu') ?? [];
-          break;
-        }
-        case targetPlatform.NPU: {
-          fileString = fileString?.filter((item: { target: string }) => item.target.toLowerCase() === 'npu') ?? [];
-          break;
-        }
-        default: { return; }
-      }
-      const frontEndConfigArr = fileString;
-      const compConfigArr = frontEndConfigArr.filter((item: { page: string }) => item.page.toLowerCase() === 'quant');
-      const convConfigArr = frontEndConfigArr.filter((item: { page: string }) => item.page.toLowerCase() === 'convert');
+      if (!target) { this.logAndReportError('Activation failed. Target was not specified.'); return; }
 
-      // Set items in mock local storage.
-      if (!extension.mockLocalStorage?.setItem('compressionData', compConfigArr)) { return; }
-      if (!extension.mockLocalStorage?.setItem('convertData', convConfigArr)) { return; }
-      if (!extension.mockLocalStorage?.setItem('compDataBackup', compConfigArr)) { return; }
-      if (!extension.mockLocalStorage?.setItem('convDataBackup', convConfigArr)) { return; }
-
-      // Set items in Redux.
-      if (target) {
-        const config = [
-          { key: 'compressionData', value: compConfigArr },
-          { key: 'convertData', value: convConfigArr },
-          { key: 'chipName', value: GlobalModel.instance.chipName ?? '' },
-        ];
-        const frontEndConfigCallbackMessage: ConfigMessage = {
-          method: ApiMethod.SAVE_CONFIG_CALLBACK,
-          params: { config: config },
-        };
-        extension.chipConfigPanel?.postInitTarget(target);
-        extension.chipConfigPanel?.postMessage(frontEndConfigCallbackMessage);
-      } else {
-        this.logAndReportError('Activation failed. Target was not specified. ');
+      // Field defaults and layout are now defined in the frontend schema files
+      // (quantizeConfig.ts / convertConfig.ts).  The backend only needs to send
+      // back whatever the user previously saved to mockLocalStorage, so the
+      // frontend can merge saved values on top of its own schema defaults.
+      // On first run, both will be empty arrays and the frontend initialises
+      // entirely from its schema.
+      if (!extension.mockLocalStorage?.getItem('compressionData')) {
+        extension.mockLocalStorage?.setItem('compressionData', []);
+        extension.mockLocalStorage?.setItem('compDataBackup', []);
       }
+      if (!extension.mockLocalStorage?.getItem('convertData')) {
+        extension.mockLocalStorage?.setItem('convertData', []);
+        extension.mockLocalStorage?.setItem('convDataBackup', []);
+      }
+
+      const compConfigArr = common.parseArray(extension.mockLocalStorage?.getItem('compressionData'));
+      const convConfigArr = common.parseArray(extension.mockLocalStorage?.getItem('convertData'));
+
+      const config = [
+        { key: 'compressionData', value: compConfigArr },
+        { key: 'convertData',     value: convConfigArr },
+        { key: 'chipName',        value: GlobalModel.instance.chipName ?? '' },
+      ];
+      const frontEndConfigCallbackMessage: ConfigMessage = {
+        method: ApiMethod.SAVE_CONFIG_CALLBACK,
+        params: { config },
+      };
+      extension.chipConfigPanel?.postInitTarget(target);
+      extension.chipConfigPanel?.postMessage(frontEndConfigCallbackMessage);
     } catch (err) {
       this.logAndReportError('this.importConfigandTarget failed');
     }
