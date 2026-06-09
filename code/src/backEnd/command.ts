@@ -1373,6 +1373,15 @@ export class Command {
     // Create history folder for current model.
     this.createHistoryFolder(localModelPath, modelName, modelEndsWith, dateTime);
 
+    // 1156e: quantize step is skipped — write a placeholder quant history entry so the
+    // history chain (quant → convert → deploy → benchmark) works normally downstream.
+    const is1156e = GlobalModel.instance.soc === '1156e';
+    if (is1156e) {
+      extension.mockLocalStorage?.setItem('skipQuantize', true);
+      extension.mockLocalStorage?.setItem('lastQuantTS', dateTime);
+      this.writeSkippedQuantHistory(dateTime, `${modelName}.${modelEndsWith}`, source);
+    }
+
     // Watchers.
     this.clearAllWatchers(); // Clear all watchers first.
     if (source === 'linux') {
@@ -1381,8 +1390,9 @@ export class Command {
       this.watchers({ serial: true, heartbeat: false }); // Only enable serial port watcher
     }
 
-    // All done. Notify front end and navigate to quantize page.
-    extension.chipConfigPanel?.postMessage({ type: 'AllDone', params: { source: source } });
+    // All done. Notify front end.
+    const skipQuantize = is1156e ? true : undefined;
+    extension.chipConfigPanel?.postMessage({ type: 'AllDone', params: { source, skipQuantize } });
   }
 
   static async sizeCheckAndCopy(source: Source, localModelPath: any, pickedFsPath: any, selectedPath: any): Promise<void> {
@@ -1740,13 +1750,15 @@ export class Command {
     const { modelName, modelEndsWith } = this.parseModelPath(remoteModel, '/');
     if (!target || (target !== 'CPU' && target !== 'NPU')) { return 'target not recognized!'; }
 
-    // 'pb', 'om', 'exeom' currently not supported.
-    const supportedFiles = {
-      NPU: ['onnx', 'pt', 'pth'],
-      CPU: ['onnx', 'tflite'],
-    };
-    if (!supportedFiles[target].includes(modelEndsWith)) {
-      errMsg = 'Selected file format not supported!';
+    // 1156e only accepts ONNX (no quantization step, model goes directly to Convert).
+    const is1156e = GlobalModel.instance.soc === '1156e';
+    const supportedFiles: Record<string, string[]> = is1156e
+      ? { NPU: ['onnx'], CPU: ['onnx'] }
+      : { NPU: ['onnx', 'pt', 'pth'], CPU: ['onnx', 'tflite'] };
+    if (!supportedFiles[target]?.includes(modelEndsWith)) {
+      errMsg = is1156e
+        ? 'Only ONNX models are supported for 1156e.'
+        : 'Selected file format not supported!';
       return errMsg;
     }
 
@@ -1942,6 +1954,26 @@ export class Command {
     }
     historyList.push(historyInfo);
     fs.writeFileSync(filePath, JSON.stringify(historyList), 'utf8');
+  }
+
+  // Write a placeholder quant history entry for 1156e (quantize step is skipped).
+  // This allows the quant → convert → deploy → benchmark history chain to work normally.
+  static writeSkippedQuantHistory(dateTime: number, modelName: string, source: Source): void {
+    const [quantJson, quantFilePath] = this.getCompressionConvertHistoryFilePath('quantize');
+    const entry: Partial<HistoryInfo> = {
+      source,
+      modelName,
+      contentLength: 0,
+      updateTime: dateTime,
+      accuracy: '----',
+      avgSim: '----',
+      mse: '----',
+      ram: '----',
+      flash: '----',
+      time: '----',
+    };
+    quantJson.push(entry);
+    fs.writeFileSync(quantFilePath, JSON.stringify(quantJson), 'utf8');
   }
 
   // 生成json并写入内容
@@ -2277,6 +2309,16 @@ export class Command {
     // Set the corresponding stage disabled.
     this.setStageDisabled(modelEndsWith);
 
+    // 1156e: restore skipQuantize flag and lastQuantTS from the placeholder quant entry.
+    if (GlobalModel.instance.soc === '1156e') {
+      extension.mockLocalStorage?.setItem('skipQuantize', true);
+      const [quantJson] = this.getCompressionConvertHistoryFilePath('quantize');
+      if (quantJson.length > 0) {
+        const latestQuantTs = Math.max(...quantJson.map((e: any) => e.updateTime));
+        extension.mockLocalStorage?.setItem('lastQuantTS', latestQuantTs);
+      }
+    }
+
     // Clear history before proceeding.
     await this.clearHistory();
 
@@ -2314,7 +2356,8 @@ export class Command {
     GlobalModel.instance.source = 'windows';
     extension.chipConfigPanel?.postMessage({ type: 'Source', params: { source: 'windows' } });
     if (mode === 'core') {
-      const msg: Message = { type: 'AllDone', params: { source: 'windows' } };
+      const skipQuantize = GlobalModel.instance.soc === '1156e' ? true : undefined;
+      const msg: Message = { type: 'AllDone', params: { source: 'windows', skipQuantize } };
       extension.chipConfigPanel?.postMessage(msg);
     }
   }
@@ -2407,7 +2450,8 @@ export class Command {
       connectedMsg = { type: 'Connected' };
       await this.newModelSetup();
     } else if (type === 'core') {
-      connectedMsg = { type: 'AllDone', params: { source: 'linux' } };
+      const skipQuantize = GlobalModel.instance.soc === '1156e' ? true : undefined;
+      connectedMsg = { type: 'AllDone', params: { source: 'linux', skipQuantize } };
     } else {
       this.logAndReportError('Unknown type when connecting to server.');
       return;
@@ -2482,49 +2526,35 @@ export class Command {
     }
 
     GlobalModel.instance.wslDistro = distro; // set global wsldistro before notifying front end.
+    const skipQuantize = GlobalModel.instance.soc === '1156e' ? true : undefined;
     const msg: Message = mode === 'newmodel'
       ? { type: 'WSLReady' }
-      : { type: 'AllDone', params: { source: 'wsl' } };
+      : { type: 'AllDone', params: { source: 'wsl', skipQuantize } };
 
     extension.chipConfigPanel?.postMessage(msg);
     this.outputLogger.handleLogInfo('WSL is ready to use', 'info');
   }
 
-  static getModelStatusPath(data: any): any {
-    // Model history folders are under xxx_hiproj/aicache/, not the SDK workspace folder.
+  static getModelStatusPath(data: any): readonly string[] {
     const workFolder = path.join(GlobalModel.instance.hiprojDir!, 'aicache', data.name, 'history');
-    if (!fs.existsSync(workFolder)) {
-      return ['finish', 'process', 'wait', 'wait', 'wait'];
+    if (!fs.existsSync(workFolder)) { return this.NAV.AT_COMPRESS; }
+
+    const quantData   = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
+    const convertData = this.getModelStatusHistoryFilePath(workFolder, 'convert');
+    const deployData  = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
+    const benchData   = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
+
+    if (!quantData.length) {
+      this.clearConfig();
+      return this.NAV.AT_COMPRESS;
     }
 
-    const compressPath = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
-    const convertPath = this.getModelStatusHistoryFilePath(workFolder, 'convert');
-    const deployPath = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
-    const benchmarkPath = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
-    if (compressPath.length) {
-      const nowItem = compressPath.map(item => item.updateTime);
-      const quantTime = Math.max(...nowItem);
-      const covertStep = convertPath.filter(item => item.quantUUId === quantTime);
-      if (covertStep.length) {
-        const nowConItem = covertStep.map(item => item.updateTime);
-        const convertTime = Math.max(...nowConItem);
-        const profilingStep = benchmarkPath.filter(item => item.convertUUId === convertTime);
-        const deployStep = deployPath.filter(item => item.convertUUId === convertTime);
-        if (profilingStep.length) {
-          return ['finish', 'finish', 'finish', 'finish', 'finish'];
-        } else {
-          if (deployStep.length) {
-            return ['finish', 'finish', 'finish', 'finish', 'wait'];
-          }
-          return ['finish', 'finish', 'finish', 'process', 'wait'];
-        }
-      } else {
-        return ['finish', 'finish', 'process', 'wait', 'wait'];
-      }
-    } else {
-      this.clearConfig();
-      return ['finish', 'process', 'wait', 'wait', 'wait'];
-    }
+    const quantTime = Math.max(...quantData.map((i: any) => i.updateTime));
+    const linked = convertData.filter((i: any) => i.quantUUId === quantTime);
+    if (!linked.length) { return this.NAV.AT_CONVERT; }
+
+    const convertTime = Math.max(...linked.map((i: any) => i.updateTime));
+    return this.navAfterConvert(convertTime, deployData, benchData);
   }
 
   static async clearConfig(): Promise<void> {
@@ -2723,17 +2753,19 @@ export class Command {
 
   static async mergeQATQuant(combinedData: any, source: Source, modelInfo: any, toolsInfo: any): Promise<any> {
     const { compressionData, layerData } = combinedData;
-    const qatValue = compressionData.filter((item: { type: string }) => item.type.toLowerCase() === 'qat');
-    if (!qatValue) { return {}; } // unlikely)
+    const qatItems: any[] = compressionData.filter((item: any) => item.type?.toLowerCase() === 'qat');
+    if (!qatItems.length) { return {}; }
 
-    let networkStructure = qatValue[1].content;
-    let retrainInputs = qatValue[2].content;
-    let validationInputs = qatValue[3].content;
-    let retrainOutputs = qatValue[5].content;
-    let validationOutput = qatValue[6].content;
-    const epochNum = Number(qatValue[8].content);
-    const batchSize = Number(qatValue[9].content);
-    const learningRate = Number(qatValue[10].content);
+    // Key-based lookup — independent of insertion order.
+    const byKey = (k: string): any => qatItems.find((item: any) => item.key === k);
+    let networkStructure = byKey('network_structure')?.content;
+    let retrainInputs    = byKey('retrain_inputs')?.content;
+    let validationInputs = byKey('validation_inputs')?.content;
+    let retrainOutputs   = byKey('retrain_output')?.content;
+    let validationOutput = byKey('valid_output')?.content;
+    const epochNum       = Number(byKey('epoch_num')?.content);
+    const batchSize      = Number(byKey('batch_size')?.content);
+    const learningRate   = Number(byKey('learning_rate')?.content);
 
     if (source === 'wsl') {
       try {
@@ -2754,10 +2786,10 @@ export class Command {
       }
     }
 
-    const switchStatusItemPTQ = compressionData.find((item: { key: string }) => item.key === 'switch_status');
-    const advancedEnabled = switchStatusItemPTQ.defaultValue;
+    const switchStatusItemPTQ = combinedData.compressionData.find((item: { key: string }) => item.key === 'switch_status');
+    const advancedEnabled = switchStatusItemPTQ?.defaultValue ?? false;
     const advancedOptionsataInfoQAT = { advanced: advancedEnabled };
-    const switchInputItemPTQ = compressionData.find((item: { key: string }) => item.key === 'switch_input_value');
+    const switchInputItemPTQ = combinedData.compressionData.find((item: { key: string }) => item.key === 'switch_input_value');
     let additionalArgumentsPTQ = advancedEnabled ? switchInputItemPTQ.defaultValue : '';
     additionalArgumentsPTQ = await this.convertPathIfNeeded(additionalArgumentsPTQ, source);
     const additionalArgumentsInfoQAT = { ascendConfig: additionalArgumentsPTQ };
@@ -3619,69 +3651,73 @@ export class Command {
     extension.chipConfigPanel?.postMessage(frontEndConfigCallbackMessage);
   }
 
-  static getNowStatusPath(selectItem: any): any {
+  // ─── Navigator status constants ──────────────────────────────────────────
+  // Step order: SelectModel | Quantize | Convert | Deploy | Benchmark
+  private static readonly NAV = {
+    AT_COMPRESS:   ['finish', 'process', 'wait',    'wait',    'wait'   ],
+    AT_CONVERT:    ['finish', 'finish',  'process', 'wait',    'wait'   ],
+    AT_DEPLOY:     ['finish', 'finish',  'finish',  'process', 'wait'   ],
+    AT_BENCHMARK:  ['finish', 'finish',  'finish',  'finish',  'wait'   ],
+    DONE:          ['finish', 'finish',  'finish',  'finish',  'finish' ],
+  } as const;
+
+  /**
+   * Given a confirmed convert timestamp, determine what step comes next by
+   * checking whether deploy / benchmark history entries reference it.
+   */
+  private static navAfterConvert(
+    convertTime: number,
+    deploy: any[],
+    benchmark: any[],
+  ): readonly string[] {
+    if (benchmark.some((i: any) => i.convertUUId === convertTime)) { return this.NAV.DONE; }
+    if (deploy.some((i: any) => i.convertUUId === convertTime))    { return this.NAV.AT_BENCHMARK; }
+    return this.NAV.AT_DEPLOY;
+  }
+
+  static getNowStatusPath(selectItem: any): readonly string[] {
     const { page, timeStamp } = selectItem;
     const historyRootDir = GlobalModel.instance.aiCacheDir;
-    if (!historyRootDir) { return ['finish', 'process', 'wait', 'wait', 'wait']; } // We have checked this but do this for consistency.
-    const workFolder = path.join(historyRootDir, `history`);
-    const quantPath = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
-    const convertPath = this.getModelStatusHistoryFilePath(workFolder, 'convert');
-    const deploy = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
-    const benchmark = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
-    if (page === 'lastQuantTS') { // Enter from next in Quant History.
-      const covertStep = convertPath.filter(item => item.quantUUId === timeStamp);
-      if (covertStep.length) {
-        const nowConItem = covertStep.map(item => item.updateTime);
-        const convertTime = Math.max(...nowConItem);
-        const benchmarkStep = benchmark.filter(item => item.convertUUId === convertTime);
-        const deployStep = deploy.filter(item => item.convertUUId === convertTime);
-        if (benchmarkStep.length) {
-          return ['finish', 'finish', 'finish', 'finish', 'finish'];
-        } else if (deployStep.length) {
-          return ['finish', 'finish', 'finish', 'finish', 'wait'];
-        }
-        return ['finish', 'finish', 'finish', 'process', 'wait'];
+    if (!historyRootDir) { return this.NAV.AT_COMPRESS; }
+
+    const workFolder  = path.join(historyRootDir, 'history');
+    const quantData   = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
+    const convertData = this.getModelStatusHistoryFilePath(workFolder, 'convert');
+    const deployData  = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
+    const benchData   = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
+
+    if (page === 'lastQuantTS') {
+      const linked = convertData.filter((i: any) => i.quantUUId === timeStamp);
+      if (linked.length) {
+        const convertTime = Math.max(...linked.map((i: any) => i.updateTime));
+        return this.navAfterConvert(convertTime, deployData, benchData);
       }
-      if (quantPath.length) {
-        return ['finish', 'finish', 'process', 'wait', 'wait'];
-      }
-      return ['finish', 'process', 'wait', 'wait', 'wait'];
-    } else if (page === 'lastConvertTS') { // Enter from next in Convert History.
+      return quantData.length ? this.NAV.AT_CONVERT : this.NAV.AT_COMPRESS;
+
+    } else if (page === 'lastConvertTS') {
       const lastQuantTS = extension.mockLocalStorage?.getItem('lastQuantTS');
       if (lastQuantTS) {
-        const covertNowStep = convertPath.filter(item => item.quantUUId === parseInt(lastQuantTS));
-        if (covertNowStep.length > 0) {
-          const benchmarkStep = benchmark.filter(item => item.convertUUId === timeStamp);
-          const deployStep = deploy.filter(item => item.convertUUId === timeStamp);
-          if (benchmarkStep.length) {
-            return ['finish', 'finish', 'finish', 'finish', 'finish'];
-          } else if (deployStep.length) {
-            return ['finish', 'finish', 'finish', 'finish', 'wait'];
-          }
-          return ['finish', 'finish', 'finish', 'process', 'wait'];
+        const linked = convertData.filter((i: any) => i.quantUUId === parseInt(lastQuantTS));
+        if (linked.length) {
+          return this.navAfterConvert(Number(timeStamp), deployData, benchData);
         }
-        if (quantPath.length) {
-          return ['finish', 'finish', 'process', 'wait', 'wait'];
-        }
-        return ['finish', 'wait', 'process', 'wait', 'wait'];
+        return quantData.length ? this.NAV.AT_CONVERT : this.NAV.AT_COMPRESS;
       }
-      return ['finish', 'process', 'wait', 'wait', 'wait'];
+      return this.NAV.AT_COMPRESS;
+
     } else if (page === 'Deploy') {
       const lastConvertTS = extension.mockLocalStorage?.getItem('lastConvertTS');
       if (lastConvertTS) {
-        const deployNowStep = deploy.filter(item => item.convertUUId === parseInt(lastConvertTS));
-        if (deployNowStep.length > 0) {
-          const benchmarkStep = benchmark.filter(item => item.convertUUId === timeStamp);
-          if (benchmarkStep.length) {
-            return ['finish', 'finish', 'finish', 'finish', 'finish'];
-          }
-          return ['finish', 'finish', 'finish', 'finish', 'wait'];
+        const linked = deployData.filter((i: any) => i.convertUUId === parseInt(lastConvertTS));
+        if (linked.length) {
+          return benchData.some((i: any) => i.convertUUId === timeStamp) ? this.NAV.DONE : this.NAV.AT_BENCHMARK;
         }
-        return ['finish', 'finish', 'finish', 'process', 'wait'];
+        return this.NAV.AT_DEPLOY;
       }
-      return ['finish', 'finish', 'process', 'wait', 'wait'];
+      return this.NAV.AT_CONVERT;
+
     } else {
-      return ['finish', 'process', 'wait', 'wait', 'wait'];
+      return this.NAV.AT_COMPRESS;
     }
   }
 
@@ -3733,6 +3769,7 @@ export class Command {
     // This works because ptq and qat cannot be actiavted at the same time.
     const stage = extension.mockLocalStorage?.getItem('ptq') ? 'ptq' : 'qat';
     const isCPU = target === 'CPU';
+    const skipQuantize = Boolean(extension.mockLocalStorage?.getItem('skipQuantize'));
 
     const model = GlobalModel.instance?.selectedFile;
     const remoteHome = GlobalModel.instance?.remoteHome;
@@ -3740,35 +3777,43 @@ export class Command {
     if (!historyRootDir || !model) { return {}; } // unlikely
 
     // Get timestamp from the previous quant process.
+    // For 1156e (skipQuantize), lastQuantTS is the model-selection timestamp written at import time.
     const lastQuantTS = extension.mockLocalStorage?.getItem('lastQuantTS');
-    if (!lastQuantTS) { throw new Error('Must enter from a quantization result. Aborting...'); }
+    if (!lastQuantTS && !skipQuantize) { throw new Error('Must enter from a quantization result. Aborting...'); }
 
     const quantRootDir = isCPU
       ? path.join(historyRootDir, `Quant/quant_${lastQuantTS}/`)
       : path.join(historyRootDir, `Quant/quant_${lastQuantTS}/${stage}`);
-    if (!fs.existsSync(quantRootDir)) { throw new Error('Output folder for last quantization not found.'); }
+    if (!skipQuantize && !fs.existsSync(quantRootDir)) {
+      throw new Error('Output folder for last quantization not found.');
+    }
 
     // Get deploy.onnx from quantization. (NPU only)
-    let deployOnnxPath;
+    // For 1156e the original model file is used directly — there is no quantized output.
+    let deployOnnxPath: string | undefined;
     if (!isCPU) {
-      const files = fs.readdirSync(quantRootDir);
-      const deployOnnxFile = files.find(f => f.endsWith('.onnx') && f.toLowerCase().includes('deploy'));
+      if (skipQuantize) {
+        deployOnnxPath = model; // remote/linux path of the original onnx model
+      } else {
+        const files = fs.readdirSync(quantRootDir);
+        const deployOnnxFile = files.find(f => f.endsWith('.onnx') && f.toLowerCase().includes('deploy'));
 
-      if (!deployOnnxFile) { throw new Error('deploy onnx file not found.'); }
-      if (!convertData || convertData.length === 0) { return {}; } // unlikely
+        if (!deployOnnxFile) { throw new Error('deploy onnx file not found.'); }
+        if (!convertData || convertData.length === 0) { return {}; } // unlikely
 
-      // Upload deploy onnx file in case quant folder on Linux has been overwritten.
-      try {
-        if (source === 'linux') {
-          const localPath = path.join(quantRootDir, deployOnnxFile);
-          deployOnnxPath = `${remoteHome}/${remoteRootDir}/.cache/ai/quant/${stage}/quant/${deployOnnxFile}`;
-          await vscode.commands.executeCommand(this.remoteCmdLib.uploadCmd, localPath, deployOnnxPath);
-        } else {
-          const deployOnnxPathWin = path.join(quantRootDir, deployOnnxFile);
-          deployOnnxPath = await this.convertPathIfNeeded(deployOnnxPathWin, source);
+        // Upload deploy onnx file in case quant folder on Linux has been overwritten.
+        try {
+          if (source === 'linux') {
+            const localPath = path.join(quantRootDir, deployOnnxFile);
+            deployOnnxPath = `${remoteHome}/${remoteRootDir}/.cache/ai/quant/${stage}/quant/${deployOnnxFile}`;
+            await vscode.commands.executeCommand(this.remoteCmdLib.uploadCmd, localPath, deployOnnxPath);
+          } else {
+            const deployOnnxPathWin = path.join(quantRootDir, deployOnnxFile);
+            deployOnnxPath = await this.convertPathIfNeeded(deployOnnxPathWin, source);
+          }
+        } catch (err) {
+          throw new Error(`Failed to upload scripts, cause: ${this.handleError(err)}`);
         }
-      } catch (err) {
-        throw new Error(`Failed to upload scripts, cause: ${this.handleError(err)}`);
       }
     }
 

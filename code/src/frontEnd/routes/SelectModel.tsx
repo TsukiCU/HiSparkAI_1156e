@@ -267,19 +267,34 @@ function SelectModel(props: { target: Target; source: Source }): React.JSX.Eleme
 
       if (msg.type === 'AllDone') {
         const realSource = msg.params.source;
-        if (msg.data) {
-          IStore.getStore().dispatch(updateEntity('navbarStatus', msg.data));
+        const skipQuantize = Boolean(msg.params?.skipQuantize);
+
+        if (skipQuantize) {
+          // 1156e: quantize step is auto-completed; navigate directly to Convert.
+          // Ensure Quantize (index 1) always shows 'finish' regardless of msg.data.
+          const base: string[] = Array.isArray(msg.data) ? [...msg.data] : ['finish', 'finish', 'process', 'wait', 'wait'];
+          base[1] = 'finish';
+          IStore.getStore().dispatch(updateEntity('navbarStatus', base));
+          IStore.getStore().dispatch(updateEntity('skipQuantize', true));
         } else {
-          IStore.getStore().dispatch(updateEntity('navbarStatus', ['finish', 'proecss', 'wait', 'wait', 'wait']));
+          if (msg.data) {
+            IStore.getStore().dispatch(updateEntity('navbarStatus', msg.data));
+          } else {
+            IStore.getStore().dispatch(updateEntity('navbarStatus', ['finish', 'process', 'wait', 'wait', 'wait']));
+          }
         }
 
-        if (realSource === 'wsl') {
-        } else if (realSource === 'linux') {
+        if (realSource === 'linux') {
           IStore.getStore().dispatch(updateEntity('isConnected', true));
         }
 
-        IStore.getStore().dispatch(updateEntity('nowStatus', STATUS));
-        navigate('/quantize', { state: { params: msg } });
+        if (skipQuantize) {
+          IStore.getStore().dispatch(updateEntity('nowStatus', 2)); // 2 = CONVERT
+          navigate('/convert', { state: { params: msg } });
+        } else {
+          IStore.getStore().dispatch(updateEntity('nowStatus', STATUS)); // STATUS = 1 = COMPRESSION
+          navigate('/quantize', { state: { params: msg } });
+        }
       }
 
       // Connect to remote server through 'New Model'.

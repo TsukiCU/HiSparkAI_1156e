@@ -61,6 +61,7 @@ function Navbar(): React.JSX.Element {
   const nowStatus = useSelector((state: any) => state.entities.nowStatus);
   const navbarStatus = useSelector((state: any) => state.entities.navbarStatus);
   const selectedFileNames = useSelector((state: any) => state.entities.selectedFileName);
+  const skipQuantize = useSelector((state: any) => Boolean(state.entities.skipQuantize));
   const [serverHost, setServerHost] = useState(window.initialData?.kind);
   const [current, setCurrent] = useState(0);
   const { pathname } = useLocation();
@@ -145,6 +146,8 @@ function Navbar(): React.JSX.Element {
       notify('Select a model first.', { type: 'error', stack: false, duration: 2 });
       return;
     }
+    // 1156e: Quantize step (index 1) is skipped — block direct navigation to it.
+    if (skipQuantize && currents === STEPSTATUS.COMPRESSION) { return; }
     setCurrent(currents);
     mapRouter(currents);
   };
