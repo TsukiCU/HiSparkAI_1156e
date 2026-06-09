@@ -3869,13 +3869,52 @@ export class Command {
       // frontend can merge saved values on top of its own schema defaults.
       // On first run, both will be empty arrays and the frontend initialises
       // entirely from its schema.
-      if (!extension.mockLocalStorage?.getItem('compressionData')) {
-        extension.mockLocalStorage?.setItem('compressionData', []);
-        extension.mockLocalStorage?.setItem('compDataBackup', []);
+      // On first run (nothing saved yet), seed mockLocalStorage with the minimum
+      // static defaults that backend operations depend on:
+      //   - compressionData: quantisation config fields (batch_num, validation, etc.)
+      //   - convertData: Output_Type select (updateConvertConfig checks length parity)
+      // After the user configures fields and clicks Quantize, these get overwritten
+      // with the actual user values via SAVE_CONFIG.
+      const tgt = target.toLowerCase();
+
+      if (!extension.mockLocalStorage?.getItem('compressionData') ||
+          common.parseArray(extension.mockLocalStorage.getItem('compressionData')).length === 0) {
+        const compDefaults = tgt === 'cpu'
+          ? [
+              { target: 'cpu', page: 'quant', kind: 'input',  group: 'Quantization', key: 'batch_num',        title: 'batch_num',             content: '1',           defaultValue: '1',           disabled: false },
+              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'validation_cpu',   title: 'Validation',             content: ['NONE','FILE'], defaultValue: 'NONE',       disabled: false },
+              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'bit_num_cpu',      title: 'Quantized Data Type',    content: ['int8'],        defaultValue: 'int8',       disabled: false },
+              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'quant_type',       title: 'Quant Type',             content: ['FULL_QUANT'],  defaultValue: 'FULL_QUANT', disabled: false },
+              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'validation_labels_cpu', title: 'Validation Labels', content: ['None','Choose from File System'], defaultValue: 'None', disabled: false },
+              { target: 'cpu', page: 'quant', kind: 'file',   group: 'Quantization', key: 'val_out_cpu',      title: '',                       content: ' ',            defaultValue: ' ',          disabled: false, folder: false },
+            ]
+          : [
+              { target: 'npu', page: 'quant', type: 'ptq', kind: 'input',  group: 'Quantization', key: 'batch_num',          title: 'batch_num',          content: '1',              defaultValue: '1',        disabled: false },
+              { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'validation_npu',     title: 'Validation',         content: ['NONE','FILE'],  defaultValue: 'NONE',     disabled: false },
+              { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'bit_num_npu',        title: 'Quantized Data Type',content: ['int8','int16'], defaultValue: 'int8',     disabled: false },
+              { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'validation_labels_npu', title: 'Validation Labels', content: ['None','Choose from File System'], defaultValue: 'None', disabled: false },
+              { target: 'npu', page: 'quant', type: 'ptq', kind: 'file',   group: 'Quantization', key: 'vi2_file',           title: '',                   content: ' ',              defaultValue: ' ',        disabled: false, folder: false },
+              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'retrain_code',       title: 'Train Code',         content: 'import this',   defaultValue: 'import this', disabled: true  },
+              { target: 'npu', page: 'quant', type: 'qat', kind: 'select', group: 'Quantization', key: 'config_file',        title: 'Config File',        content: ['Default','Custom'], defaultValue: 'Default', disabled: false },
+              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'epoch_num',          title: 'Epoch Num',          content: '1',              defaultValue: '1',        disabled: false },
+              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'batch_size',         title: 'Batch Size',         content: '4',              defaultValue: '4',        disabled: false },
+              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'learning_rate',      title: 'Learning Rate',      content: '0.00001',        defaultValue: '0.00001',  disabled: false },
+            ];
+        extension.mockLocalStorage?.setItem('compressionData', compDefaults);
+        extension.mockLocalStorage?.setItem('compDataBackup',  compDefaults);
       }
-      if (!extension.mockLocalStorage?.getItem('convertData')) {
-        extension.mockLocalStorage?.setItem('convertData', []);
-        extension.mockLocalStorage?.setItem('convDataBackup', []);
+
+      if (!extension.mockLocalStorage?.getItem('convertData') ||
+          common.parseArray(extension.mockLocalStorage.getItem('convertData')).length === 0) {
+        // updateConvertConfig checks `convertData.length % 2 === 0` for parity.
+        // Seeding [Output_Type] gives length=1 (odd) so it correctly computes nodeNum=0.
+        const convDefaults = [{
+          target: tgt, page: 'convert', kind: 'select', group: 'Convert',
+          key: 'Output_Type', title: 'Output Type',
+          content: ['float16', 'uint8', 'int8'], defaultValue: 'float16', disabled: false,
+        }];
+        extension.mockLocalStorage?.setItem('convertData',    convDefaults);
+        extension.mockLocalStorage?.setItem('convDataBackup', convDefaults);
       }
 
       const compConfigArr = common.parseArray(extension.mockLocalStorage?.getItem('compressionData'));

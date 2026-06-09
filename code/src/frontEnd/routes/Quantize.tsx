@@ -240,25 +240,32 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
   // This is the ONLY place that reads compressionData.  All rendering reads
   // from inputBoxes / selectBoxes / fileBoxes state, never from compressionData.
   useEffect(() => {
-    const { inputs, selects, files } = buildState(compressionData ?? [], target, switchStatus);
+    const byKey = (key: string): any => (compressionData ?? []).find((d: any) => d.key === key) ?? {};
+    const selByKeyData = (key: string): string => String(byKey(key)?.defaultValue ?? '');
+
+    // Compute newSwitch BEFORE buildState so bitNum gets the correct disabled state
+    // on initial load from saved data (Issue 1).
+    const sw = byKey(QUANT_KEYS.switchStatus);
+    const si = byKey(QUANT_KEYS.switchInput);
+    const newSwitch = target === 'NPU' ? Boolean(sw?.defaultValue ?? false) : false;
+
+    const { inputs, selects, files } = buildState(compressionData ?? [], target, newSwitch);
     setInputBoxes(inputs);
     setSelectBoxes(selects);
     setFileBoxes(files);
 
-    // Derive auxiliary UI state from the data.
-    const byKey = (key: string): any => (compressionData ?? []).find((d: any) => d.key === key) ?? {};
-    const selByKeyData = (key: string): string => String(byKey(key)?.defaultValue ?? '');
+    // Derive disableBtn from the BUILT state, not from raw compressionData.
+    // When compressionData is empty, the built state uses schema defaults (validation='NONE'),
+    // so disableBtn is correctly true and Validation Inputs stay hidden (Issue 4).
+    const validationKey = target === 'NPU' ? QUANT_KEYS.npu.ptq.validation : QUANT_KEYS.cpu.validation;
+    const validationSel = selects.find((s: SelectBoxProps) => s.key === validationKey);
+    setDisableBtn((validationSel?.defaultValue ?? 'NONE') === 'NONE');
 
     if (target === 'CPU') {
-      setDisableBtn(selByKeyData(QUANT_KEYS.cpu.validation) === 'NONE');
       setSelectedOutput(selByKeyData(QUANT_KEYS.selectedOutput) || 'None');
     } else {
-      setDisableBtn(selByKeyData(QUANT_KEYS.npu.ptq.validation) === 'NONE');
       setSelectedOutput(selByKeyData(QUANT_KEYS.selectedOutput) || 'None');
       setDisable(selByKeyData(QUANT_KEYS.npu.qat.configFile) === 'Default' || selByKeyData(QUANT_KEYS.npu.qat.configFile) === '');
-      const sw = byKey(QUANT_KEYS.switchStatus);
-      const si = byKey(QUANT_KEYS.switchInput);
-      const newSwitch = Boolean(sw?.defaultValue ?? false);
       setSwitchStatus(newSwitch);
       setSwitchInputValue(newSwitch ? String(si?.content ?? '') : '');
       const ns = byKey(QUANT_KEYS.npu.qat.networkStruct);
@@ -276,15 +283,46 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
 
   // ─── Sync to backend storage ───────────────────────────────────────────
   useEffect(() => {
+    if (inputBoxes.length === 0 && selectBoxes.length === 0 && fileBoxes.length === 0) { return; }
+
     const inputMap  = new Map(inputBoxes.map(b => [b.key, b]));
     const selectMap = new Map(selectBoxes.map(b => [b.key, b]));
     const fileMap   = new Map(fileBoxes.map(b => [b.key, b]));
-    const updated   = (compressionData ?? []).map((d: CompressionItem) => {
+    // QAT key set is used to assign the correct `type` field (ptq/qat/undefined).
+    const QAT_KEYS_SET = new Set(Object.values(QUANT_KEYS.npu.qat) as string[]);
+    const itemType = (key: string): string | undefined =>
+      target === 'CPU' ? undefined : (QAT_KEYS_SET.has(key) ? 'qat' : 'ptq');
+
+    // Update items already in compressionData.
+    const updated: CompressionItem[] = (compressionData ?? []).map((d: CompressionItem) => {
       const inp = inputMap.get(d.key);  if (inp)  { return { ...d, content: inp.content  }; }
       const sel = selectMap.get(d.key); if (sel)  { return { ...d, defaultValue: sel.defaultValue, content: sel.content, disabled: sel.disabled }; }
       const fil = fileMap.get(d.key);   if (fil)  { return { ...d, content: fil.content  }; }
       return d;
     });
+
+    // When compressionData is empty (first run), also add schema-initialised fixed fields
+    // so mockLocalStorage is non-empty and backend operations succeed (Issue 5).
+    const existingKeys = new Set(updated.map(d => d.key));
+    for (const b of inputBoxes) {
+      if (!existingKeys.has(b.key)) {
+        updated.push({ target: target.toLowerCase(), page: 'quant', type: itemType(b.key), kind: 'input', group: b.group, key: b.key, title: b.title, content: b.content, defaultValue: String(b.content ?? ''), disabled: Boolean(b.disabled) });
+        existingKeys.add(b.key);
+      }
+    }
+    for (const b of selectBoxes) {
+      if (!existingKeys.has(b.key)) {
+        updated.push({ target: target.toLowerCase(), page: 'quant', type: itemType(b.key), kind: 'select', group: b.group, key: b.key, title: b.title, content: b.content, defaultValue: b.defaultValue, disabled: Boolean(b.disabled) });
+        existingKeys.add(b.key);
+      }
+    }
+    for (const b of fileBoxes) {
+      if (!existingKeys.has(b.key)) {
+        updated.push({ target: target.toLowerCase(), page: 'quant', type: itemType(b.key), kind: 'file', group: b.group, key: b.key, title: b.title, content: String(b.content ?? ''), defaultValue: String(b.content ?? ''), disabled: Boolean(b.disabled) });
+        existingKeys.add(b.key);
+      }
+    }
+
     BackEndStorage.set('compressionData', updated, PanelType.CHIPCONFIG);
   }, [inputBoxes, selectBoxes, fileBoxes]);
 
@@ -382,6 +420,10 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
       });
 
     // Ensure fixed fields are present even if compressionData was empty.
+    const QAT_KEYS_SET = new Set(Object.values(QUANT_KEYS.npu.qat) as string[]);
+    const itemType = (key: string): string | undefined =>
+      target === 'CPU' ? undefined : (QAT_KEYS_SET.has(key) ? 'qat' : 'ptq');
+
     const existingKeys = new Set(merged.map(d => d.key));
     const fix = target === 'NPU' ? FIXED_KEYS.npu : FIXED_KEYS.cpu;
     for (const [key, spec] of Object.entries(QUANT_FIELD_SPECS)) {
@@ -389,7 +431,7 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
       if (existingKeys.has(key)) { continue; }
       const state = inputMap.get(key) ?? selectMap.get(key) ?? fileMap.get(key);
       if (state) {
-        merged.push({ target: target.toLowerCase(), page: 'quant', type: spec.kind === 'input' ? 'ptq' : undefined,
+        merged.push({ target: target.toLowerCase(), page: 'quant', type: itemType(key),
           kind: spec.kind, group: spec.group, key, title: spec.title,
           content: (state as any).content ?? (state as any).defaultValue ?? spec.defaultValue,
           defaultValue: (state as any).defaultValue ?? spec.defaultValue, disabled: Boolean((state as any).disabled) });
@@ -504,9 +546,9 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
           {layerConfigModal()}
         </div>
 
-        {/* ② Calibration Inputs table (validation switch appears AFTER the table) */}
-        <div className="app-common-font"><h2 className="section-title">{QUANT_TEXT.sections.calibrationInputs}</h2></div>
+        {/* ② Calibration Inputs table (title INSIDE the div, validation switch AFTER) */}
         <div className="inputs-class-table">
+          <div className="app-common-font"><h2 className="section-title">{QUANT_TEXT.sections.calibrationInputs}</h2></div>
           <div className="row-ptq th-ptq">
             {CALIB_TABLE_HEADERS_NPU.map(h => (
               <span key={h.label} className="th-ptq" style={h.style}>{h.label}</span>
@@ -545,11 +587,11 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
           />
         )}
 
-        {/* ④ Validation Inputs table (when validation = FILE) */}
+        {/* ④ Validation Inputs table (title INSIDE the div, shown when validation = FILE) */}
         {!disableBtn && (
           <>
-            <div className="app-common-font"><h2 className="section-title">{QUANT_TEXT.sections.validationInputs}</h2></div>
             <div className="inputs-class-table">
+              <div className="app-common-font"><h2 className="section-title">{QUANT_TEXT.sections.validationInputs}</h2></div>
               <div className="row-ptq th-ptq">
                 {VALID_TABLE_HEADERS.map(h => (
                   <span key={h.label} className="th-ptq" style={h.style}>{h.label}</span>
