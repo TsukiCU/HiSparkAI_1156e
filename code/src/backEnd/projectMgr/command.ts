@@ -361,6 +361,21 @@ export class ProjectMgrCommand {
         );
       } catch { /* ignore write failure — fall back to sdkDir */ }
       pathToOpen = fs.existsSync(workspaceFilePath) ? workspaceFilePath : sdkDir;
+
+      // Create .vscode/launch.json in the hiproj folder to suppress VSCode's
+      // "Generate launch.json" prompt when it opens as a multi-root workspace.
+      try {
+        const vscodeDir = path.join(hiprojDir, '.vscode');
+        fs.mkdirSync(vscodeDir, { recursive: true });
+        const launchPath = path.join(vscodeDir, 'launch.json');
+        if (!fs.existsSync(launchPath)) {
+          fs.writeFileSync(
+            launchPath,
+            JSON.stringify({ version: '0.2.0', configurations: [] }, null, 4),
+            'utf-8',
+          );
+        }
+      } catch { /* ignore */ }
     }
 
     // projectDataKey = hiprojDir in all cases: workspace[0] is always hiprojDir

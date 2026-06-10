@@ -2641,6 +2641,14 @@ export class Command {
     }
 
     const bitNumMap: Record<string, number> = { int8: 8, float16: 16, 8: 8 }; // Temporary map for "quantized data type" transition
+
+    // cpuValue[4] = validation_labels_cpu select (defaultValue = 'None' | 'Choose from File System')
+    // cpuValue[5] = val_out_cpu file picker (content = actual .csv path chosen by user)
+    const validationLabelSel  = cpuValue[4]?.defaultValue ?? 'None';
+    const validationLabelPath = validationLabelSel === 'Choose from File System'
+      ? (String(cpuValue[5]?.content ?? '').trim())
+      : '';
+
     const quantConfig = {
       quantConfig: {
         validation: cpuValue[1].defaultValue ?? 'validation',
@@ -2650,7 +2658,7 @@ export class Command {
         valiInputs: valiInputList,
         valiOutputs: {
           name: selectedOutput,
-          path: cpuValue[4].content ?? 'valiOutputs',
+          path: validationLabelPath,
         },
       },
     };
