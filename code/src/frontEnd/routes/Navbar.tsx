@@ -95,7 +95,8 @@ function Navbar(): React.JSX.Element {
     { stepStatus: 'waiting', to: '/deploy', clickFunc: '', imgIcon: DeployIcon, activeIcon: DeployLight, selectIcon: DeployActiveIcon, desc: 'Deploy' },
     { stepStatus: 'waiting', to: '/benchmark', clickFunc: handleProfilingModalOpen, imgIcon: ProfilingIcon, activeIcon: ProfilingLight, selectIcon: ProfilingActiveIcon, desc: 'Benchmark' },
   ]);
-  const items = navLinkArr.map((item: any) => {
+  const onSelectModel = pathname === '/' || pathname === '/selectmodel';
+  const items = navLinkArr.map((item: any, index: number) => {
     const icon = SelectedIcon;
     const themeIcon = themeData === 'dark' || (!themeData && serverHost === 2) ? item.imgIcon : item.activeIcon;
     let selectIcon = pathname === item.to ? item.selectIcon : '';
@@ -103,13 +104,19 @@ function Navbar(): React.JSX.Element {
       selectIcon = item.to === '/selectmodel' ? SelectModelActiveIcon : '';
     }
 
+    // 1156e: Quantize (index 1) is grayed out when the user is on SelectModel,
+    // but shows the checkmark (finish) on all other pages.
+    const effectiveStatus = (skipQuantize && index === 1 && onSelectModel)
+      ? 'wait'
+      : item.stepStatus;
+
     let finalIcon = selectIcon;
     if (finalIcon === '') {
-      finalIcon = item.stepStatus === 'finish' ? icon : themeIcon;
+      finalIcon = effectiveStatus === 'finish' ? icon : themeIcon;
     }
     let finalFilter = '';
     if (!(themeData === 'dark' || (!themeData && serverHost === 2))) {
-      if (item.stepStatus === 'finish' || selectIcon) {
+      if (effectiveStatus === 'finish' || selectIcon) {
         finalFilter = 'unset';
       } else { finalFilter = 'invert(60%)'; }
     }
@@ -125,7 +132,7 @@ function Navbar(): React.JSX.Element {
           }}
         /> <span className={selectIcon !== '' ? 'select-desc button-text' : 'ant-select button-text'}>{item.desc}</span></>
       ,
-      status: item.stepStatus,
+      status: effectiveStatus,
     };
   });
   const next = (): void => {
