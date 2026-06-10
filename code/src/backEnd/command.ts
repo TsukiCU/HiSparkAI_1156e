@@ -2535,9 +2535,9 @@ export class Command {
     this.outputLogger.handleLogInfo('WSL is ready to use', 'info');
   }
 
-  static getModelStatusPath(data: any): readonly string[] {
+  static getModelStatusPath(data: any): string[] {
     const workFolder = path.join(GlobalModel.instance.hiprojDir!, 'aicache', data.name, 'history');
-    if (!fs.existsSync(workFolder)) { return this.NAV.AT_COMPRESS; }
+    if (!fs.existsSync(workFolder)) { return this.applySkipQuantize(this.NAV.AT_COMPRESS); }
 
     const quantData   = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
     const convertData = this.getModelStatusHistoryFilePath(workFolder, 'convert');
@@ -2546,15 +2546,15 @@ export class Command {
 
     if (!quantData.length) {
       this.clearConfig();
-      return this.NAV.AT_COMPRESS;
+      return this.applySkipQuantize(this.NAV.AT_COMPRESS);
     }
 
     const quantTime = Math.max(...quantData.map((i: any) => i.updateTime));
     const linked = convertData.filter((i: any) => i.quantUUId === quantTime);
-    if (!linked.length) { return this.NAV.AT_CONVERT; }
+    if (!linked.length) { return this.applySkipQuantize(this.NAV.AT_CONVERT); }
 
     const convertTime = Math.max(...linked.map((i: any) => i.updateTime));
-    return this.navAfterConvert(convertTime, deployData, benchData);
+    return this.applySkipQuantize(this.navAfterConvert(convertTime, deployData, benchData));
   }
 
   static async clearConfig(): Promise<void> {
@@ -3141,6 +3141,10 @@ export class Command {
       const convertJsonFolder = JsonFolder;
       const convertJsonPath = JsonPath;
       const remoteConvertDir = remoteDir;
+      // Ensure the Json folder exists (not guaranteed when quantize was skipped, e.g. 1156e).
+      if (!fs.existsSync(convertJsonFolder)) {
+        fs.mkdirSync(convertJsonFolder, { recursive: true });
+      }
       return { convertJsonFolder, convertJsonPath, remoteJsonDir, remoteConvertDir };
     }
   }
@@ -3670,6 +3674,17 @@ export class Command {
   } as const;
 
   /**
+   * For 1156e (skipQuantize), the Quantize step must appear grayed out ('wait')
+   * instead of checked ('finish') because the user never actually performed it.
+   */
+  private static applySkipQuantize(status: readonly string[]): string[] {
+    if (GlobalModel.instance.soc !== '1156e') { return [...status]; }
+    const result = [...status];
+    result[1] = 'wait';
+    return result;
+  }
+
+  /**
    * Given a confirmed convert timestamp, determine what step comes next by
    * checking whether deploy / benchmark history entries reference it.
    */
@@ -3683,10 +3698,10 @@ export class Command {
     return this.NAV.AT_DEPLOY;
   }
 
-  static getNowStatusPath(selectItem: any): readonly string[] {
+  static getNowStatusPath(selectItem: any): string[] {
     const { page, timeStamp } = selectItem;
     const historyRootDir = GlobalModel.instance.aiCacheDir;
-    if (!historyRootDir) { return this.NAV.AT_COMPRESS; }
+    if (!historyRootDir) { return this.applySkipQuantize(this.NAV.AT_COMPRESS); }
 
     const workFolder  = path.join(historyRootDir, 'history');
     const quantData   = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
@@ -3694,38 +3709,40 @@ export class Command {
     const deployData  = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
     const benchData   = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
 
+    const nav = (s: readonly string[]) => this.applySkipQuantize(s);
+
     if (page === 'lastQuantTS') {
       const linked = convertData.filter((i: any) => i.quantUUId === timeStamp);
       if (linked.length) {
         const convertTime = Math.max(...linked.map((i: any) => i.updateTime));
-        return this.navAfterConvert(convertTime, deployData, benchData);
+        return nav(this.navAfterConvert(convertTime, deployData, benchData));
       }
-      return quantData.length ? this.NAV.AT_CONVERT : this.NAV.AT_COMPRESS;
+      return nav(quantData.length ? this.NAV.AT_CONVERT : this.NAV.AT_COMPRESS);
 
     } else if (page === 'lastConvertTS') {
       const lastQuantTS = extension.mockLocalStorage?.getItem('lastQuantTS');
       if (lastQuantTS) {
         const linked = convertData.filter((i: any) => i.quantUUId === parseInt(lastQuantTS));
         if (linked.length) {
-          return this.navAfterConvert(Number(timeStamp), deployData, benchData);
+          return nav(this.navAfterConvert(Number(timeStamp), deployData, benchData));
         }
-        return quantData.length ? this.NAV.AT_CONVERT : this.NAV.AT_COMPRESS;
+        return nav(quantData.length ? this.NAV.AT_CONVERT : this.NAV.AT_COMPRESS);
       }
-      return this.NAV.AT_COMPRESS;
+      return nav(this.NAV.AT_COMPRESS);
 
     } else if (page === 'Deploy') {
       const lastConvertTS = extension.mockLocalStorage?.getItem('lastConvertTS');
       if (lastConvertTS) {
         const linked = deployData.filter((i: any) => i.convertUUId === parseInt(lastConvertTS));
         if (linked.length) {
-          return benchData.some((i: any) => i.convertUUId === timeStamp) ? this.NAV.DONE : this.NAV.AT_BENCHMARK;
+          return nav(benchData.some((i: any) => i.convertUUId === timeStamp) ? this.NAV.DONE : this.NAV.AT_BENCHMARK);
         }
-        return this.NAV.AT_DEPLOY;
+        return nav(this.NAV.AT_DEPLOY);
       }
-      return this.NAV.AT_CONVERT;
+      return nav(this.NAV.AT_CONVERT);
 
     } else {
-      return this.NAV.AT_COMPRESS;
+      return nav(this.NAV.AT_COMPRESS);
     }
   }
 

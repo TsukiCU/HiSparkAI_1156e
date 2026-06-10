@@ -272,8 +272,8 @@ function SelectModel(props: { target: Target; source: Source }): React.JSX.Eleme
         if (skipQuantize) {
           // 1156e: quantize step is auto-completed; navigate directly to Convert.
           // Ensure Quantize (index 1) always shows 'finish' regardless of msg.data.
-          const base: string[] = Array.isArray(msg.data) ? [...msg.data] : ['finish', 'finish', 'process', 'wait', 'wait'];
-          base[1] = 'finish';
+          const base: string[] = Array.isArray(msg.data) ? [...msg.data] : ['finish', 'wait', 'process', 'wait', 'wait'];
+          base[1] = 'wait'; // Quantize is grayed out — not completed, just skipped for 1156e.
           IStore.getStore().dispatch(updateEntity('navbarStatus', base));
           IStore.getStore().dispatch(updateEntity('skipQuantize', true));
         } else {
