@@ -44,7 +44,7 @@ import * as os from 'os';
 import { getUserGuidePath } from './file/modelConfig';
 import { PanelType } from '@src/backEnd/interface/model';
 import type { HistoryInfo, Release } from '@src/backEnd/interface/model';
-import { GlobalModel, remoteRootDir, DEFAULT_WSL_DISTRO, remotePython, LAST_SELECTED_PATH } from './storage/Global';
+import { GlobalModel, remoteRootDir, DEFAULT_WSL_DISTRO, remotePython, getRemotePython, LAST_SELECTED_PATH } from './storage/Global';
 
 import { res } from '@src/i18n/backEndTrans';
 import * as common from './common';
@@ -1284,7 +1284,7 @@ export class Command {
         await this.uploadScripts('NPU', stage, rootDir); // model parsing scripts is placed under npu/
 
         const baseCmd = `cd ${remoteHome}/${rootDir}/ && `;
-        const python = remotePython[target];
+        const python = getRemotePython(target, GlobalModel.instance.soc);
         const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` +
           `--model ${selectedPath} ` + `--output_path .cache/ai/parsedModel/parsedModel.json`;
 
@@ -3001,7 +3001,7 @@ export class Command {
     const { remoteJsonDir, remoteQuantDir } = ctx.paths;
     if (!type) { return; }
 
-    const python = remotePython[target];
+    const python = getRemotePython(target, GlobalModel.instance.soc);
     const baseCmd = `cd ${remoteHome}/${rootDir}/scripts && `;
 
     const quantCmdLib = {
@@ -3225,7 +3225,7 @@ export class Command {
     } else {
       // Upload select_model folder in case it hasn't been done yet.
       const rootDir = remoteRootDir;
-      const python = remotePython[ctx.target];
+      const python = getRemotePython(ctx.target, GlobalModel.instance.soc);
       const folder = 'model_select';
       await this.uploadScripts('NPU', folder, rootDir);
 
@@ -3431,7 +3431,7 @@ export class Command {
     const remoteHome = GlobalModel.instance?.remoteHome;
     if (!remoteHome) { return; }
 
-    const python = remotePython[target];
+    const python = getRemotePython(target, GlobalModel.instance.soc);
     const rootDir = remoteRootDir;
     const isCPU = target === 'CPU';
 

@@ -143,6 +143,19 @@ export const remotePython = {
   CPU: '/usr/bin/python3.11',
 };
 
+/**
+ * Return the correct remote Python path for a given chip + platform.
+ *
+ * ws63 (CPU chip) runs python3.11.
+ * 3322, 1156e and any other NPU-server chip run python3.10 — these chips
+ * connect to an NPU/AI server whose Python environment is python3.10,
+ * even when the project platform is set to CPU.
+ */
+export function getRemotePython(target: 'CPU' | 'NPU' | 'NONE', soc?: string): string {
+  if (soc === '1156e') { return remotePython.NPU; } // 1156e server has python3.10
+  return target === 'CPU' ? remotePython.CPU : remotePython.NPU;
+}
+
 export const LAST_SELECTED_PATH = {
   model: '',
   general: '',
