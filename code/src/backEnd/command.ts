@@ -45,6 +45,8 @@ import { getUserGuidePath } from './file/modelConfig';
 import { PanelType } from '@src/backEnd/interface/model';
 import type { HistoryInfo, Release } from '@src/backEnd/interface/model';
 import { GlobalModel, remoteRootDir, DEFAULT_WSL_DISTRO, remotePython, getRemotePython, LAST_SELECTED_PATH } from './storage/Global';
+import { CHIP_CONFIG } from './storage/ChipConfigMap';
+import type { ChipName } from './storage/ChipConfigMap';
 
 import { res } from '@src/i18n/backEndTrans';
 import * as common from './common';
@@ -5082,67 +5084,85 @@ export class Command {
   }
 
   static async startFlashing(message: any): Promise<void> {
-    // get port and baud rate.
-    const { port, baudRate, target } = message.params;
-    const isCPU = target === 'CPU';
-    if (!baudRate || !port) {
-      extension.chipConfigPanel?.postMessage({
-        type: 'FlashFailed',
-        params: { description: 'Cannot access to port or baudrate.' },
-      });
+    const {
+      port       = '',
+      baudRate   = '',
+      target,
+      burnType   = 'Serial',
+      chipName:  rawChipName,
+      ipAddr     = '',
+      ipAddress  = '',
+      subnetMask = '',
+      gateway    = '',
+      eraseTags  = [] as string[],
+      emptyFlash = false,
+    } = message.params ?? {};
+
+    const isCPU    = target === 'CPU';
+    const chipName = (rawChipName || (isCPU ? 'ws63' : '3322')) as ChipName;
+    const chip     = CHIP_CONFIG[chipName];
+    if (!chip) {
+      extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: `Unknown chip: ${chipName}` } });
       return;
     }
+
+    // Port is required for Serial; USB doesn't need it (future).
+    if (!baudRate || (burnType !== 'Usb' && !port)) {
+      extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Cannot access to port or baudrate.' } });
+      return;
+    }
+
     const rootPath = common.getWorkFolderPath();
-    const binPath = path.join(rootPath, isCPU ? './output/ws63/fwpkg/ws63-liteos-app/ws63-liteos-app_all.fwpkg' : './output/3322/fwpkg/3322-wstp-app.fwpkg');
-    if (!fs.existsSync(binPath) || !fs.existsSync(rootPath)) {
-      extension.chipConfigPanel?.postMessage({
-        type: 'FlashFailed',
-        params: { description: 'Check if SDK is compiled.' },
-      });
+    const binPath  = path.join(rootPath, chip.fwpkgRelPath);
+
+    // For local chips (ws63, 3322) the binary must already exist; 1156e downloads it from remote.
+    if (chipName !== '1156e' && !fs.existsSync(binPath)) {
+      extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Check if SDK is compiled.' } });
       return;
     }
 
     const activeHiprojPath = GlobalModel.instance.hiprojPath;
     if (!activeHiprojPath || !fs.existsSync(activeHiprojPath)) {
-      const errMsg = 'hiproj file for the current project is missing.';
-      extension.chipConfigPanel?.postMessage({
-        type: 'FlashFailed',
-        params: { description: errMsg },
-      });
+      extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'hiproj file for the current project is missing.' } });
       return;
     }
-    let content = fs.readFileSync(activeHiprojPath, 'utf-8');
 
-    // modify port and baudrate.
-    const rePort = /^(?:\s*)port\s*=?.*$/gim;
-    const reBaud = /^(?:\s*)baud\s*=?.*$/gim;
-    const biPath = /^(?:\s*)bin_path\s*=?.*$/gim;
+    // Parse the hiproj, update the [upload] section (fall back to [compile] for older files),
+    // then write it back.  ini.parse / ini.stringify preserves all other sections unchanged.
+    const parsedContent: any = ini.parse(fs.readFileSync(activeHiprojPath, 'utf-8'));
+    const sectionKey = parsedContent.upload !== undefined ? 'upload' : 'compile';
+    if (!parsedContent[sectionKey]) { parsedContent[sectionKey] = {}; }
+    const up = parsedContent[sectionKey];
 
-    content = content.replace(rePort, `port=${port}`);
-    content = content.replace(reBaud, `baud=${baudRate}`);
-    content = content.replace(biPath, `bin_path=${binPath}`);
+    up.bin_path  = binPath;
+    up.protocol  = 'serial';
+    up.port      = burnType !== 'Usb' ? port : '';
+    up.baud      = baudRate;
 
-    fs.writeFileSync(activeHiprojPath, content, 'utf-8');
+    if (chipName === '1156e') {
+      up.localip     = ipAddr;
+      up.ipaddr      = ipAddress;
+      up.subnetmask  = subnetMask;
+      up.gateway     = gateway;
+      up.eraseconfig = Array.isArray(eraseTags) ? eraseTags.join(',') : '';
+      up.emptyflash  = emptyFlash ? 'true' : 'false';
+    }
 
-    const flashCmd = 'portionOfBurn';
+    fs.writeFileSync(activeHiprojPath, ini.stringify(parsedContent), 'utf-8');
+
+    const flashCmd     = 'portionOfBurn';
     const availableCmds = await vscode.commands.getCommands(true);
-
     if (availableCmds.includes(flashCmd)) {
       try {
         const ret = await vscode.commands.executeCommand(flashCmd);
         if (!ret) {
-          extension.chipConfigPanel?.postMessage({
-            type: 'FlashFailed',
-            params: { description: 'Failed to execute command portionOfBurn.' },
-          });
-        } else {
-          vscode.window.showWarningMessage(
-            `Command ${flashCmd} not found, make sure HiSpark Studio is activated and up to date.`
-          );
+          extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Failed to execute command portionOfBurn.' } });
         }
       } catch (err) {
         this.logAndReportError(`Failed to execute flashing command due to : ${this.handleError(err)}`);
       }
+    } else {
+      vscode.window.showWarningMessage(`Command ${flashCmd} not found, make sure HiSpark Studio is activated and up to date.`);
     }
   }
 

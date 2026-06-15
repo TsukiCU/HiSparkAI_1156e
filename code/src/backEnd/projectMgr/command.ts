@@ -98,7 +98,7 @@ function writeHiproj(
       host:               opts?.host ?? '',
       port:               opts?.port ?? '',
     },
-    compile: {
+    upload: {
       bin_path:    '',
       protocol:    'serial',
       port:        '',
@@ -108,8 +108,9 @@ function writeHiproj(
       subnetmask:  '',
       gateway:     '',
       eraseconfig: '',
-      pid:         '',
-      vid:         '',
+      pid_value:   '',
+      vid_value:   '',
+      emptyflash:  '',
     },
     debug:   {},
   };
