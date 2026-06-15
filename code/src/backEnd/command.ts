@@ -112,6 +112,14 @@ export class Command {
   private static profilingChildProcess: any = null;
   private static flashChildProcess: any = null;
   private static buildChildProcess: any = null;
+  private static buildChip: ChipName = 'NONE'; // tracks which chip is currently building.
+
+  // 1156e remote build constants.
+  private static readonly BUILD_1156E_PID_FILE = '/tmp/hispark_1156e_build.pid';
+  private static readonly BUILD_1156E_FILES_TO_CHECK = [
+    'hi_uboot_origin.bin', 'hi_esbc.bin', 'hi_uboot.bin', 'kernel.images', 'rootfs.rw.img',
+  ];
+
   private static readonly npuBaseConvertItems = { ...this.defaultConvertItems, target: 'npu' } as const;
   private static readonly cpuBaseConvertItems = { ...this.defaultConvertItems, target: 'cpu' } as const;
 
@@ -1133,8 +1141,8 @@ export class Command {
 
   static async filePickerSelectModelUnified(source: Source): Promise<void> {
     const target = extension.chipConfigPanel?.target;
-    const workFolder = common.getWorkFolderPath();
-    if (!target) { return; }
+    const chipName = GlobalModel.instance.chipName;
+    if (!target || !chipName) { return; }
 
     let selectedPath = ''; // selected path for pipeline. On Linux: remote home, on wsl : linux path.
     let pickedFsPath: string | undefined; // wsl: windows/unc path for fs.stat/copy
@@ -1288,8 +1296,8 @@ export class Command {
 
         const baseCmd = `cd ${remoteHome}/${rootDir}/ && `;
         const python = getRemotePython(target, GlobalModel.instance.soc);
-        const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` +
-          `--model ${selectedPath} ` + `--output_path .cache/ai/parsedModel/parsedModel.json`;
+        const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` + `--model ${selectedPath} `
+           + `--chip ${chipName} ` + `--platform ${this.getPlatform(chipName, target)} ` + `--output_path .cache/ai/parsedModel/parsedModel.json`;
 
         let ret: exeCmdRetType;
         try {
@@ -5005,33 +5013,95 @@ export class Command {
   }
 
   static async startBuilding(message: any): Promise<void> {
-    // check if already built.
     const rootPath = common.getWorkFolderPath();
-    const { buildTarget, target } = message;
+    const { buildTarget, target, chipName: rawChipName } = message;
     const isCPU = target === 'CPU';
-    const fwpkgPath = isCPU
-      ? path.join(rootPath, 'output/ws63/fwpkg/ws63-liteos-app/ws63-liteos-app_all.fwpkg')
-      : path.join(rootPath, 'output/3322/fwpkg/3322-wstp-app.fwpkg');
-    if (fs.existsSync(fwpkgPath)) {
-      const infoMsg = 'Binary found. Skipping...';
-      extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: infoMsg } });
+    const chip: ChipName = rawChipName || (isCPU ? 'ws63' : '3322');
+    this.buildChip = chip;
+
+    const chipCfg = CHIP_CONFIG[chip];
+    const fwpkgPath = chipCfg ? path.join(rootPath, chipCfg.fwpkgRelPath) : '';
+
+    if (fwpkgPath && fs.existsSync(fwpkgPath)) {
+      extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: 'Binary found. Skipping...' } });
       return;
     }
 
+    // 1156e: run remote build on Linux server.
+    if (chip === '1156e') {
+      try {
+        await this.build1156eRemote(rootPath, fwpkgPath);
+        extension.chipConfigPanel?.postMessage('compileDone');
+      } catch (err) {
+        const errMsg = `1156e remote build failed: ${this.handleError(err)}`;
+        this.outputLogger.handleLogInfo(errMsg, 'error');
+        extension.chipConfigPanel?.postMessage({ type: 'compileFailed' });
+      }
+      return;
+    }
+
+    // ws63 / 3322: local build via python build.py.
     const toolRootPath = common.getToolsPath();
     const python = path.join(toolRootPath, 'tools/python/python.exe');
-
     const args = ['build.py', '-c', buildTarget];
-    const buildRootPath = common.getWorkFolderPath();
 
     try {
-      await this.runProcess(python, args, buildRootPath, undefined, (p) => { this.buildChildProcess = p; });
+      await this.runProcess(python, args, rootPath, undefined, (p) => { this.buildChildProcess = p; });
       extension.chipConfigPanel?.postMessage('compileDone');
     } catch (err) {
       const errMsg = `Failed to execute python script : ${this.handleError(err)}`;
       this.outputLogger.handleLogInfo(errMsg, 'error');
       extension.chipConfigPanel?.postMessage({ type: 'compileFailed' });
     }
+  }
+
+  private static async build1156eRemote(_rootPath: string, fwpkgPath: string): Promise<void> {
+    const remoteHome = GlobalModel.instance.remoteHome;
+    if (!remoteHome) { throw new Error('Remote server not connected.'); }
+
+    const config = CHIP_CONFIG['1156e'];
+    const remoteBuildDir  = `${remoteHome}/${config.remoteBuildDir}`;
+    const remoteImagesDir = `${remoteBuildDir}/output/tiangong2_cmcc_hgu_release/images`;
+    const cdBuild  = `cd "${remoteBuildDir}"`;
+    const cdImages = `cd "${remoteImagesDir}"`;
+
+    type CmdResult = { exitCode: number; stdout: string; stderr: string };
+    let ret: CmdResult;
+
+    // Step 1: clean previous output and tmp.
+    await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, `${cdBuild} && rm -rf output tmp`);
+
+    // Step 2: full build.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building on remote server...' } });
+    const buildCmd = `${cdBuild} && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release'`;
+    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, buildCmd);
+    if (this.buildChip !== '1156e') { return; } // abort signal set by stopBuilding
+    if (ret.exitCode) { throw new Error(`Build failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+
+    // Step 3: verify key output files are non-empty.
+    const fileChecks = this.BUILD_1156E_FILES_TO_CHECK
+      .map(f => `[ ! -s "${f}" ] && echo "EMPTY: ${f}" && exit 1`)
+      .join('; ');
+    const checkCmd = `${cdImages} && { ${fileChecks}; } && echo "ALL_OK"`;
+    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, checkCmd);
+    if (ret.exitCode || ret.stdout.includes('EMPTY:')) {
+      const empty = ret.stdout.match(/EMPTY: (.+)/)?.[1] ?? 'unknown';
+      throw new Error(`Build produced empty file: ${empty}`);
+    }
+
+    // Step 4: package fwpkg.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg...' } });
+    const packCmd = `${cdImages} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`;
+    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, packCmd);
+    if (ret.exitCode) { throw new Error(`Packaging failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+
+    // Step 5: download fwpkg to local cache.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading fwpkg...' } });
+    const remoteFwpkg = `${remoteImagesDir}/tiangong2_cmcc_hgu_release.fwpkg`;
+    const localDir = path.dirname(fwpkgPath);
+    if (!fs.existsSync(localDir)) { fs.mkdirSync(localDir, { recursive: true }); }
+    await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFwpkg, fwpkgPath);
+    if (!fs.existsSync(fwpkgPath)) { throw new Error('Failed to download fwpkg file.'); }
   }
 
   static async cpuDeploySetup(message: any): Promise<void> {
@@ -5167,17 +5237,28 @@ export class Command {
   }
 
   static stopBuilding(): void {
+    // 1156e: kill the remote build process via the PID file written by cbuild.py.
+    if (this.buildChip === '1156e') {
+      vscode.commands.executeCommand(
+        this.remoteCmdLib.executeCmd,
+        `kill -TERM $(cat ${this.BUILD_1156E_PID_FILE}) 2>/dev/null; rm -f ${this.BUILD_1156E_PID_FILE}`,
+      );
+      this.buildChip = 'NONE';
+      extension.chipConfigPanel?.postMessage({ type: 'compileAborted' });
+      return;
+    }
+
+    // ws63 / 3322: kill the local child process.
     const child = this.buildChildProcess;
     if (child?.pid) {
       try {
         if (process.platform === 'win32') {
-          // /T = kill process tree, /F = force terminate
           spawn('taskkill', ['/T', '/F', '/PID', String(child.pid)]);
         } else {
           child.kill('SIGTERM');
         }
       } catch {
-        // Process may have already exited
+        // Process may have already exited.
       }
       this.buildChildProcess = null;
     }
@@ -6026,6 +6107,9 @@ export class Command {
     const rootDir = remoteRootDir;
     const paths = this.paramsConfig(historyRootDir, remoteHome, 'quant');
 
+    const chip     = GlobalModel.instance.soc ?? '';
+    const platform = this.getPlatform(chip, target);
+
     return {
       source,
       skipQuant,
@@ -6039,7 +6123,9 @@ export class Command {
       selectedFile,
       historyRootDir,
       rootDir,
-      mergedData,
+      chip,
+      platform,
+      mergedData: { ...mergedData, chip, platform },
       compressionData,
       layerData,
       linuxCacheRoot,
@@ -6063,6 +6149,9 @@ export class Command {
     const rootDir = remoteRootDir;
     const paths = this.paramsConfig(historyRootDir, remoteHome, 'convert');
 
+    const chip     = GlobalModel.instance.soc ?? '';
+    const platform = this.getPlatform(chip, target);
+
     return {
       source,
       target,
@@ -6073,7 +6162,9 @@ export class Command {
       selectedFile,
       historyRootDir,
       rootDir,
-      mergedData,
+      chip,
+      platform,
+      mergedData: { ...mergedData, chip, platform },
       convertData,
       linuxCacheRoot,
       paths,
@@ -6476,5 +6567,29 @@ export class Command {
     }
 
     throw new Error(`Unexpected remote check result for ${fieldName}: ${selectedPath}`);
+  }
+
+  private static getPlatform(chip: string, target: 'CPU' | 'NPU'): string {
+    const platformMap: Record<string, Partial<Record<'CPU' | 'NPU', string>>> = {
+      ws63: {
+        CPU: 'riscv',
+      },
+      diting: {
+        NPU: 'nano',
+      },
+      mcu: {
+        CPU: 'riscv',
+      },
+      '1156e': {
+        CPU: 'arm',
+        NPU: 'tiny',
+      },
+      '1155': {
+        CPU: 'arm',
+        NPU: 'nano',
+      },
+    };
+
+    return platformMap[chip]?.[target] ?? '';
   }
 }

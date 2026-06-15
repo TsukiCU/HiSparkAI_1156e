@@ -32,4 +32,7 @@ export interface BaseContext {
   linuxCacheRoot: string; // tasks' output dir on linux. (task: quant/convert)
 
   timeStamp?: number; // Timestamp for this task operation.
+
+  chip: string;     // chip identifier (e.g. 'ws63', '3322', '1156e').
+  platform: string; // platform string for the chip (e.g. 'riscv', 'arm', 'tiny').
 }
