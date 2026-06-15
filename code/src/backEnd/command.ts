@@ -54,6 +54,7 @@ import { Logger } from './output/outputLogger';
 import { QuantContext, ConvertContext } from './context/TaskContext';
 import { RemoteHeartbeatWatcher } from './watchers/RemoteHeartbeatWatcher';
 import { SerialPortWatcher } from './watchers/SerialPortWatcher';
+import { LocalIpWatcher } from './watchers/LocalIpWatcher';
 import { extractTarFile } from './utils/downloadToolChains';
 
 /**
@@ -6239,6 +6240,7 @@ export class Command {
 
   private static clearAllWatchers(): void {
     SerialPortWatcher.getInstance().dispose();
+    LocalIpWatcher.getInstance().dispose();
     RemoteHeartbeatWatcher.getInstance().dispose();
   }
 
@@ -6246,6 +6248,7 @@ export class Command {
     const { serial, heartbeat } = watcherOption;
     if (serial) {
       SerialPortWatcher.getInstance().start();
+      LocalIpWatcher.getInstance().start();
     }
 
     if (heartbeat) {

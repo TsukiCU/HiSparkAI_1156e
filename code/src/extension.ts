@@ -31,6 +31,7 @@ import { containsChineseOrSpace, getUserToolsPath, reSelectToolsPath, setUserToo
 import { checkPythonDepsInstalledLater, downloadFileWithRetry, extractZipFile, getIsDownloading, getToolsPath, installPipPackages, setIsDownloading } from './backEnd/utils/downloadToolChains';
 import { addPythonFile, mkdirPath, modifyPythonFile, updateToolChainJson } from './backEnd/utils/downloadPython';
 import { SerialPortWatcher } from './backEnd/watchers/SerialPortWatcher';
+import { LocalIpWatcher } from './backEnd/watchers/LocalIpWatcher';
 import { RemoteHeartbeatWatcher } from './backEnd/watchers/RemoteHeartbeatWatcher';
 import { OutputChannelManager } from './backEnd/output/channelManager';
 import { ProjectMgrContext }   from './backEnd/projectMgr/context';
@@ -558,6 +559,7 @@ export default class Extension {
 
     context.subscriptions.push(RemoteHeartbeatWatcher.getInstance());
     context.subscriptions.push(SerialPortWatcher.getInstance());
+    context.subscriptions.push(LocalIpWatcher.getInstance());
 
     // on theme change
     vscode.window.onDidChangeActiveColorTheme(this.onThemeChange.bind(this));
