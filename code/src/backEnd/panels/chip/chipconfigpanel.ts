@@ -110,13 +110,21 @@ export default class ChipConfigPanel implements Panel {
     panel.onDidDispose(this.onPanelDisposed, this, this.context.subscriptions);
     panel.webview.onDidReceiveMessage(
       async (message) => {
-        if (message.type === 'runCommand') {
-          const { commandId } = message;
-          await vscode.commands.executeCommand(commandId);
-          return;
+        try {
+          if (message.type === 'runCommand') {
+            const { commandId } = message;
+            await vscode.commands.executeCommand(commandId);
+            return;
+          }
+          const func = Reflect.get(Command, message.method);
+          if (typeof func !== 'function') {
+            logger.warn(`[chipConfigPanel] Unknown method: ${message.method}`);
+            return;
+          }
+          await Reflect.apply(func, Command, [message]);
+        } catch (err) {
+          logger.error(`[chipConfigPanel] Unhandled error in message handler (method=${message?.method}): ${err}`);
         }
-        const func = Reflect.get(Command, message.method);
-        await Reflect.apply(func, Command, [message]);
       },
       undefined,
       this.context.subscriptions

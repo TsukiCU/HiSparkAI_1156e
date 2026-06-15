@@ -1181,6 +1181,7 @@ export class Command {
         return;
       }
 
+      if (!selectedPath) { return; } // user cancelled the file picker
       fileNameForUi = path.basename(selectedPath);
     } else if (source === 'wsl') {
       const wslOptions: vscode.OpenDialogOptions = {
