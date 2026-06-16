@@ -6581,6 +6581,9 @@ export class Command {
       mcu: {
         CPU: 'riscv',
       },
+      '3322': {
+        'NPU': 'nano',
+      },
       '1156e': {
         CPU: 'arm',
         NPU: 'tiny',
