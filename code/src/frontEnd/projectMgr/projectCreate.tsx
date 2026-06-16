@@ -30,7 +30,7 @@ const PLATFORM_MAP: Record<string, { platform: 'CPU' | 'NPU'; fixed: boolean }> 
 };
 
 // Chips for which SDK path validation is performed.
-const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322']);
+const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322', '1156e']);
 
 let drag: Drag | undefined;
 
@@ -242,6 +242,7 @@ const ProjectCreate = (): JSX.Element => {
         title={<span style={{ fontWeight: 500, fontSize: 14 }}>{t('projectWizard')}</span>}
         visible={isOpen}
         width={640}
+        maskClosable={false}
         onCancel={onCancel}
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

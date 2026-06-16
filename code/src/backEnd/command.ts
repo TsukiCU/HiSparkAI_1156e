@@ -116,8 +116,9 @@ export class Command {
 
   // 1156e remote build constants.
   private static readonly BUILD_1156E_PID_FILE = '/tmp/hispark_1156e_build.pid';
-  private static readonly BUILD_1156E_FILES_TO_CHECK = [
-    'hi_uboot_origin.bin', 'hi_esbc.bin', 'hi_uboot.bin', 'kernel.images', 'rootfs.rw.img',
+  // Output files to download after a successful 1156e build.
+  private static readonly BUILD_1156E_OUTPUT_FILES = [
+    'hi_esbc_origin.bin', 'hi_esbc.bin', 'hi_uboot.bin', 'kernel.images', 'rootfs.rw.img',
   ];
 
   private static readonly npuBaseConvertItems = { ...this.defaultConvertItems, target: 'npu' } as const;
@@ -5028,13 +5029,13 @@ export class Command {
       return;
     }
 
-    // 1156e: run remote build on Linux server.
+    // 1156e: run install_deps + cbuild.py then download output files.
     if (chip === '1156e') {
       try {
-        await this.build1156eRemote(rootPath, fwpkgPath);
+        await this.build1156e();
         extension.chipConfigPanel?.postMessage('compileDone');
       } catch (err) {
-        const errMsg = `1156e remote build failed: ${this.handleError(err)}`;
+        const errMsg = `1156e build failed: ${this.handleError(err)}`;
         this.outputLogger.handleLogInfo(errMsg, 'error');
         extension.chipConfigPanel?.postMessage({ type: 'compileFailed' });
       }
@@ -5056,53 +5057,143 @@ export class Command {
     }
   }
 
-  private static async build1156eRemote(_rootPath: string, fwpkgPath: string): Promise<void> {
+  /** Run a 1156e build — handles both Linux (remote SSH) and WSL. */
+  private static async build1156e(): Promise<void> {
+    const source = GlobalModel.instance.source;
+    if (source === 'linux') {
+      await this.build1156eLinux();
+    } else if (source === 'wsl') {
+      await this.build1156eWSL();
+    } else {
+      throw new Error('1156e build requires an active Linux or WSL connection.');
+    }
+  }
+
+  /** Read the SDK path for 1156e from the active .hiproj file. */
+  private static read1156eSdkPath(): { remoteSdkPath: string; localSdkPath: string } {
+    const hiprojPath = GlobalModel.instance.hiprojPath;
+    if (!hiprojPath || !fs.existsSync(hiprojPath)) { throw new Error('hiproj file not found.'); }
+    const hiprojContent = ini.parse(fs.readFileSync(hiprojPath, 'utf-8'));
+    return {
+      remoteSdkPath: String(hiprojContent?.information?.remote_sdk_path ?? ''),
+      localSdkPath:  String(hiprojContent?.information?.sdk_path ?? ''),
+    };
+  }
+
+  /** Prepare the local deploy directory and return its path. */
+  private static prepareDeployDir(dateTime: number): string {
+    const aiCacheDir = GlobalModel.instance.aiCacheDir;
+    if (!aiCacheDir) { throw new Error('No model selected — import a model before building.'); }
+    const localImagesDir = path.join(aiCacheDir, 'Deploy', `images_${dateTime}`);
+    fs.mkdirSync(localImagesDir, { recursive: true });
+    return localImagesDir;
+  }
+
+  /** 1156e build over Linux SSH. */
+  private static async build1156eLinux(): Promise<void> {
     const remoteHome = GlobalModel.instance.remoteHome;
     if (!remoteHome) { throw new Error('Remote server not connected.'); }
 
-    const config = CHIP_CONFIG['1156e'];
-    const remoteBuildDir  = `${remoteHome}/${config.remoteBuildDir}`;
-    const remoteImagesDir = `${remoteBuildDir}/output/tiangong2_cmcc_hgu_release/images`;
-    const cdBuild  = `cd "${remoteBuildDir}"`;
-    const cdImages = `cd "${remoteImagesDir}"`;
+    const { remoteSdkPath } = this.read1156eSdkPath();
+    if (!remoteSdkPath) { throw new Error('Remote SDK path not found in .hiproj.'); }
 
-    type CmdResult = { exitCode: number; stdout: string; stderr: string };
-    let ret: CmdResult;
+    const installScriptLocal  = path.join(__dirname, '../resources/install_deps.sh');
+    const installScriptRemote = `${remoteHome}/hispark_install_deps.sh`;
+    const remoteImagesDir     = `${remoteSdkPath}/output/tiangong2_cmcc_hgu_release/images`;
 
-    // Step 1: clean previous output and tmp.
-    await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, `${cdBuild} && rm -rf output tmp`);
+    type R = { exitCode: number; stdout: string; stderr: string };
+    let ret: R;
 
-    // Step 2: full build.
+    // Step 1: upload and run install_deps.sh (strip \r in case of Windows line endings).
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Installing dependencies...' } });
+    await vscode.commands.executeCommand(this.remoteCmdLib.uploadCmd, installScriptLocal, installScriptRemote);
+    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+      `sed 's/\\r$//' "${installScriptRemote}" | bash`);
+    if (ret.exitCode) { throw new Error(`install_deps.sh failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+
+    // Step 2: run cbuild.py.
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building on remote server...' } });
-    const buildCmd = `${cdBuild} && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release'`;
-    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, buildCmd);
+    const buildCmd = `cd "${remoteSdkPath}" && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release'`;
+    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, buildCmd);
     if (this.buildChip !== '1156e') { return; } // abort signal set by stopBuilding
     if (ret.exitCode) { throw new Error(`Build failed (exit ${ret.exitCode}): ${ret.stderr}`); }
 
-    // Step 3: verify key output files are non-empty.
-    const fileChecks = this.BUILD_1156E_FILES_TO_CHECK
-      .map(f => `[ ! -s "${f}" ] && echo "EMPTY: ${f}" && exit 1`)
-      .join('; ');
-    const checkCmd = `${cdImages} && { ${fileChecks}; } && echo "ALL_OK"`;
-    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, checkCmd);
-    if (ret.exitCode || ret.stdout.includes('EMPTY:')) {
-      const empty = ret.stdout.match(/EMPTY: (.+)/)?.[1] ?? 'unknown';
-      throw new Error(`Build produced empty file: ${empty}`);
+    // Step 3: verify output files and download.
+    const dateTime = Date.now();
+    extension.mockLocalStorage?.setItem('lastDeployTS', dateTime);
+    const localImagesDir = this.prepareDeployDir(dateTime);
+
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading build outputs...' } });
+    for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
+      const remoteFile = `${remoteImagesDir}/${fileName}`;
+      // Check file exists and is non-empty on remote.
+      const sizeRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+        `stat -c%s "${remoteFile}" 2>/dev/null || echo 0`);
+      const size = parseInt((sizeRet.stdout || '').trim(), 10);
+      if (isNaN(size) || size === 0) {
+        vscode.window.showErrorMessage(
+          `1156e build failed: output file "${fileName}" is missing or empty (0 B). ` +
+          'Check the build environment and try again.'
+        );
+        throw new Error(`Output file missing or empty: ${fileName}`);
+      }
+      const localFile = path.join(localImagesDir, fileName);
+      await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFile, localFile);
     }
+  }
 
-    // Step 4: package fwpkg.
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg...' } });
-    const packCmd = `${cdImages} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`;
-    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, packCmd);
-    if (ret.exitCode) { throw new Error(`Packaging failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+  /** 1156e build via WSL. */
+  private static async build1156eWSL(): Promise<void> {
+    const distro = GlobalModel.instance.wslDistro;
+    if (!distro) { throw new Error('WSL distro not set.'); }
 
-    // Step 5: download fwpkg to local cache.
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading fwpkg...' } });
-    const remoteFwpkg = `${remoteImagesDir}/tiangong2_cmcc_hgu_release.fwpkg`;
-    const localDir = path.dirname(fwpkgPath);
-    if (!fs.existsSync(localDir)) { fs.mkdirSync(localDir, { recursive: true }); }
-    await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFwpkg, fwpkgPath);
-    if (!fs.existsSync(fwpkgPath)) { throw new Error('Failed to download fwpkg file.'); }
+    const { localSdkPath } = this.read1156eSdkPath();
+    if (!localSdkPath) { throw new Error('SDK path not found in .hiproj.'); }
+
+    const installScriptWin = path.join(__dirname, '../resources/install_deps.sh');
+    const wslScript = await common.winToLinuxPathForWsl(distro, installScriptWin, common.exeRunner);
+    const wslSdkPath = await common.winToLinuxPathForWsl(distro, localSdkPath, common.exeRunner);
+    if (!wslScript || !wslSdkPath) { throw new Error('Failed to convert paths to WSL format.'); }
+
+    // Step 1: run install_deps.sh inside WSL.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Installing dependencies (WSL)...' } });
+    let ret = await common.exeRunner({
+      exe: 'wsl.exe',
+      args: ['-d', distro, '--', 'bash', '-lc', `sed 's/\\r$//' ${common.shQuote(wslScript)} | bash`],
+      mode: 'utf8',
+      logger: this.outputLogger,
+    });
+    if (ret.code !== 0) { throw new Error(`install_deps.sh failed (WSL, exit ${ret.code})`); }
+
+    // Step 2: run cbuild.py inside WSL.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building (WSL)...' } });
+    ret = await common.exeRunner({
+      exe: 'wsl.exe',
+      args: ['-d', distro, '--', 'bash', '-lc',
+        `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release`],
+      mode: 'utf8',
+      logger: this.outputLogger,
+    });
+    if (ret.code !== 0) { throw new Error(`cbuild.py failed (WSL, exit ${ret.code})`); }
+
+    // Step 3: verify output files and copy to local.
+    const dateTime = Date.now();
+    extension.mockLocalStorage?.setItem('lastDeployTS', dateTime);
+    const localImagesDir = this.prepareDeployDir(dateTime);
+    const winImagesDir = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
+
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Copying build outputs...' } });
+    for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
+      const srcFile = path.join(winImagesDir, fileName);
+      if (!fs.existsSync(srcFile) || fs.statSync(srcFile).size === 0) {
+        vscode.window.showErrorMessage(
+          `1156e build failed: output file "${fileName}" is missing or empty (0 B). ` +
+          'Check the build environment and try again.'
+        );
+        throw new Error(`Output file missing or empty: ${fileName}`);
+      }
+      await fs.promises.copyFile(srcFile, path.join(localImagesDir, fileName));
+    }
   }
 
   static async cpuDeploySetup(message: any): Promise<void> {

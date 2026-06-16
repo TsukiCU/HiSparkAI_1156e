@@ -60,10 +60,17 @@ function callback(key: string, data: any, target: 'projectMgr' | 'import' = 'pro
  * wizard accepts is guaranteed to be recognised by the main plugin.
  */
 function validateSdkForChip(soc: string, sdkPath: string): boolean {
-  if (!sdkPath || !fs.existsSync(sdkPath)) { return false; }
+  if (!sdkPath) { return false; }
   if (soc === 'ws63' || soc === '3322') {
+    if (!fs.existsSync(sdkPath)) { return false; }
     const jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', soc, `${soc}.json`);
     return fs.existsSync(jsonPath);
+  }
+  if (soc === '1156e') {
+    // Linux remote path (starts with '/') — can't validate locally, accept as-is.
+    if (sdkPath.startsWith('/')) { return true; }
+    // WSL/local Windows path — check that chip/ and gateway/ directories exist.
+    return fs.existsSync(path.join(sdkPath, 'chip')) && fs.existsSync(path.join(sdkPath, 'gateway'));
   }
   return true;
 }
@@ -287,13 +294,6 @@ export class ProjectMgrCommand {
         resolve(distros);
       });
     });
-  }
-
-  // ── 1156e SDK validation stub ──────────────────────────────────────────────
-  // TODO: implement chip-specific validation for 1156e.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  static verifySDK(_sdkPath: string, _connectionType: 'linux' | 'wsl'): boolean {
-    return true;
   }
 
   // ── SDK validation ─────────────────────────────────────────────────────────
