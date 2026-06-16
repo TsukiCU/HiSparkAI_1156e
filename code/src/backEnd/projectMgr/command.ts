@@ -60,18 +60,12 @@ function callback(key: string, data: any, target: 'projectMgr' | 'import' = 'pro
  * wizard accepts is guaranteed to be recognised by the main plugin.
  */
 function validateSdkForChip(soc: string, sdkPath: string): boolean {
-  if (!sdkPath) { return false; }
+  if (!sdkPath || !fs.existsSync(sdkPath)) { return false; }
   if (soc === 'ws63' || soc === '3322') {
-    if (!fs.existsSync(sdkPath)) { return false; }
     const jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', soc, `${soc}.json`);
     return fs.existsSync(jsonPath);
   }
-  if (soc === '1156e') {
-    // Linux remote path (starts with '/') — can't validate locally, accept as-is.
-    if (sdkPath.startsWith('/')) { return true; }
-    // WSL/local Windows path — check that chip/ and gateway/ directories exist.
-    return fs.existsSync(path.join(sdkPath, 'chip')) && fs.existsSync(path.join(sdkPath, 'gateway'));
-  }
+  // 1156e validation is performed inside selectSdkPathFor1156e before the path is committed.
   return true;
 }
 
@@ -247,6 +241,19 @@ export class ProjectMgrCommand {
         } catch { /* ignore parse errors */ }
       }
 
+      // Validate: check that chip/ and gateway/ directories exist on the remote server.
+      type R = { exitCode: number; stdout: string };
+      const checkResult = await vscode.commands.executeCommand<R>(
+        'remoteBuild.api.executeCommand',
+        `test -d "${remotePath}/chip" && test -d "${remotePath}/gateway" && echo "VALID" || echo "INVALID"`,
+      );
+      if (!checkResult?.stdout?.includes('VALID')) {
+        vscode.window.showWarningMessage(
+          `Invalid 1156E SDK: "${remotePath}" must contain chip/ and gateway/ subdirectories.`,
+        );
+        return; // Do not commit the invalid path.
+      }
+
       callback(key, remotePath);
 
     } else {
@@ -271,9 +278,18 @@ export class ProjectMgrCommand {
       });
       if (!result?.[0]?.fsPath) { return; }
 
+      // Validate locally: chip/ and gateway/ must exist.
+      const sdkWinPath = result[0].fsPath;
+      if (!fs.existsSync(path.join(sdkWinPath, 'chip')) || !fs.existsSync(path.join(sdkWinPath, 'gateway'))) {
+        vscode.window.showWarningMessage(
+          `Invalid 1156E SDK: "${sdkWinPath}" must contain chip/ and gateway/ subdirectories.`,
+        );
+        return; // Do not commit the invalid path.
+      }
+
       ProjectMgrContext.pendingConnectionType = 'wsl';
       ProjectMgrContext.pendingWslDistro      = selectedDistro;
-      callback(key, result[0].fsPath);
+      callback(key, sdkWinPath);
     }
   }
 

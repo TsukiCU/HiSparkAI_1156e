@@ -112,6 +112,7 @@ export class Command {
   private static profilingChildProcess: any = null;
   private static flashChildProcess: any = null;
   private static buildChildProcess: any = null;
+  private static wslBuildChild: any = null;     // active WSL build process (for abort).
   private static buildChip: ChipName = 'NONE'; // tracks which chip is currently building.
 
   // 1156e remote build constants.
@@ -5143,6 +5144,28 @@ export class Command {
   }
 
   /** 1156e build via WSL. */
+  /**
+   * Spawn a wsl.exe command and track the child process in wslBuildChild so that
+   * stopBuilding() can kill it. Returns exit code, stdout, stderr.
+   */
+  private static runWslBuildCmd(
+    distro: string,
+    cmd: string,
+  ): Promise<{ code: number; stdout: string; stderr: string }> {
+    return new Promise((resolve) => {
+      const child = spawn('wsl.exe', ['-d', distro, '--', 'bash', '-lc', cmd], { windowsHide: true });
+      this.wslBuildChild = child;
+      let stdout = '';
+      let stderr = '';
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
+      child.stdout.on('data', (d: string) => { stdout += d; this.outputLogger.raw(d); });
+      child.stderr.on('data', (d: string) => { stderr += d; this.outputLogger.raw(d); });
+      child.on('error', (err) => { this.wslBuildChild = null; resolve({ code: -1, stdout, stderr: String(err) }); });
+      child.on('close', (code) => { this.wslBuildChild = null; resolve({ code: code ?? -1, stdout, stderr }); });
+    });
+  }
+
   private static async build1156eWSL(): Promise<void> {
     const distro = GlobalModel.instance.wslDistro;
     if (!distro) { throw new Error('WSL distro not set.'); }
@@ -5155,25 +5178,15 @@ export class Command {
     const wslSdkPath = await common.winToLinuxPathForWsl(distro, localSdkPath, common.exeRunner);
     if (!wslScript || !wslSdkPath) { throw new Error('Failed to convert paths to WSL format.'); }
 
-    // Step 1: run install_deps.sh inside WSL.
+    // Step 1: run install_deps.sh inside WSL (tracked for abort).
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Installing dependencies (WSL)...' } });
-    let ret = await common.exeRunner({
-      exe: 'wsl.exe',
-      args: ['-d', distro, '--', 'bash', '-lc', `sed 's/\\r$//' ${common.shQuote(wslScript)} | bash`],
-      mode: 'utf8',
-      logger: this.outputLogger,
-    });
+    let ret = await this.runWslBuildCmd(distro, `sed 's/\\r$//' ${common.shQuote(wslScript)} | bash`);
     if (ret.code !== 0) { throw new Error(`install_deps.sh failed (WSL, exit ${ret.code})`); }
 
-    // Step 2: run cbuild.py inside WSL.
+    // Step 2: run cbuild.py inside WSL (tracked for abort).
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building (WSL)...' } });
-    ret = await common.exeRunner({
-      exe: 'wsl.exe',
-      args: ['-d', distro, '--', 'bash', '-lc',
-        `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release`],
-      mode: 'utf8',
-      logger: this.outputLogger,
-    });
+    ret = await this.runWslBuildCmd(distro,
+      `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release`);
     if (ret.code !== 0) { throw new Error(`cbuild.py failed (WSL, exit ${ret.code})`); }
 
     // Step 3: verify output files and copy to local.
@@ -5329,12 +5342,26 @@ export class Command {
   }
 
   static stopBuilding(): void {
-    // 1156e: kill the remote build process via the PID file written by cbuild.py.
     if (this.buildChip === '1156e') {
-      vscode.commands.executeCommand(
-        this.remoteCmdLib.executeCmd,
-        `kill -TERM $(cat ${this.BUILD_1156E_PID_FILE}) 2>/dev/null; rm -f ${this.BUILD_1156E_PID_FILE}`,
-      );
+      const source = GlobalModel.instance.source;
+
+      if (source === 'wsl') {
+        // Kill the tracked WSL child process (wsl.exe) on Windows.
+        const child = this.wslBuildChild;
+        if (child?.pid) {
+          try { spawn('taskkill', ['/T', '/F', '/PID', String(child.pid)]); } catch { /* ignored */ }
+          this.wslBuildChild = null;
+        }
+      } else {
+        // Linux: kill the remote process via the PID file written by cbuild.py.
+        // Note: during the install_deps.sh phase the PID file does not exist yet;
+        // the kill is a no-op then but that command is short-lived anyway.
+        vscode.commands.executeCommand(
+          this.remoteCmdLib.executeCmd,
+          `kill -TERM $(cat ${this.BUILD_1156E_PID_FILE}) 2>/dev/null; rm -f ${this.BUILD_1156E_PID_FILE}`,
+        );
+      }
+
       this.buildChip = 'NONE';
       extension.chipConfigPanel?.postMessage({ type: 'compileAborted' });
       return;

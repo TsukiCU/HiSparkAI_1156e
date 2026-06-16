@@ -30,7 +30,8 @@ const PLATFORM_MAP: Record<string, { platform: 'CPU' | 'NPU'; fixed: boolean }> 
 };
 
 // Chips for which SDK path validation is performed.
-const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322', '1156e']);
+const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322']);
+// 1156e SDK is validated at selection time (inside selectSdkPathFor1156e).
 
 let drag: Drag | undefined;
 

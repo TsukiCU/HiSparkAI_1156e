@@ -104,9 +104,9 @@ function Navbar(): React.JSX.Element {
       selectIcon = item.to === '/selectmodel' ? SelectModelActiveIcon : '';
     }
 
-    // 1156e: Quantize (index 1) is grayed out when the user is on SelectModel,
-    // but shows the checkmark (finish) on all other pages.
-    const effectiveStatus = (skipQuantize && index === 1 && onSelectModel)
+    // 1156e: Quantize (index 1) is always grayed (skipped/disabled) — never shows
+    // a checkmark, since the step was bypassed rather than completed.
+    const effectiveStatus = (skipQuantize && index === 1)
       ? 'wait'
       : item.stepStatus;
 
