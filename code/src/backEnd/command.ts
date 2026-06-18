@@ -624,13 +624,36 @@ export class Command {
         } catch (e) {
           this.logAndReportError(`解析convertOutput.json参数校验字段失败：${e}`);
         }
-        const exeomFile = path.join(localDir, 'convert.exeom');
-        const dbgFile = path.join(localDir, 'convert.dbg');
-        fileData = {
-          type: 'fileSize',
-          exeomSize: this.getFileSizeInKB(exeomFile),
-          dbgSize: this.getFileSizeInKB(dbgFile),
-        };
+        const chip = GlobalModel.instance.chipName ?? '';
+        const convertOutputJsonPath = path.join(localDir, 'convertOutput.json');
+        if (chip === '1156e') {
+          // 1156e: omSize in convertOutput.json; no dbg file.
+          if (fs.existsSync(convertOutputJsonPath)) {
+            const jc = JSON.parse(fs.readFileSync(convertOutputJsonPath, 'utf-8'));
+            fileData = {
+              type: 'fileSize',
+              exeomSize: parseFloat(Number(jc.omSize ?? 0).toFixed(2)),
+              dbgSize: null,
+            };
+          } else {
+            const dirEntries = fs.readdirSync(localDir);
+            const omFile = dirEntries.find(f => path.extname(f).toLowerCase() === '.om');
+            fileData = {
+              type: 'fileSize',
+              exeomSize: omFile ? this.getFileSizeInKB(path.join(localDir, omFile)) : 0,
+              dbgSize: null,
+            };
+          }
+        } else {
+          // 3322 and others: exeom + dbg files on disk.
+          const exeomFile = path.join(localDir, 'convert.exeom');
+          const dbgFile   = path.join(localDir, 'convert.dbg');
+          fileData = {
+            type: 'fileSize',
+            exeomSize: this.getFileSizeInKB(exeomFile),
+            dbgSize: this.getFileSizeInKB(dbgFile),
+          };
+        }
       } else {
         // 2. target platform is CPU → analyze ram and flash from json files.
         const filePathCPU = `${localDir}/convert_plot.json`;
@@ -4284,16 +4307,32 @@ export class Command {
       return {};
     }
 
-    // Exeom file and dbg file.
-    const exeomFile = isExeom
-      ? path.join(historyRootDir, `selectmodel/${modelName}.exeom`)
-      : path.join(historyRootDir, `Convert/convert_${lastConvertTS}/convert.exeom`);
-    const dbgFile = isExeom
-      ? path.join(historyRootDir, `selectmodel/${modelName}.dbg`)
-      : path.join(historyRootDir, `Convert/convert_${lastConvertTS}/convert.dbg`);
-    if (!fs.existsSync(exeomFile) || !fs.existsSync(dbgFile)) {
-      this.logAndReportError('Cannot proceed. Check if convert.py has been executed correctly.');
-      return {};
+    // Model file and (3322 only) dbg file.
+    const chip = GlobalModel.instance.chipName ?? '';
+    let exeomFile: string;
+    let dbgFile: string | undefined;
+    if (chip === '1156e') {
+      // 1156e produces a single .om file — no dbg.
+      const convertDir = path.join(historyRootDir, `Convert/convert_${lastConvertTS}`);
+      const dirFiles = fs.existsSync(convertDir) ? fs.readdirSync(convertDir) : [];
+      const omFile = dirFiles.find(f => path.extname(f).toLowerCase() === '.om');
+      exeomFile = omFile ? path.join(convertDir, omFile) : '';
+      dbgFile = undefined;
+      if (!exeomFile) {
+        this.logAndReportError('Cannot proceed. .om file not found in convert output.');
+        return {};
+      }
+    } else {
+      exeomFile = isExeom
+        ? path.join(historyRootDir, `selectmodel/${modelName}.exeom`)
+        : path.join(historyRootDir, `Convert/convert_${lastConvertTS}/convert.exeom`);
+      dbgFile = isExeom
+        ? path.join(historyRootDir, `selectmodel/${modelName}.dbg`)
+        : path.join(historyRootDir, `Convert/convert_${lastConvertTS}/convert.dbg`);
+      if (!fs.existsSync(exeomFile) || !fs.existsSync(dbgFile)) {
+        this.logAndReportError('Cannot proceed. Check if convert.py has been executed correctly.');
+        return {};
+      }
     }
 
     // Spare onnx file for QAT.
@@ -4366,12 +4405,12 @@ export class Command {
       },
     };
     const modelInfo = { modelSelected: `${exeomFile}` };
-    const dbgSelected = { dbgSelected: `${dbgFile}` };
+    const dbgSelectedInfo = dbgFile != null ? { dbgSelected: `${dbgFile}` } : {};
     const goldenModelInfo = { goldenModelSelected: isQAT ? spareOnnxFile : model };
 
     const mergedData = (stage === 'profiling') ?
-      { ...modelInfo, ...dbgSelected, ...serialInfo, ...toolsInfo } :
-      { ...modelInfo, ...goldenModelInfo, ...dbgSelected, ...serialInfo, ...accuValiInfo, ...valiLabelsInfo, ...toolsInfo };
+      { ...modelInfo, ...dbgSelectedInfo, ...serialInfo, ...toolsInfo } :
+      { ...modelInfo, ...goldenModelInfo, ...dbgSelectedInfo, ...serialInfo, ...accuValiInfo, ...valiLabelsInfo, ...toolsInfo };
 
     return mergedData;
   }
@@ -6051,11 +6090,17 @@ export class Command {
     const output = fs.createWriteStream(outputPath);
     archive.pipe(output);
 
-    // (NPU Convert): Filter to only include exeom files and dbg files.
+    // (NPU Convert): Filter to only include model output files.
+    //   3322: convert.exeom + convert.dbg
+    //   1156e: *.om (no dbg)
     // (CPU Convert & Quantization): Download everything in one zip file.
+    const chipName = GlobalModel.instance.chipName ?? '';
     const shouldIncludeFile = (filePath: string): boolean => {
       const name = path.basename(filePath);
       if (nextPage?.includes('deploy') && target === 'NPU') {
+        if (chipName === '1156e') {
+          return path.extname(name).toLowerCase() === '.om';
+        }
         return name === 'convert.dbg' || name === 'convert.exeom';
       }
       return true;
