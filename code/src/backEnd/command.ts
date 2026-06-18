@@ -632,7 +632,7 @@ export class Command {
             const jc = JSON.parse(fs.readFileSync(convertOutputJsonPath, 'utf-8'));
             fileData = {
               type: 'fileSize',
-              exeomSize: parseFloat(Number(jc.omSize ?? 0).toFixed(2)),
+              exeomSize: parseFloat((parseFloat(jc.omSize) || 0).toFixed(2)),
               dbgSize: null,
             };
           } else {
@@ -5635,17 +5635,20 @@ export class Command {
         const jsonContent = JSON.parse(fs.readFileSync(convertOutputJson, 'utf-8'));
         if (chipName === '1156e') {
           // 1156e: only omSize field; no dbg output.
+          // omSize may be a string like "1234.56 KB" — parseFloat handles trailing units.
           fileData = {
             type: 'fileSize',
-            exeomSize: parseFloat(Number(jsonContent.omSize ?? 0).toFixed(2)),
+            exeomSize: parseFloat((parseFloat(jsonContent.omSize) || 0).toFixed(2)),
             dbgSize: null,
           };
         } else {
           // 3322 and others: exeomSize + optional dbgSize.
           fileData = {
             type: 'fileSize',
-            exeomSize: parseFloat(Number(jsonContent.exeomSize ?? 0).toFixed(2)),
-            dbgSize: jsonContent.dbgSize != null ? parseFloat(Number(jsonContent.dbgSize).toFixed(2)) : null,
+            exeomSize: parseFloat((parseFloat(jsonContent.exeomSize) || 0).toFixed(2)),
+            dbgSize: jsonContent.dbgSize != null
+              ? parseFloat((parseFloat(jsonContent.dbgSize) || 0).toFixed(2))
+              : null,
           };
         }
       } else {
