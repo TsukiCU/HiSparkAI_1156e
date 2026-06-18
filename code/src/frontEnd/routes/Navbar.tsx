@@ -63,6 +63,7 @@ function Navbar(): React.JSX.Element {
   const navbarStatus = useSelector((state: any) => state.entities.navbarStatus);
   const selectedFileNames = useSelector((state: any) => state.entities.selectedFileName);
   const skipQuantize = useSelector((state: any) => Boolean(state.entities.skipQuantize));
+  const skipConvert  = useSelector((state: any) => Boolean(state.entities.skipConvert));
   const [serverHost, setServerHost] = useState(window.initialData?.kind);
   const [current, setCurrent] = useState(0);
   const { pathname } = useLocation();
@@ -105,8 +106,8 @@ function Navbar(): React.JSX.Element {
       selectIcon = item.to === '/selectmodel' ? SelectModelActiveIcon : '';
     }
 
-    // 1156e: Quantize (index 1) is skipped — show SkipStageIcon, block navigation.
-    const isSkipped = skipQuantize && index === 1;
+    // Skipped steps (exeom/om: Quantize + Convert; 1156e ONNX: Quantize only).
+    const isSkipped = (skipQuantize && index === 1) || (skipConvert && index === 2);
     const effectiveStatus = isSkipped ? 'wait' : item.stepStatus;
 
     let finalIcon = selectIcon;
@@ -156,8 +157,8 @@ function Navbar(): React.JSX.Element {
       notify('Select a model first.', { type: 'error', stack: false, duration: 2 });
       return;
     }
-    // 1156e: Quantize step (index 1) is skipped — block direct navigation to it.
     if (skipQuantize && currents === STEPSTATUS.COMPRESSION) { return; }
+    if (skipConvert  && currents === STEPSTATUS.CONVERT)     { return; }
     setCurrent(currents);
     mapRouter(currents);
   };

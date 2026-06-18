@@ -18,8 +18,8 @@ import type { CSSProperties } from 'react';
 // ─── Key mappings ──────────────────────────────────────────────────────────
 
 export const BENCHMARK_KEYS = {
-  /** Input file keys contain this substring (e.g. "input/profiling/0"). */
-  inputFilePattern: 'input/profiling',
+  /** Input file keys contain this substring (e.g. "input/profiling/1"). */
+  inputFilePattern: '/profiling/',
 
   /** The validation label file key. */
   provalidation: 'provali',

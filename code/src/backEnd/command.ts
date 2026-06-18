@@ -853,7 +853,7 @@ export class Command {
       const x = i + 1;
       const nameStr = String(inputs[i]?.Name ?? '');
       profilingItems.push({
-        key: `${nameStr}/benchmark/${x}`,
+        key: `${nameStr}/profiling/${x}`,
         title: `${nameStr}`,
         content: ' ',
         folder: true,
@@ -1174,7 +1174,11 @@ export class Command {
     let fileNameForUi = '';
 
     // file picker.
-    const supportedModels = { NPU: ['onnx', 'pt', 'pth'], CPU: ['onnx', 'tflite'] };
+    const is1156e = GlobalModel.instance.soc === '1156e';
+    const supportedModels = {
+      NPU: is1156e ? ['onnx', 'om'] : ['onnx', 'pt', 'pth', 'exeom'],
+      CPU: ['onnx', 'tflite'],
+    };
 
     // defaultUri
     const getDefaultUri = (lastPath: string): vscode.Uri | undefined => {
@@ -1307,23 +1311,49 @@ export class Command {
       params: { fileName: fileNameForUi },
     });
 
-    // ParseModel if uploaded model is either .onnx or .tflite.
-    if (modelEndsWith === 'onnx' || modelEndsWith === 'tflite') {
+    // ── Companion files for precompiled formats (exeom / om) ─────────────────
+    // exeom: try to fetch .dbg (optional) and .onnx (optional) from the same directory.
+    // om:    try to fetch .onnx (optional) from the same directory.
+    // Companion files are downloaded silently; absence is not an error.
+    const isPrecompiled = modelEndsWith === 'exeom' || modelEndsWith === 'om';
+    let onnxCompanionLocal: string | undefined; // local path if companion onnx was fetched
+
+    if (isPrecompiled) {
+      if (modelEndsWith === 'exeom') {
+        await this.tryFetchCompanion(source, selectedPath, modelName, 'dbg', localModelDir, pickedFsPath);
+      }
+      const localOnnxPath = path.join(localModelDir, `${modelName}.onnx`);
+      const onnxFetched = await this.tryFetchCompanion(source, selectedPath, modelName, 'onnx', localModelDir, pickedFsPath);
+      if (onnxFetched) { onnxCompanionLocal = localOnnxPath; }
+    }
+
+    // ── Parse model ───────────────────────────────────────────────────────────
+    // Parse onnx/tflite directly, or a companion onnx fetched for exeom/om.
+    const parseExt = isPrecompiled ? (onnxCompanionLocal ? 'onnx' : '') : modelEndsWith;
+    // For Linux: if parsing companion onnx, its remote path is alongside the primary file.
+    const parseRemoteFile = (isPrecompiled && source === 'linux' && onnxCompanionLocal)
+      ? `${path.posix.dirname(selectedPath)}/${modelName}.onnx`
+      : selectedPath;
+    // For WSL/Windows: parse against the locally cached file.
+    const parseLocalFile = onnxCompanionLocal ?? localModelPath;
+
+    if (parseExt === 'onnx' || parseExt === 'tflite') {
       const scriptWin = path.join(__dirname, '../resources/scripts/npu/model_select/model_arch_parse.py');
-      const parsedJson = path.join(localModelDir, 'parsedModel.json'); // place where output json is stored.
+      const parsedJson = path.join(localModelDir, 'parsedModel.json');
 
       if (source === 'linux') {
         const remoteHome = GlobalModel.instance?.remoteHome;
         if (!remoteHome || (target !== 'NPU' && target !== 'CPU')) { return; } // unlikely
 
         const rootDir = remoteRootDir;
-        const stage = 'model_select';
-        await this.uploadScripts('NPU', stage, rootDir); // model parsing scripts is placed under npu/
+        await this.uploadScripts('NPU', 'model_select', rootDir);
 
         const baseCmd = `cd ${remoteHome}/${rootDir}/ && `;
         const python = getRemotePython(target, GlobalModel.instance.soc);
-        const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` + `--model ${selectedPath} `
-           + `--chip ${chipName} ` + `--platform ${this.getPlatform(chipName, target)} ` + `--output_path .cache/ai/parsedModel/parsedModel.json`;
+        const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py `
+          + `--model ${parseRemoteFile} `
+          + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `
+          + `--output_path .cache/ai/parsedModel/parsedModel.json`;
 
         let ret: exeCmdRetType;
         try {
@@ -1337,68 +1367,60 @@ export class Command {
           return;
         }
 
-        // Download parsedModel.json
-        const localPath = parsedJson;
-        const remotePath = `${remoteHome}/${rootDir}/.cache/ai/parsedModel/parsedModel.json`;
+        const remoteParsed = `${remoteHome}/${rootDir}/.cache/ai/parsedModel/parsedModel.json`;
         try {
-          await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remotePath, localPath);
+          await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteParsed, parsedJson);
         } catch (err) {
           this.logAndReportError(`Failed to execute ${this.remoteCmdLib.downloadCmd} : ${this.handleError(err)}`);
         }
       } else if (source === 'wsl') {
         const distro = GlobalModel.instance.wslDistro;
-        if (!distro) { throw new Error('Global WSL distro not set. '); } // unlikely but fatal, throw.
+        if (!distro) { throw new Error('Global WSL distro not set.'); }
 
-        // map to path format that wsl recognizes.
         const scriptWsl = await common.winToLinuxPathForWsl(distro, scriptWin, common.exeRunner);
-
-        // Run parse against cached model path (stable)
-        const modelLinuxForRun = await common.winToLinuxPathForWsl(distro, localModelPath, common.exeRunner);
+        const modelLinuxForRun = await common.winToLinuxPathForWsl(distro, parseLocalFile, common.exeRunner);
         const parsedJsonWsl = await common.winToLinuxPathForWsl(distro, parsedJson, common.exeRunner);
         if (!scriptWsl || !parsedJsonWsl || !modelLinuxForRun) {
-          this.logAndReportError(`Cannot map parsedModel.json path to WSL linux path: ${parsedJson}`);
+          this.logAndReportError(`Cannot map parse paths to WSL linux path`);
           return;
         }
 
-        // Output to local parsedModel.json via /mnt/.. mapping
-        const parsedLocal = path.join(localModelDir, 'parsedModel.json');
-        const parsedLinux = await common.winToLinuxPathForWsl(distro, parsedLocal, common.exeRunner);
-        if (!parsedLinux) {
-          this.logAndReportError(`Cannot map parsedModel.json path to WSL linux path: ${parsedLocal}`);
-          return;
-        }
-
-        // Run model parsing script.
         const wslPython = await this.getWSLPython(distro);
-        const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} ` + `--model ${common.shQuote(modelLinuxForRun)} ` + `--output_path ${common.shQuote(parsedJsonWsl)}`;
-        this.outputLogger.handleLogInfo(`Start running: ${parseCmd} \n`, 'info');
+        const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} `
+          + `--model ${common.shQuote(modelLinuxForRun)} `
+          + `--output_path ${common.shQuote(parsedJsonWsl)}`;
+        this.outputLogger.handleLogInfo(`Start running: ${parseCmd}\n`, 'info');
         const ret = await common.exeRunner({
-          exe: 'wsl.exe',
-          args: ['-d', distro, '--', 'bash', '-lc', parseCmd],
-          mode: 'utf8',
-          logger: this.outputLogger,
-          python: true,
+          exe: 'wsl.exe', args: ['-d', distro, '--', 'bash', '-lc', parseCmd],
+          mode: 'utf8', logger: this.outputLogger, python: true,
         });
-
         if (ret.code !== 0) {
-          this.logAndReportError(`Error when executing quantization scripts, exit code ${ret.code}`);
+          this.logAndReportError(`Error when executing parse.py, exit code ${ret.code}`);
           return;
         }
       } else {
         const toolRootPath = common.getToolsPath();
         const python = path.join(toolRootPath, 'tools/python/python.exe');
-        if (target !== 'CPU') { throw new Error('Script is running locally but it\'s on NPU platform'); } // unlikely but fatal.
-        const pythonRootPath = path.join(__dirname, `../resources/scripts/${target.toLowerCase()}/profiling`); // CPU only.
-
-        const parseCmd = `${python} ${scriptWin} --model ${localModelPath} --output_path ${parsedJson}`;
-        const args = [scriptWin, '--model', localModelPath, '--output_path', parsedJson];
+        if (target !== 'CPU') { throw new Error('Script is running locally but it\'s on NPU platform'); }
+        const pythonRootPath = path.join(__dirname, `../resources/scripts/${target.toLowerCase()}/profiling`);
+        const args = [scriptWin, '--model', parseLocalFile, '--output_path', parsedJson];
         try {
-          await this.runProcess(python, args, pythonRootPath, { cmd: parseCmd });
+          await this.runProcess(python, args, pythonRootPath, { cmd: `${python} ${args.join(' ')}` });
         } catch (err) {
           this.logAndReportError(this.handleError(`Failed to parse model: ${err}`));
           return;
         }
       }
+    }
+
+    // For precompiled models without companion onnx, clear profilingData so Benchmark
+    // shows the accuracy section as disabled (onnxAvailable = false).
+    const onnxAvailable = !isPrecompiled || onnxCompanionLocal !== undefined;
+    if (isPrecompiled && !onnxCompanionLocal) {
+      extension.chipConfigPanel?.postMessage({
+        method: ApiMethod.SAVE_CONFIG_CALLBACK,
+        params: { config: [{ key: 'profilingData', value: [] }, { key: 'modelOutputNames', value: [] }] },
+      });
     }
 
     errMsg = this.generateConfig(target, modelEndsWith, 'full', true);
@@ -1410,13 +1432,17 @@ export class Command {
     // Create history folder for current model.
     this.createHistoryFolder(localModelPath, modelName, modelEndsWith, dateTime);
 
-    // 1156e: quantize step is skipped — write a placeholder quant history entry so the
-    // history chain (quant → convert → deploy → benchmark) works normally downstream.
-    const is1156e = GlobalModel.instance.soc === '1156e';
-    if (is1156e) {
+    // 1156e ONNX or precompiled (exeom/om): skip quantize step.
+    // Precompiled models also skip convert — they land directly on Deploy.
+    if (is1156e || isPrecompiled) {
       extension.mockLocalStorage?.setItem('skipQuantize', true);
       extension.mockLocalStorage?.setItem('lastQuantTS', dateTime);
       this.writeSkippedQuantHistory(dateTime, `${modelName}.${modelEndsWith}`, source);
+    }
+    if (isPrecompiled) {
+      extension.mockLocalStorage?.setItem('skipConvert', true);
+      extension.mockLocalStorage?.setItem('lastConvertTS', dateTime);
+      this.writeSkippedConvertHistory(dateTime, dateTime, `${modelName}.${modelEndsWith}`, source);
     }
 
     // Watchers.
@@ -1427,9 +1453,24 @@ export class Command {
       this.watchers({ serial: true, heartbeat: false }); // Only enable serial port watcher
     }
 
+    // Persist skip flags + onnxAvailable into global.txt for history restore.
+    const globalDataUpdated = JSON.parse(fs.readFileSync(path.join(aiCacheModelDir, 'global.txt'), 'utf-8'));
+    if (isPrecompiled) {
+      globalDataUpdated.skipConvert = true;
+      globalDataUpdated.onnxAvailable = onnxAvailable;
+    }
+    fs.writeFileSync(path.join(aiCacheModelDir, 'global.txt'), JSON.stringify(globalDataUpdated, null, 2), 'utf-8');
+
+    // Send onnxAvailable to Redux so Benchmark can grey accuracy section when no onnx.
+    extension.chipConfigPanel?.postMessage({
+      method: ApiMethod.SAVE_CONFIG_CALLBACK,
+      params: { config: [{ key: 'onnxAvailable', value: onnxAvailable }] },
+    });
+
     // All done. Notify front end.
-    const skipQuantize = is1156e ? true : undefined;
-    extension.chipConfigPanel?.postMessage({ type: 'AllDone', params: { source, skipQuantize } });
+    const skipQuantize = (is1156e || isPrecompiled) ? true : undefined;
+    const skipConvert  = isPrecompiled ? true : undefined;
+    extension.chipConfigPanel?.postMessage({ type: 'AllDone', params: { source, skipQuantize, skipConvert } });
   }
 
   static async sizeCheckAndCopy(source: Source, localModelPath: any, pickedFsPath: any, selectedPath: any): Promise<void> {
@@ -1753,6 +1794,7 @@ export class Command {
         ptq = false;
         break;
       case 'exeom':
+      case 'om':
         ptq = false;
         qat = false;
         convert = false;
@@ -1783,46 +1825,19 @@ export class Command {
   static async validateModel(target: Target, remoteModel: any): Promise<string | undefined> {
     if (!remoteModel) { return undefined; }
 
-    let errMsg;
-    const { modelName, modelEndsWith } = this.parseModelPath(remoteModel, '/');
+    const { modelEndsWith } = this.parseModelPath(remoteModel, '/');
     if (!target || (target !== 'CPU' && target !== 'NPU')) { return 'target not recognized!'; }
 
-    // 1156e only accepts ONNX (no quantization step, model goes directly to Convert).
     const is1156e = GlobalModel.instance.soc === '1156e';
+    // 1156e: onnx (→ convert) or om (precompiled, skip quant+convert).
+    // 3322/ws63: onnx/pt/pth (normal flow) or exeom (precompiled, skip quant+convert).
     const supportedFiles: Record<string, string[]> = is1156e
-      ? { NPU: ['onnx'], CPU: ['onnx'] }
-      : { NPU: ['onnx', 'pt', 'pth'], CPU: ['onnx', 'tflite'] };
+      ? { NPU: ['onnx', 'om'], CPU: ['onnx'] }
+      : { NPU: ['onnx', 'pt', 'pth', 'exeom'], CPU: ['onnx', 'tflite'] };
     if (!supportedFiles[target]?.includes(modelEndsWith)) {
-      errMsg = is1156e
-        ? 'Only ONNX models are supported for 1156e.'
+      return is1156e
+        ? 'Only ONNX and OM models are supported for 1156e.'
         : 'Selected file format not supported!';
-      return errMsg;
-    }
-
-    if (modelEndsWith === 'exeom') { // legacy. exeom not supported for now.
-      const remoteDir = path.posix.dirname(remoteModel);
-      const dbgSearchCmd = `find . -type f -name "${modelName}.dbg" | wc -l`;
-      const baseCmd = ` cd ${remoteDir} && `;
-      const fullCmd = baseCmd + dbgSearchCmd;
-
-      let sizeResult: { exitCode: number; stdout: string; stderr: string };
-      try {
-        sizeResult = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, fullCmd);
-      } catch (err) {
-        this.logAndReportError(`Failed to execute ${fullCmd} on the remote server: ${this.handleError(err)}`);
-        errMsg = 'Failed to execute command';
-        return errMsg;
-      }
-
-      // dbgFilesFound can only be 0 or 1.
-      const dbgFilesFound = parseInt(sizeResult.stdout.trim(), 10);
-      if (dbgFilesFound === 0) {
-        errMsg = 'An exeom file was chosen, but no related dbg file is found under the same directory.';
-        return errMsg;
-      } else if (dbgFilesFound > 1) {
-        errMsg = 'An unknown error occured.';
-        return errMsg;
-      }
     }
 
     return undefined;
@@ -2011,6 +2026,67 @@ export class Command {
     };
     quantJson.push(entry);
     fs.writeFileSync(quantFilePath, JSON.stringify(quantJson), 'utf8');
+  }
+
+  // Write a placeholder convert history entry for precompiled models (exeom/om).
+  // This allows the quant → convert → deploy → benchmark history chain to work normally.
+  static writeSkippedConvertHistory(quantDateTime: number, convertDateTime: number, modelName: string, source: Source): void {
+    const [convertJson, convertFilePath] = this.getCompressionConvertHistoryFilePath('convert');
+    const entry: Partial<HistoryInfo> = {
+      source,
+      modelName,
+      contentLength: 0,
+      updateTime: convertDateTime,
+      quantUUId: quantDateTime,
+      accuracy: '----',
+      avgSim: '----',
+      accuracyChange: '----',
+      mse: '----',
+      time: '----',
+      dtype: '----',
+      exeomSize: '----',
+      dbgSize: '----',
+    };
+    convertJson.push(entry);
+    fs.writeFileSync(convertFilePath, JSON.stringify(convertJson), 'utf8');
+  }
+
+  /**
+   * Try to download/copy a companion file (e.g. `.dbg` or `.onnx`) that sits alongside
+   * the primary model. Companion files are optional — failure is silently ignored.
+   *
+   * @returns true if the companion was successfully fetched to localDir.
+   */
+  static async tryFetchCompanion(
+    source: Source,
+    primaryPath: string,   // remote/WSL path of the primary model file
+    modelName: string,
+    ext: string,           // companion extension without dot, e.g. 'dbg' or 'onnx'
+    localDir: string,
+    pickedFsPath?: string, // WSL only: Windows FS path of the primary file
+  ): Promise<boolean> {
+    const localPath = path.join(localDir, `${modelName}.${ext}`);
+    try {
+      if (source === 'linux') {
+        const remoteDir = path.posix.dirname(primaryPath);
+        const remotePath = `${remoteDir}/${modelName}.${ext}`;
+        const check = await vscode.commands.executeCommand<{ exitCode: number; stdout: string }>(
+          this.remoteCmdLib.executeCmd,
+          `test -f "${remotePath}" && echo "EXISTS" || echo "NOT_EXISTS"`,
+        );
+        if (!check?.stdout?.includes('EXISTS')) { return false; }
+        await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remotePath, localPath);
+        return fs.existsSync(localPath);
+      }
+      if (source === 'wsl' && pickedFsPath) {
+        const winDir = path.dirname(pickedFsPath);
+        const winPath = path.join(winDir, `${modelName}.${ext}`);
+        if (!fs.existsSync(winPath)) { return false; }
+        await fs.promises.copyFile(winPath, localPath);
+        return true;
+      }
+    } catch { /* companion files are optional — swallow all errors */ }
+    return false;
   }
 
   // 生成json并写入内容
@@ -2302,15 +2378,15 @@ export class Command {
     // Get remote model and source by reading global.txt.
     let remoteModel;
     let source: Source;
+    let globalTxt: any = {};
     const globalFile = path.join(historyRootDir, 'global.txt');
     try {
-      const jsonData = fs.readFileSync(globalFile, 'utf-8');
-      const parsedItems = JSON.parse(jsonData);
-      remoteModel = parsedItems.selectedFile;
-      source = parsedItems?.source ?? 'linux';
+      globalTxt = JSON.parse(fs.readFileSync(globalFile, 'utf-8'));
+      remoteModel = globalTxt.selectedFile;
+      source = globalTxt?.source ?? 'linux';
       if (source === 'wsl') {
-        lastWslDistro = parsedItems.wslDistro;
-        if (!lastWslDistro) { throw new Error('wslDistro field not found.') } // unlikely.
+        lastWslDistro = globalTxt.wslDistro;
+        if (!lastWslDistro) { throw new Error('wslDistro field not found.'); } // unlikely.
         GlobalModel.instance.wslDistro = lastWslDistro;
       }
     } catch (err) {
@@ -2329,9 +2405,14 @@ export class Command {
     GlobalModel.instance.aiCacheDir = historyRootDir;
     GlobalModel.instance.localFile = path.join(historyRootDir, 'selectmodel', modelName);
 
-    // For onnx and tflite files, read parsedModel.json
+    // Restore skip flags and onnxAvailable from global.txt (written at import time).
     const { modelEndsWith } = this.parseModelPath(remoteModel, '/');
-    if (modelEndsWith === 'onnx' || modelEndsWith === 'tflite') {
+    const isPrecompiledModel = modelEndsWith === 'exeom' || modelEndsWith === 'om';
+    const restoredSkipConvert = Boolean(globalTxt.skipConvert);
+    const restoredOnnxAvailable = globalTxt.onnxAvailable ?? !isPrecompiledModel;
+
+    // Regenerate config from parsedModel.json if available.
+    if (modelEndsWith === 'onnx' || modelEndsWith === 'tflite' || isPrecompiledModel) {
       if (modelEndsWith === 'tflite' && target !== 'CPU') {
         this.logAndReportError('Not supported on this platform!');
         return;
@@ -2342,17 +2423,38 @@ export class Command {
         return;
       }
     }
+    if (isPrecompiledModel && !restoredOnnxAvailable) {
+      // No companion onnx — clear profiling data.
+      extension.chipConfigPanel?.postMessage({
+        method: ApiMethod.SAVE_CONFIG_CALLBACK,
+        params: { config: [{ key: 'profilingData', value: [] }, { key: 'modelOutputNames', value: [] }] },
+      });
+    }
+    // Send onnxAvailable so Benchmark accuracy section shows correct state.
+    extension.chipConfigPanel?.postMessage({
+      method: ApiMethod.SAVE_CONFIG_CALLBACK,
+      params: { config: [{ key: 'onnxAvailable', value: restoredOnnxAvailable }] },
+    });
 
     // Set the corresponding stage disabled.
     this.setStageDisabled(modelEndsWith);
 
-    // 1156e: restore skipQuantize flag and lastQuantTS from the placeholder quant entry.
-    if (GlobalModel.instance.soc === '1156e') {
+    // Restore skip flags from placeholder history entries.
+    const is1156eSoc = GlobalModel.instance.soc === '1156e';
+    if (is1156eSoc || isPrecompiledModel) {
       extension.mockLocalStorage?.setItem('skipQuantize', true);
       const [quantJson] = this.getCompressionConvertHistoryFilePath('quantize');
       if (quantJson.length > 0) {
         const latestQuantTs = Math.max(...quantJson.map((e: any) => e.updateTime));
         extension.mockLocalStorage?.setItem('lastQuantTS', latestQuantTs);
+      }
+    }
+    if (restoredSkipConvert) {
+      extension.mockLocalStorage?.setItem('skipConvert', true);
+      const [convertJson] = this.getCompressionConvertHistoryFilePath('convert');
+      if (convertJson.length > 0) {
+        const latestConvertTs = Math.max(...convertJson.map((e: any) => e.updateTime));
+        extension.mockLocalStorage?.setItem('lastConvertTS', latestConvertTs);
       }
     }
 
@@ -2393,8 +2495,9 @@ export class Command {
     GlobalModel.instance.source = 'windows';
     extension.chipConfigPanel?.postMessage({ type: 'Source', params: { source: 'windows' } });
     if (mode === 'core') {
-      const skipQuantize = GlobalModel.instance.soc === '1156e' ? true : undefined;
-      const msg: Message = { type: 'AllDone', params: { source: 'windows', skipQuantize } };
+      const skipQuantize = GlobalModel.instance.soc === '1156e' || extension.mockLocalStorage?.getItem('skipQuantize') ? true : undefined;
+      const skipConvert  = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
+      const msg: Message = { type: 'AllDone', params: { source: 'windows', skipQuantize, skipConvert } };
       extension.chipConfigPanel?.postMessage(msg);
     }
   }
@@ -2487,8 +2590,9 @@ export class Command {
       connectedMsg = { type: 'Connected' };
       await this.newModelSetup();
     } else if (type === 'core') {
-      const skipQuantize = GlobalModel.instance.soc === '1156e' ? true : undefined;
-      connectedMsg = { type: 'AllDone', params: { source: 'linux', skipQuantize } };
+      const skipQuantize = GlobalModel.instance.soc === '1156e' || extension.mockLocalStorage?.getItem('skipQuantize') ? true : undefined;
+      const skipConvert  = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
+      connectedMsg = { type: 'AllDone', params: { source: 'linux', skipQuantize, skipConvert } };
     } else {
       this.logAndReportError('Unknown type when connecting to server.');
       return;
@@ -2563,10 +2667,11 @@ export class Command {
     }
 
     GlobalModel.instance.wslDistro = distro; // set global wsldistro before notifying front end.
-    const skipQuantize = GlobalModel.instance.soc === '1156e' ? true : undefined;
+    const skipQuantize = GlobalModel.instance.soc === '1156e' || extension.mockLocalStorage?.getItem('skipQuantize') ? true : undefined;
+    const skipConvert  = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
     const msg: Message = mode === 'newmodel'
       ? { type: 'WSLReady' }
-      : { type: 'AllDone', params: { source: 'wsl', skipQuantize } };
+      : { type: 'AllDone', params: { source: 'wsl', skipQuantize, skipConvert } };
 
     extension.chipConfigPanel?.postMessage(msg);
     this.outputLogger.handleLogInfo('WSL is ready to use', 'info');

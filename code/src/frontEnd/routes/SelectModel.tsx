@@ -268,30 +268,28 @@ function SelectModel(props: { target: Target; source: Source }): React.JSX.Eleme
       if (msg.type === 'AllDone') {
         const realSource = msg.params.source;
         const skipQuantize = Boolean(msg.params?.skipQuantize);
-
-        if (skipQuantize) {
-          // 1156e: quantize step is auto-completed; navigate directly to Convert.
-          // Ensure Quantize (index 1) always shows 'finish' regardless of msg.data.
-          const base: string[] = Array.isArray(msg.data) ? [...msg.data] : ['finish', 'finish', 'process', 'wait', 'wait'];
-          base[1] = 'finish'; // Quantize auto-completed (skipped) — shows checkmark at Convert.
-          IStore.getStore().dispatch(updateEntity('navbarStatus', base));
-          IStore.getStore().dispatch(updateEntity('skipQuantize', true));
-        } else {
-          if (msg.data) {
-            IStore.getStore().dispatch(updateEntity('navbarStatus', msg.data));
-          } else {
-            IStore.getStore().dispatch(updateEntity('navbarStatus', ['finish', 'process', 'wait', 'wait', 'wait']));
-          }
-        }
+        const skipConvert  = Boolean(msg.params?.skipConvert);
 
         if (realSource === 'linux') {
           IStore.getStore().dispatch(updateEntity('isConnected', true));
         }
 
-        if (skipQuantize) {
+        if (skipConvert) {
+          // exeom/om: skip both Quantize and Convert — go directly to Deploy.
+          IStore.getStore().dispatch(updateEntity('skipQuantize', true));
+          IStore.getStore().dispatch(updateEntity('skipConvert', true));
+          IStore.getStore().dispatch(updateEntity('navbarStatus', ['finish', 'finish', 'finish', 'process', 'wait']));
+          IStore.getStore().dispatch(updateEntity('nowStatus', 3)); // 3 = DEPLOY
+          navigate('/deploy', { state: { params: msg } });
+        } else if (skipQuantize) {
+          // 1156e ONNX: skip Quantize only — go to Convert.
+          const base: string[] = ['finish', 'finish', 'process', 'wait', 'wait'];
+          IStore.getStore().dispatch(updateEntity('navbarStatus', base));
+          IStore.getStore().dispatch(updateEntity('skipQuantize', true));
           IStore.getStore().dispatch(updateEntity('nowStatus', 2)); // 2 = CONVERT
           navigate('/convert', { state: { params: msg } });
         } else {
+          IStore.getStore().dispatch(updateEntity('navbarStatus', msg.data || ['finish', 'process', 'wait', 'wait', 'wait']));
           IStore.getStore().dispatch(updateEntity('nowStatus', STATUS)); // STATUS = 1 = COMPRESSION
           navigate('/quantize', { state: { params: msg } });
         }

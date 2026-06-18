@@ -109,6 +109,8 @@ export interface HistoryInfo {
   contentLength: number;
   updateTime: number;
   selectUUId?: number;
+  quantUUId?: number;    // links a convert/benchmark entry back to its quant entry
+  convertUUId?: number;  // links a benchmark entry back to its convert entry
   accuracy?: string | '----';
   avgSim?: string | '----';
   mse?: string | '----';
@@ -116,6 +118,8 @@ export interface HistoryInfo {
   flash?: string | '----';
   time?: string | '----';
   accuracyChange?: string;
+  exeomSize?: string;
+  dbgSize?: string;
   host?: string;
   port?: number;
   username?: string;

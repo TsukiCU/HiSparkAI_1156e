@@ -165,6 +165,9 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   const selectResultRecord   = useSelector((state: any) => state.entities.selectResultRecord);
   const profHistoryData      = useSelector((state: any) => state.entities.profHistoryData);
   const profilingData        = useSelector((state: any) => state.entities.profilingData) as ProfilingItem[];
+  // True when the selected model is onnx (or a precompiled model with companion onnx).
+  // Default true so existing onnx-only workflows are unaffected.
+  const onnxAvailable        = useSelector((state: any) => Boolean(state.entities.onnxAvailable ?? true));
   const proGraphData         = useSelector((state: any) => state.entities.importProGraphCallbackData);
   const proValidationData    = useSelector((state: any) => state.entities.importProValidationCallbackData);
   const ports                = useSelector((state: any) => state.entities.ports) as [];
@@ -434,6 +437,10 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   // ─── Action handlers ────────────────────────────────────────────────────
 
   const handleAccuracy = (): void => {
+    if (!onnxAvailable) {
+      notify('ONNX model not imported — accuracy evaluation is unavailable.', { type: 'warning', stack: false, duration: 3 });
+      return;
+    }
     if (!lastConvertTS) { message.error({ content: BENCHMARK_TEXT.errors.noConvertRecord, duration: 1 }); return; }
     if (target === 'CPU' && !checkAccuracyConfig()) { return; }
     if (target === 'CPU' && checkAccuracyConfig() && (!port1 || !baudRate1)) {
@@ -643,8 +650,17 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
             <strong>{BENCHMARK_TEXT.sections.accuracyConfig}</strong>
           </div>
 
-          <div className="AVC-container">
-            {renderAccuracyConfig()}
+          {/* Accuracy config — greyed out when no ONNX available.
+              Outer div captures click to show a toast; inner div blocks all interactions. */}
+          <div
+            className="AVC-container"
+            onClick={!onnxAvailable ? (): void => {
+              notify('ONNX model not imported — accuracy evaluation is unavailable.', { type: 'warning', stack: false, duration: 3 });
+            } : undefined}
+          >
+            <div style={!onnxAvailable ? { opacity: 0.4, pointerEvents: 'none' } : {}}>
+              {renderAccuracyConfig()}
+            </div>
 
             <div className="AVC-container-1-row">
               <div className="AVC-container-1-2">
