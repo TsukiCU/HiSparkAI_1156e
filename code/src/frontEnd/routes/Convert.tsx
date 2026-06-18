@@ -60,7 +60,7 @@ interface ConvertItem {
 }
 
 type ConvertStarkDataType =
-  | { type: 'fileSize'; exeomSize: number; dbgSize: number }
+  | { type: 'fileSize'; exeomSize: number; dbgSize: number | null }
   | {
       type: 'ramFlash';
       ram:   { workspace: number; packWeight: number; stack: number; other: number };
@@ -386,7 +386,9 @@ function Convert(props: { target: Target; source: Source }): React.JSX.Element {
     if (raw.type === 'fileSize') {
       data = [
         { name: 'model', value: raw.exeomSize, category: 'Filesize', itemStyle: { color: '#0087AB' } },
-        { name: 'dbg',   value: raw.dbgSize,   category: 'Filesize', itemStyle: { color: '#1F9D69' } },
+        ...(raw.dbgSize !== null
+          ? [{ name: 'dbg', value: raw.dbgSize, category: 'Filesize', itemStyle: { color: '#1F9D69' } }]
+          : []),
       ];
       params = { xTitle: '', yTitle: '', yAxisLabels: ['filesize'] };
     } else if (raw.type === 'ramFlash') {

@@ -3449,6 +3449,9 @@ export class Command {
     const rootDir = remoteRootDir;
     const isCPU = target === 'CPU';
 
+    // Clear and recreate the remote output directory before each run to guarantee fresh results.
+    const clearCmd = `rm -rf "${ctx.linuxCacheRoot}" && mkdir -p "${ctx.linuxCacheRoot}" && `;
+
     const baseCmd = isCPU
       ? `cd ${remoteHome}/${rootDir}/scripts && `
       : `source /usr/local/hisparkai/Ascend/latest/bin/setenv.bash && cd ${remoteHome}/${rootDir}/scripts && `;
@@ -3461,7 +3464,7 @@ export class Command {
     // Disable not found notification temporarily.
     await common.safeExecuteCommand(this.remoteCmdLib.revealCmd, []);
     let ret: { exitCode: number; stdout: string; stderr: string };
-    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, baseCmd + wrappedCmd);
+    ret = await vscode.commands.executeCommand(this.remoteCmdLib.executeCmd, clearCmd + baseCmd + wrappedCmd);
     if (this.convertAbortRequested) { return; }
     if (ret.exitCode) {
       throw new Error(`Converion script failed with exit code: ${ret.exitCode}`);
@@ -5586,7 +5589,7 @@ export class Command {
       let fileData: any = {};
       const convertDir = path.dirname(filePath);
 
-      // 1. target platform is NPU. exeom and dbg file can be found. → Read file size.
+      // 1. 3322 NPU: exeom + dbg both present → read both file sizes.
       const exeomFile = path.join(convertDir, 'convert.exeom');
       const dbgFile = path.join(convertDir, 'convert.dbg');
       if (fs.existsSync(exeomFile) && fs.existsSync(dbgFile)) {
@@ -5595,17 +5598,28 @@ export class Command {
           exeomSize: this.getFileSizeInKB(exeomFile),
           dbgSize: this.getFileSizeInKB(dbgFile),
         };
-      } else if (fs.existsSync(filePath) && path.extname(filePath).toLowerCase() === '.json') {
-        // 2. target platform is CPU → analyze ram and flash from json files.
-        const fileString = fs.readFileSync(filePath, 'utf8');
-        const jsonData = JSON.parse(fileString);
-        fileData = {
-          type: 'ramFlash',
-          ram: jsonData.ram || {},
-          flash: jsonData.flash || {},
-        };
       } else {
-        throw new Error('Failed to display convert results');
+        // 1b. 1156e NPU: only an .om file is produced — dbgSize is null (no dbg output).
+        const dirFiles = fs.readdirSync(convertDir);
+        const omFileName = dirFiles.find(f => path.extname(f).toLowerCase() === '.om');
+        if (omFileName) {
+          fileData = {
+            type: 'fileSize',
+            exeomSize: this.getFileSizeInKB(path.join(convertDir, omFileName)),
+            dbgSize: null,
+          };
+        } else if (fs.existsSync(filePath) && path.extname(filePath).toLowerCase() === '.json') {
+          // 2. CPU: analyze ram and flash from json files.
+          const fileString = fs.readFileSync(filePath, 'utf8');
+          const jsonData = JSON.parse(fileString);
+          fileData = {
+            type: 'ramFlash',
+            ram: jsonData.ram || {},
+            flash: jsonData.flash || {},
+          };
+        } else {
+          throw new Error('Failed to display convert results');
+        }
       }
       fileData._convertTS = timestamp;
       // Generate convert history.
