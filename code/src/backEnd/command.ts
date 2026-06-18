@@ -2074,7 +2074,7 @@ export class Command {
           this.remoteCmdLib.executeCmd,
           `test -f "${remotePath}" && echo "EXISTS" || echo "NOT_EXISTS"`,
         );
-        if (!check?.stdout?.includes('EXISTS')) { return false; }
+        if (check?.stdout?.trim() !== 'EXISTS') { return false; }
         await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remotePath, localPath);
         return fs.existsSync(localPath);
       }

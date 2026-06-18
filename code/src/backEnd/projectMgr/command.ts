@@ -245,7 +245,7 @@ export class ProjectMgrCommand {
         'remoteBuild.api.executeCommand',
         `test -d "${remotePath}/chip" && test -d "${remotePath}/gateway" && echo "VALID" || echo "INVALID"`,
       );
-      if (!checkResult?.stdout?.includes('VALID')) {
+      if (checkResult?.stdout?.trim() !== 'VALID') {
         vscode.window.showWarningMessage(
           `Invalid 1156E SDK: "${remotePath}" must contain chip/ and gateway/ subdirectories.`,
         );
