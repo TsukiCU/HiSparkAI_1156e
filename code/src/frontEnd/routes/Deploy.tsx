@@ -357,24 +357,23 @@ function Deploy(props: { target: Target; source: Source }): React.JSX.Element {
                     label={'Burn Type'}
                     labelwidth={'63px'}
                     selectVal={burnType}
-                    portOptions={[{ value: 'Serial', label: 'Serial' }, { value: 'Usb', label: 'Usb' }]}
+                    portOptions={[{ value: 'Serial', label: 'Serial' }]}
                     selectWidth={'15vw'}
                     changeHandler={setBurnType}
                   />
                 </div>
               )}
-              {burnType !== 'Usb' && (
-                <div style={{ whiteSpace: 'nowrap' }}>
-                  <SelectSerial
-                    label={'Burn Port'}
-                    labelwidth={'63px'}
-                    selectVal={flashPort}
-                    portOptions={portOptions}
-                    selectWidth={'15vw'}
-                    changeHandler={setflashPort}
-                  />
-                </div>
-              )}
+              {/* Port selector — always shown (Serial is the only supported mode) */}
+              <div style={{ whiteSpace: 'nowrap' }}>
+                <SelectSerial
+                  label={'Burn Port'}
+                  labelwidth={'63px'}
+                  selectVal={flashPort}
+                  portOptions={portOptions}
+                  selectWidth={'15vw'}
+                  changeHandler={setflashPort}
+                />
+              </div>
               {!BAUDRATE_CHIPS.includes(chipName) && (
                 <div style={{ whiteSpace: 'nowrap' }}>
                   <SelectSerial

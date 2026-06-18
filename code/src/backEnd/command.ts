@@ -5410,7 +5410,6 @@ export class Command {
       port       = '',
       baudRate   = '',
       target,
-      burnType   = 'Serial',
       chipName:  rawChipName,
       ipAddr     = '',
       ipAddress  = '',
@@ -5428,8 +5427,7 @@ export class Command {
       return;
     }
 
-    // Port is required for Serial; USB doesn't need it (future).
-    if (!baudRate || (burnType !== 'Usb' && !port)) {
+    if (!baudRate || !port) {
       extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Cannot access to port or baudrate.' } });
       return;
     }
@@ -5458,7 +5456,7 @@ export class Command {
 
     up.bin_path  = binPath;
     up.protocol  = 'serial';
-    up.port      = burnType !== 'Usb' ? port : '';
+    up.port      = port;
     up.baud      = baudRate;
 
     if (chipName === '1156e') {

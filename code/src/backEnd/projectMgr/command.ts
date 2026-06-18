@@ -109,8 +109,6 @@ function writeHiproj(
       subnetmask:  '',
       gateway:     '',
       eraseconfig: '',
-      pid_value:   '',
-      vid_value:   '',
       emptyflash:  '',
     },
     debug:   {},
