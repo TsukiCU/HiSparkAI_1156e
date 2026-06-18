@@ -33,6 +33,7 @@ import ProfilingLight from '../../../resources/button/ProfilingLight.svg';
 import SelectModelLight from '../../../resources/button/SelectModelLight.svg';
 import CompressionLight from '../../../resources/button/CompressionLight.svg';
 import SelectedIcon from '../../../resources/button/SelectedIcon.svg';
+import SkipStageIcon from '../../../resources/button/skipStage.svg';
 import ConvertActiveIcon from '../../../resources/button/ConvertActiveIcon.svg';
 import SelectModelActiveIcon from '../../../resources/button/SelectModelActiveIcon.svg';
 import ProfilingActiveIcon from '../../../resources/button/ProfilingActiveIcon.svg';
@@ -104,19 +105,21 @@ function Navbar(): React.JSX.Element {
       selectIcon = item.to === '/selectmodel' ? SelectModelActiveIcon : '';
     }
 
-    // 1156e: Quantize (index 1) is always grayed (skipped/disabled) — never shows
-    // a checkmark, since the step was bypassed rather than completed.
-    const effectiveStatus = (skipQuantize && index === 1)
-      ? 'wait'
-      : item.stepStatus;
+    // 1156e: Quantize (index 1) is skipped — show SkipStageIcon, block navigation.
+    const isSkipped = skipQuantize && index === 1;
+    const effectiveStatus = isSkipped ? 'wait' : item.stepStatus;
 
     let finalIcon = selectIcon;
     if (finalIcon === '') {
-      finalIcon = effectiveStatus === 'finish' ? icon : themeIcon;
+      if (isSkipped) {
+        finalIcon = SkipStageIcon;
+      } else {
+        finalIcon = effectiveStatus === 'finish' ? icon : themeIcon;
+      }
     }
     let finalFilter = '';
     if (!(themeData === 'dark' || (!themeData && serverHost === 2))) {
-      if (effectiveStatus === 'finish' || selectIcon) {
+      if (effectiveStatus === 'finish' || selectIcon || isSkipped) {
         finalFilter = 'unset';
       } else { finalFilter = 'invert(60%)'; }
     }

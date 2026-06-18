@@ -5598,15 +5598,15 @@ export class Command {
           // 1156e: only omSize field; no dbg output.
           fileData = {
             type: 'fileSize',
-            exeomSize: parseFloat((jsonContent.omSize ?? 0).toFixed(2)),
+            exeomSize: parseFloat(Number(jsonContent.omSize ?? 0).toFixed(2)),
             dbgSize: null,
           };
         } else {
           // 3322 and others: exeomSize + optional dbgSize.
           fileData = {
             type: 'fileSize',
-            exeomSize: parseFloat((jsonContent.exeomSize ?? 0).toFixed(2)),
-            dbgSize: jsonContent.dbgSize != null ? parseFloat((jsonContent.dbgSize).toFixed(2)) : null,
+            exeomSize: parseFloat(Number(jsonContent.exeomSize ?? 0).toFixed(2)),
+            dbgSize: jsonContent.dbgSize != null ? parseFloat(Number(jsonContent.dbgSize).toFixed(2)) : null,
           };
         }
       } else {
