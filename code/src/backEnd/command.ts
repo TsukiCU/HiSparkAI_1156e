@@ -5588,30 +5588,51 @@ export class Command {
     try {
       let fileData: any = {};
       const convertDir = path.dirname(filePath);
+      const chipName = GlobalModel.instance.chipName ?? '';
 
-      // 1. 3322 NPU: exeom + dbg both present → read both file sizes.
-      const exeomFile = path.join(convertDir, 'convert.exeom');
-      const dbgFile = path.join(convertDir, 'convert.dbg');
-      if (fs.existsSync(exeomFile) && fs.existsSync(dbgFile)) {
-        fileData = {
-          type: 'fileSize',
-          exeomSize: this.getFileSizeInKB(exeomFile),
-          dbgSize: this.getFileSizeInKB(dbgFile),
-        };
+      // 1. convertOutput.json produced by convert script — chip-specific field names.
+      const convertOutputJson = path.join(convertDir, 'convertOutput.json');
+      if (fs.existsSync(convertOutputJson)) {
+        const jsonContent = JSON.parse(fs.readFileSync(convertOutputJson, 'utf-8'));
+        if (chipName === '1156e') {
+          // 1156e: only omSize field; no dbg output.
+          fileData = {
+            type: 'fileSize',
+            exeomSize: parseFloat((jsonContent.omSize ?? 0).toFixed(2)),
+            dbgSize: null,
+          };
+        } else {
+          // 3322 and others: exeomSize + optional dbgSize.
+          fileData = {
+            type: 'fileSize',
+            exeomSize: parseFloat((jsonContent.exeomSize ?? 0).toFixed(2)),
+            dbgSize: jsonContent.dbgSize != null ? parseFloat((jsonContent.dbgSize).toFixed(2)) : null,
+          };
+        }
       } else {
-        // 1b. 1156e NPU: only an .om file is produced — dbgSize is null (no dbg output).
-        const dirFiles = fs.readdirSync(convertDir);
+        // Fallback: detect output files on disk (backward-compatible).
+        const exeomFile = path.join(convertDir, 'convert.exeom');
+        const dbgFile   = path.join(convertDir, 'convert.dbg');
+        const dirFiles  = fs.readdirSync(convertDir);
         const omFileName = dirFiles.find(f => path.extname(f).toLowerCase() === '.om');
-        if (omFileName) {
+
+        if (fs.existsSync(exeomFile) && fs.existsSync(dbgFile)) {
+          // 3322: exeom + dbg files present.
+          fileData = {
+            type: 'fileSize',
+            exeomSize: this.getFileSizeInKB(exeomFile),
+            dbgSize: this.getFileSizeInKB(dbgFile),
+          };
+        } else if (omFileName) {
+          // 1156e: .om file only — no dbg.
           fileData = {
             type: 'fileSize',
             exeomSize: this.getFileSizeInKB(path.join(convertDir, omFileName)),
             dbgSize: null,
           };
         } else if (fs.existsSync(filePath) && path.extname(filePath).toLowerCase() === '.json') {
-          // 2. CPU: analyze ram and flash from json files.
-          const fileString = fs.readFileSync(filePath, 'utf8');
-          const jsonData = JSON.parse(fileString);
+          // CPU: analyze ram and flash from json.
+          const jsonData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
           fileData = {
             type: 'ramFlash',
             ram: jsonData.ram || {},
