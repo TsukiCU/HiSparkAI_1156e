@@ -5237,11 +5237,11 @@ export class Command {
     };
   }
 
-  /** Prepare the local deploy directory and return its path. */
-  private static prepareDeployDir(dateTime: number): string {
+  /** Return (and create if needed) the fixed-name local deploy images directory. */
+  private static prepareDeployDir(): string {
     const aiCacheDir = GlobalModel.instance.aiCacheDir;
     if (!aiCacheDir) { throw new Error('No model selected — import a model before building.'); }
-    const localImagesDir = path.join(aiCacheDir, 'Deploy', `images_${dateTime}`);
+    const localImagesDir = path.join(aiCacheDir, 'Deploy', 'images');
     fs.mkdirSync(localImagesDir, { recursive: true });
     return localImagesDir;
   }
@@ -5275,15 +5275,15 @@ export class Command {
     if (this.buildChip !== '1156e') { return; } // abort signal set by stopBuilding
     if (ret.exitCode) { throw new Error(`Build failed (exit ${ret.exitCode}): ${ret.stderr}`); }
 
-    // Step 3: verify output files and download.
-    const dateTime = Date.now();
-    extension.mockLocalStorage?.setItem('lastDeployTS', dateTime);
-    const localImagesDir = this.prepareDeployDir(dateTime);
+    // Step 3: verify output files, then download the fwpkg for flashing.
+    const localImagesDir = this.prepareDeployDir();
+    const fwpkgRelPath  = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const fwpkgFileName = path.basename(fwpkgRelPath);
 
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading build outputs...' } });
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Verifying build outputs...' } });
     for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
       const remoteFile = `${remoteImagesDir}/${fileName}`;
-      // Check file exists and is non-empty on remote.
+      // Check the file exists and is non-empty on remote.
       const sizeRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
         `stat -c%s "${remoteFile}" 2>/dev/null || echo 0`);
       const size = parseInt((sizeRet.stdout || '').trim(), 10);
@@ -5294,9 +5294,14 @@ export class Command {
         );
         throw new Error(`Output file missing or empty: ${fileName}`);
       }
-      const localFile = path.join(localImagesDir, fileName);
-      await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFile, localFile);
+      // Individual files are verified but not downloaded — only the fwpkg is needed for flashing.
+      // await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFile, path.join(localImagesDir, fileName));
     }
+
+    // Download the packaged fwpkg.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading fwpkg...' } });
+    const remoteFwpkg = `${remoteSdkPath}/${fwpkgRelPath}`;
+    await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFwpkg, path.join(localImagesDir, fwpkgFileName));
   }
 
   /** 1156e build via WSL. */
@@ -5345,13 +5350,13 @@ export class Command {
       `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release`);
     if (ret.code !== 0) { throw new Error(`cbuild.py failed (WSL, exit ${ret.code})`); }
 
-    // Step 3: verify output files and copy to local.
-    const dateTime = Date.now();
-    extension.mockLocalStorage?.setItem('lastDeployTS', dateTime);
-    const localImagesDir = this.prepareDeployDir(dateTime);
-    const winImagesDir = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
+    // Step 3: verify output files, then copy the fwpkg for flashing.
+    const localImagesDir = this.prepareDeployDir();
+    const fwpkgRelPath  = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const fwpkgFileName = path.basename(fwpkgRelPath);
+    const winImagesDir  = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
 
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Copying build outputs...' } });
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Verifying build outputs...' } });
     for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
       const srcFile = path.join(winImagesDir, fileName);
       if (!fs.existsSync(srcFile) || fs.statSync(srcFile).size === 0) {
@@ -5361,8 +5366,14 @@ export class Command {
         );
         throw new Error(`Output file missing or empty: ${fileName}`);
       }
-      await fs.promises.copyFile(srcFile, path.join(localImagesDir, fileName));
+      // Individual files are verified but not copied — only the fwpkg is needed for flashing.
+      // await fs.promises.copyFile(srcFile, path.join(localImagesDir, fileName));
     }
+
+    // Copy the packaged fwpkg.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Copying fwpkg...' } });
+    const srcFwpkg = path.join(localSdkPath, fwpkgRelPath);
+    await fs.promises.copyFile(srcFwpkg, path.join(localImagesDir, fwpkgFileName));
   }
 
   static async cpuDeploySetup(message: any): Promise<void> {
@@ -5441,13 +5452,23 @@ export class Command {
       return;
     }
 
-    const rootPath = common.getWorkFolderPath();
-    const binPath  = path.join(rootPath, chip.fwpkgRelPath);
-
-    // For local chips (ws63, 3322) the binary must already exist; 1156e downloads it from remote.
-    if (chipName !== '1156e' && !fs.existsSync(binPath)) {
-      extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Check if SDK is compiled.' } });
-      return;
+    // Resolve bin_path: ws63/3322 use the SDK-relative fwpkg; 1156e uses the locally cached fwpkg.
+    let binPath: string;
+    if (chipName === '1156e') {
+      const aiCacheDir  = GlobalModel.instance.aiCacheDir;
+      const fwpkgName   = path.basename(chip.fwpkgRelPath);
+      binPath = aiCacheDir ? path.join(aiCacheDir, 'Deploy', 'images', fwpkgName) : '';
+      if (!binPath || !fs.existsSync(binPath)) {
+        extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Check if SDK is compiled.' } });
+        return;
+      }
+    } else {
+      const rootPath = common.getWorkFolderPath();
+      binPath = path.join(rootPath, chip.fwpkgRelPath);
+      if (!fs.existsSync(binPath)) {
+        extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Check if SDK is compiled.' } });
+        return;
+      }
     }
 
     const activeHiprojPath = GlobalModel.instance.hiprojPath;
@@ -5456,12 +5477,10 @@ export class Command {
       return;
     }
 
-    // Parse the hiproj, update the [upload] section (fall back to [compile] for older files),
-    // then write it back.  ini.parse / ini.stringify preserves all other sections unchanged.
+    // Parse and update the [upload] section, then write back unchanged sections.
     const parsedContent: any = ini.parse(fs.readFileSync(activeHiprojPath, 'utf-8'));
-    const sectionKey = parsedContent.upload !== undefined ? 'upload' : 'compile';
-    if (!parsedContent[sectionKey]) { parsedContent[sectionKey] = {}; }
-    const up = parsedContent[sectionKey];
+    if (!parsedContent.upload) { parsedContent.upload = {}; }
+    const up = parsedContent.upload;
 
     up.bin_path  = binPath;
     up.protocol  = 'serial';
