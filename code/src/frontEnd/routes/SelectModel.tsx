@@ -274,18 +274,18 @@ function SelectModel(props: { target: Target; source: Source }): React.JSX.Eleme
           IStore.getStore().dispatch(updateEntity('isConnected', true));
         }
 
+        // Always dispatch both flags so stale values from a previous model are cleared.
+        IStore.getStore().dispatch(updateEntity('skipQuantize', skipQuantize));
+        IStore.getStore().dispatch(updateEntity('skipConvert',  skipConvert));
+
         if (skipConvert) {
           // exeom/om: skip both Quantize and Convert — go directly to Deploy.
-          IStore.getStore().dispatch(updateEntity('skipQuantize', true));
-          IStore.getStore().dispatch(updateEntity('skipConvert', true));
           IStore.getStore().dispatch(updateEntity('navbarStatus', ['finish', 'finish', 'finish', 'process', 'wait']));
           IStore.getStore().dispatch(updateEntity('nowStatus', 3)); // 3 = DEPLOY
           navigate('/deploy', { state: { params: msg } });
         } else if (skipQuantize) {
           // 1156e ONNX: skip Quantize only — go to Convert.
-          const base: string[] = ['finish', 'finish', 'process', 'wait', 'wait'];
-          IStore.getStore().dispatch(updateEntity('navbarStatus', base));
-          IStore.getStore().dispatch(updateEntity('skipQuantize', true));
+          IStore.getStore().dispatch(updateEntity('navbarStatus', ['finish', 'finish', 'process', 'wait', 'wait']));
           IStore.getStore().dispatch(updateEntity('nowStatus', 2)); // 2 = CONVERT
           navigate('/convert', { state: { params: msg } });
         } else {

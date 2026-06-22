@@ -1432,6 +1432,11 @@ export class Command {
     // Create history folder for current model.
     this.createHistoryFolder(localModelPath, modelName, modelEndsWith, dateTime);
 
+    // Always clear previous skip flags first — prevents stale state when the user
+    // switches from a precompiled model (exeom/om) to a non-precompiled one.
+    extension.mockLocalStorage?.removeItem('skipQuantize');
+    extension.mockLocalStorage?.removeItem('skipConvert');
+
     // 1156e ONNX or precompiled (exeom/om): skip quantize step.
     // Precompiled models also skip convert — they land directly on Deploy.
     if (is1156e || isPrecompiled) {
