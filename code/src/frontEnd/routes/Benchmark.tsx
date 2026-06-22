@@ -536,13 +536,18 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
           </div>
 
           {provalidation && (
-            <div style={{ position: 'relative' }}>
+            // The CSS rule ".AVC-container-last-row .fileInputContainer { margin-left: -120px }"
+            // compensates for the empty 120px label inside FileInputBoxComponent.
+            // Moving that offset to this wrapper div prevents the negative margin from
+            // causing fileInputContainer to overflow left and occlude the adjacent Select.
+            <div style={{ position: 'relative', marginLeft: '-120px' }}>
               <FileInputBoxComponent
                 fileInputBox={{ ...provalidation, disabled: !onnxAvailable || selectedOutput === 'None', content: selectedOutput === 'None' ? '' : provalidation.content }}
                 isShowInput={false} fileExt="csv"
                 onInputChange={(value, key): void => handleInputChange(value, key, provalidation.group)}
                 filePickerType="local"
                 inputPlaceholder={BENCHMARK_TEXT.labels.labelFilePlaceholder}
+                customEditableStyle={{ marginLeft: 0 }}
               />
               {!onnxAvailable && (
                 <div style={{ position: 'absolute', inset: 0, cursor: 'not-allowed' }} onClick={notifyNoOnnx} />
