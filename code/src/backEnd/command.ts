@@ -6578,6 +6578,12 @@ export class Command {
     fs.rmdirSync(targetDir);
   }
 
+  /** Called from the webview frontend to display a VSCode info notification (bottom-right). */
+  static showInfo(message: any): void {
+    const text: string = message?.params?.text ?? '';
+    if (text) { vscode.window.showInformationMessage(text); }
+  }
+
   private static showWarnToast(message: string): void {
     setTimeout(() => { vscode.window.showWarningMessage(message); }, 0);
   }

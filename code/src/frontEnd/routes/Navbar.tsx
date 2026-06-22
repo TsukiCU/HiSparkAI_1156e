@@ -114,7 +114,10 @@ function Navbar(): React.JSX.Element {
       finalIcon = effectiveStatus === 'finish' ? icon : themeIcon;
     }
     let finalFilter = '';
-    if (!(themeData === 'dark' || (!themeData && serverHost === 2))) {
+    if (isSkipped) {
+      // Skipped steps: strong greyscale in both light and dark themes.
+      finalFilter = 'grayscale(100%) opacity(0.45)';
+    } else if (!(themeData === 'dark' || (!themeData && serverHost === 2))) {
       if (effectiveStatus === 'finish' || selectIcon) {
         finalFilter = 'unset';
       } else { finalFilter = 'invert(60%)'; }
@@ -152,8 +155,14 @@ function Navbar(): React.JSX.Element {
       notify('Select a model first.', { type: 'error', stack: false, duration: 2 });
       return;
     }
-    if (skipQuantize && currents === STEPSTATUS.COMPRESSION) { return; }
-    if (skipConvert  && currents === STEPSTATUS.CONVERT)     { return; }
+    if (skipQuantize && currents === STEPSTATUS.COMPRESSION) {
+      vscode.postMessage({ method: 'showInfo', params: { text: 'This step is skipped for the current model type.' } });
+      return;
+    }
+    if (skipConvert && currents === STEPSTATUS.CONVERT) {
+      vscode.postMessage({ method: 'showInfo', params: { text: 'This step is skipped for the current model type.' } });
+      return;
+    }
     setCurrent(currents);
     mapRouter(currents);
   };

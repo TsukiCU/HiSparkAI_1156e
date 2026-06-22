@@ -436,9 +436,13 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
 
   // ─── Action handlers ────────────────────────────────────────────────────
 
+  const notifyNoOnnx = (): void => {
+    vscode.postMessage({ method: 'showInfo', params: { text: 'ONNX model not available — accuracy evaluation is disabled.' } });
+  };
+
   const handleAccuracy = (): void => {
     if (!onnxAvailable) {
-      notify('ONNX model not imported — accuracy evaluation is unavailable.', { type: 'warning', stack: false, duration: 3 });
+      notifyNoOnnx();
       return;
     }
     if (!lastConvertTS) { message.error({ content: BENCHMARK_TEXT.errors.noConvertRecord, duration: 1 }); return; }
@@ -491,7 +495,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
     const { inputFiles, provalidation } = splitBenchmarkData(fileBoxes);
 
     return (
-      <div>
+      <div style={!onnxAvailable ? { opacity: 0.4 } : {}}>
         {/* Input file table */}
         <div className="inputs-class-table" style={{ width: 'auto' }}>
           {inputFiles.length > 0 && (
@@ -501,14 +505,18 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
               ))}
             </div>
           )}
-          {inputFiles.map((box, i) => (
-            <div key={box.key} className="AVC-container-rows">
+          {inputFiles.map((box) => (
+            <div key={box.key} className="AVC-container-rows" style={{ position: 'relative' }}>
               <FileInputBoxComponent
-                fileInputBox={box} isShowInput={false}
+                fileInputBox={{ ...box, disabled: !onnxAvailable || Boolean(box.disabled) }}
+                isShowInput={false}
                 onInputChange={(value, key): void => handleInputChange(value, key, box.group)}
                 filePickerType="local"
                 inputPlaceholder={BENCHMARK_TEXT.labels.inputFilePlaceholder}
               />
+              {!onnxAvailable && (
+                <div style={{ position: 'absolute', inset: 0, cursor: 'not-allowed' }} onClick={notifyNoOnnx} />
+              )}
             </div>
           ))}
         </div>
@@ -519,6 +527,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
             <label>{BENCHMARK_TEXT.labels.validationLabels}</label>
             <Select
               value={selectedOutput}
+              disabled={!onnxAvailable}
               onChange={(val): void => setSelectedOutput(val)}
               style={{ width: 170 }}
             >
@@ -527,13 +536,18 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
           </div>
 
           {provalidation && (
-            <FileInputBoxComponent
-              fileInputBox={{ ...provalidation, disabled: selectedOutput === 'None', content: selectedOutput === 'None' ? '' : provalidation.content }}
-              isShowInput={false} fileExt="csv"
-              onInputChange={(value, key): void => handleInputChange(value, key, provalidation.group)}
-              filePickerType="local"
-              inputPlaceholder={BENCHMARK_TEXT.labels.labelFilePlaceholder}
-            />
+            <div style={{ position: 'relative' }}>
+              <FileInputBoxComponent
+                fileInputBox={{ ...provalidation, disabled: !onnxAvailable || selectedOutput === 'None', content: selectedOutput === 'None' ? '' : provalidation.content }}
+                isShowInput={false} fileExt="csv"
+                onInputChange={(value, key): void => handleInputChange(value, key, provalidation.group)}
+                filePickerType="local"
+                inputPlaceholder={BENCHMARK_TEXT.labels.labelFilePlaceholder}
+              />
+              {!onnxAvailable && (
+                <div style={{ position: 'absolute', inset: 0, cursor: 'not-allowed' }} onClick={notifyNoOnnx} />
+              )}
+            </div>
           )}
 
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -650,17 +664,8 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
             <strong>{BENCHMARK_TEXT.sections.accuracyConfig}</strong>
           </div>
 
-          {/* Accuracy config — greyed out when no ONNX available.
-              Outer div captures click to show a toast; inner div blocks all interactions. */}
-          <div
-            className="AVC-container"
-            onClick={!onnxAvailable ? (): void => {
-              notify('ONNX model not imported — accuracy evaluation is unavailable.', { type: 'warning', stack: false, duration: 3 });
-            } : undefined}
-          >
-            <div style={!onnxAvailable ? { opacity: 0.4, pointerEvents: 'none' } : {}}>
-              {renderAccuracyConfig()}
-            </div>
+          <div className="AVC-container">
+            {renderAccuracyConfig()}
 
             <div className="AVC-container-1-row">
               <div className="AVC-container-1-2">
