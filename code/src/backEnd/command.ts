@@ -4472,10 +4472,10 @@ export class Command {
       ],
     };
 
-    // validation config
+    // validation config — only needed for accuracy stage (profiling stage ignores these).
     let accuValiInfo;
     let valiLabelsInfo;
-    if (!isExeom) {
+    if (!isExeom && stage === 'accuracy') {
       const setLen = profilingData.length - 2;
       const accuValiList = [];
       for (let i = 0; i < setLen; ++i) {
@@ -4660,9 +4660,13 @@ export class Command {
     }
 
     let profilingData = extension.mockLocalStorage?.getItem('profilingData');
+    // profilingData is only required for accuracy evaluation; performance profiling works without it.
     if (!profilingData) {
-      extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: `Data for benchmark missing!` } });
-      return;
+      if (stage === 'accuracy') {
+        extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: `Data for benchmark missing!` } });
+        return;
+      }
+      profilingData = [];
     }
     if (!Array.isArray(profilingData)) {
       profilingData = JSON.parse(profilingData);

@@ -33,7 +33,6 @@ import ProfilingLight from '../../../resources/button/ProfilingLight.svg';
 import SelectModelLight from '../../../resources/button/SelectModelLight.svg';
 import CompressionLight from '../../../resources/button/CompressionLight.svg';
 import SelectedIcon from '../../../resources/button/SelectedIcon.svg';
-import SkipStageIcon from '../../../resources/button/skipStage.svg';
 import ConvertActiveIcon from '../../../resources/button/ConvertActiveIcon.svg';
 import SelectModelActiveIcon from '../../../resources/button/SelectModelActiveIcon.svg';
 import ProfilingActiveIcon from '../../../resources/button/ProfilingActiveIcon.svg';
@@ -112,15 +111,11 @@ function Navbar(): React.JSX.Element {
 
     let finalIcon = selectIcon;
     if (finalIcon === '') {
-      if (isSkipped) {
-        finalIcon = SkipStageIcon;
-      } else {
-        finalIcon = effectiveStatus === 'finish' ? icon : themeIcon;
-      }
+      finalIcon = effectiveStatus === 'finish' ? icon : themeIcon;
     }
     let finalFilter = '';
     if (!(themeData === 'dark' || (!themeData && serverHost === 2))) {
-      if (effectiveStatus === 'finish' || selectIcon || isSkipped) {
+      if (effectiveStatus === 'finish' || selectIcon) {
         finalFilter = 'unset';
       } else { finalFilter = 'invert(60%)'; }
     }
