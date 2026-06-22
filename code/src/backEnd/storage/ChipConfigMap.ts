@@ -22,7 +22,7 @@ export const CHIP_CONFIG: Record<string, ChipConfig> = {
     remotePython: '/usr/bin/python3.10',
   },
   '1156e': {
-    fwpkgRelPath: 'output/1156e/tiangong2_cmcc_hgu_release.fwpkg',
+    fwpkgRelPath: 'output/tiangong2_cmcc_hgu_release/images/tiangong2_cmcc_hgu_release.fwpkg',
     buildTarget: 'build_mkp',
     scriptDir: '',
     remotePython: '',
