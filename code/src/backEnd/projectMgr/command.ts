@@ -92,7 +92,7 @@ function writeHiproj(
       sdk_path:           isLinux ? hiprojDir : sdkDir,
       remote_sdk_path:    isLinux ? sdkDir : '',
       series_name:        'projectMgr',
-      project_type:       'PROJECT_MGR',
+      project_type:       'CFBB',
       connection_type:    projectData.connectionType ?? '',
       wsl_distro:         projectData.wslDistro ?? '',
       // host/port match remote-build.json servers.host / servers.port (Linux 1156e only).
