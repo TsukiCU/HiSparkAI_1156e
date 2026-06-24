@@ -5266,7 +5266,10 @@ export class Command {
     await vscode.commands.executeCommand(this.remoteCmdLib.uploadCmd, installScriptLocal, installScriptRemote);
     ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
       `sed 's/\\r$//' "${installScriptRemote}" | bash`);
-    if (ret.exitCode) { throw new Error(`install_deps.sh failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+    if (ret.exitCode) {
+      const detail = [ret.stderr, ret.stdout].filter(Boolean).join('\n');
+      throw new Error(`install_deps.sh failed (exit ${ret.exitCode}):\n${detail}`);
+    }
 
     // Step 2: run cbuild.py.
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building on remote server...' } });
