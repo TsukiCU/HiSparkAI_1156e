@@ -15,13 +15,18 @@
       "type": "whl"
     },
     {
-        "url": "https://mirrors.cloud.tencent.com/pypi/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
-        "name": "setuptools",
-        "type": "whl"
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
+      "name": "setuptools",
+      "type": "whl"
     },
     {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9b/0f/022ca4783b6e6239a53b988a4d315d67f9ae7126227fb2255054a558bd72/numpy-2.0.0-cp311-cp311-win_amd64.whl",
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/cd/25/bcecc4974d09257ffcd1f098ee778f7834c3ad767fe5db785be9a4aa9cb2/numpy-1.26.4-cp311-cp311-win_amd64.whl",
       "name": "numpy",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/20/9b/a4cc916bab46f64e56b85b090607a676f66b473e6b762e6f1d9d591eb2e8/protobuf-4.25.3-cp310-abi3-win_amd64.whl",
+      "name": "protobuf",
       "type": "whl"
     },
     {
@@ -61,7 +66,7 @@
     },
     {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/0c/14/9966e648a48f9bfee456002700cde4ca41f1e04ebaea842ccf663b6e7db2/onnxruntime-1.16.0-cp311-cp311-win_amd64.whl",
-      "name": "onnxrntime",
+      "name": "onnxruntime",
       "type": "whl"
     },
     {
@@ -75,7 +80,7 @@
       "type": "whl"
     },
     {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9e/b8/ed5f794359d05cd0bffb894c6418da87b93016ee17b669d55c45d1bd5d5b/tensorflow-2.13.0-cp311-cp311-win_amd64.whl",
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/00/06/0c5516a61e30c51936084ebc37091d116efe9ae74b2818cbd8b2006218e7/tensorflow-2.13.0-cp311-cp311-win_amd64.whl",
       "name": "tensorflow",
       "type": "whl"
     },
@@ -95,13 +100,13 @@
       "type": "zip"
     },
     {
-     "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/DebugKits_25.12.2.tar.gz",
-     "name": "DebugKits",
-     "type": "tar.gz"
+      "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/DebugKits_25.12.2.tar.gz",
+      "name": "DebugKits",
+      "type": "tar.gz"
     },
     {
-     "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/mindspore-enterprise-lite-win-x64.tar.gz",
-     "name": "MindSpore",
-     "type": "tar.gz"
+      "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/mindspore-enterprise-lite-win-x64.tar.gz",
+      "name": "MindSpore",
+      "type": "tar.gz"
     }
   ]

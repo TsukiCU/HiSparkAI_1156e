@@ -693,96 +693,95 @@ exit /b 0
     });
 }
 
-// pip 清华镜像源（免安装 python 无全局 pip 配置，镜像通过命令行参数传入）
-/**
- * 安装 Python 包。
- *
- * .whl 本质是 zip 文件。用 Python 自带的 zipfile 模块直接解压到
- * site-packages，完全不经过 pip，彻底避免：
- *   - 依赖版本冲突（protobuf、numpy 等）
- *   - pip 发起的网络请求
- *   - 企业代理 407
- *   - pip.pyz 版本兼容性问题
- * 解压失败的文件（如损坏的 tensorflow.whl）会打印警告并跳过，
- * 不影响其他包的安装。
- *
- * .tar.gz（tkinter-embed）仍用 pip --no-deps --target，因为它不是 zip。
- */
+// 安装wheel包
 export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string): Promise<void> {
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
-        const pythonPath  = path.join(pythonDir, 'python.exe');
-        const sitePackages = path.join(pythonDir, 'Lib', 'site-packages');
-        if (!fs.existsSync(sitePackages)) {
-            fs.mkdirSync(sitePackages, { recursive: true });
-        }
-        const childProcess = require('child_process');
-
-        const whlPaths = pipFilePaths.filter(p => p.endsWith('.whl'));
-        const tarPaths = pipFilePaths.filter(p => p.includes('.tar.gz'));
-
-        // Step 1: 用 Python zipfile 解压所有 .whl，不经过 pip。
-        if (whlPaths.length > 0) {
-            progress.report({ message: `解压 ${whlPaths.length} 个 .whl 包...` });
-
-            // 将解压脚本写入临时文件，避免命令行长度限制
-            const tempScript = path.join(os.tmpdir(), `hispark_whl_install_${Date.now()}.py`);
-            const scriptLines = [
-                'import sys, zipfile, os',
-                'site = sys.argv[1]',
-                'os.makedirs(site, exist_ok=True)',
-                'skipped = []',
-                'for whl in sys.argv[2:]:',
-                '    try:',
-                '        with zipfile.ZipFile(whl, "r") as z:',
-                '            z.extractall(site)',
-                '        print("OK", os.path.basename(whl))',
-                '    except Exception as e:',
-                '        print("SKIP", os.path.basename(whl), "-", e, file=sys.stderr)',
-                '        skipped.append(os.path.basename(whl))',
-            ];
-            fs.writeFileSync(tempScript, scriptLines.join('\n'), 'utf8');
-
-            try {
-                await new Promise<void>((resolve, reject) => {
-                    const proc = childProcess.spawn(
-                        pythonPath,
-                        [tempScript, sitePackages, ...whlPaths],
-                        { windowsHide: true }
-                    );
-                    let stderr = '';
-                    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
-                    proc.on('close', (_code: number) => {
-                        if (stderr.trim()) {
-                            vscode.window.showWarningMessage(`以下包因文件损坏被跳过（不影响整体安装）:\n${stderr.trim()}`);
-                        }
-                        resolve(); // 单个包失败不终止流程
-                    });
-                    proc.on('error', reject);
-                });
-            } finally {
-                try { fs.unlinkSync(tempScript); } catch { /* 忽略临时文件清理失败 */ }
-            }
-        }
-
-        // Step 2: .tar.gz 用 pip --no-deps --target 安装
-        for (const packagePath of tarPaths) {
-            const packageName = path.basename(packagePath, '.tar.gz');
-            progress.report({ message: `安装 ${packageName}...` });
+        return new Promise<void>((resolve, reject) => {
+            const totalPackages = pipFilePaths.length;
+            let installedCount = 0;
+            // 记录成功和失败的包
+            const successPackages: string[] = [];
+            const failedPackages: string[] = [];
+            
+            // 获取Python路径
+            const pythonPath = path.join(pythonDir, 'python.exe');
             const pippyzPath = path.join(downloadDir, 'pip.pyz');
-            const cmd = `"${pythonPath}" "${pippyzPath}" install --target "${pythonDir}" --no-deps "${packagePath}"`;
-            await new Promise<void>((resolve, reject) => {
-                childProcess.exec(cmd, { maxBuffer: 20 * 1024 * 1024, timeout: 120000 }, (err: any, _stdout: string, stderr: string) => {
-                    if (err) { reject(new Error(`安装 ${packageName} 失败:\n${(stderr || err.message || '').trim()}`)); }
-                    else { resolve(); }
+            const installNextPackage = (index: number): void => {
+                if (index >= pipFilePaths.length) {
+                    // 显示安装总结
+                    showInstallationSummary(successPackages, failedPackages);
+                    if (failedPackages.length !== 0) {
+                        reject(new Error(``));
+                        return;
+                    }
+                    resolve();
+                    return;
+                }
+                
+                const packagePath = pipFilePaths[index];
+                let packageName = path.basename(packagePath, '.whl');
+                const mirror = '-i https://pypi.tuna.tsinghua.edu.cn/simple';
+                let command = `"${pythonPath}" ${pippyzPath} install "${packagePath}" ${mirror}`;
+                if (packagePath.includes('.tar.gz')) {
+                    packageName = path.basename(packagePath, '.tar.gz');
+                    command = `"${pythonPath}" ${pippyzPath} install --target "${pythonDir}" "${packagePath}" ${mirror}`;
+                }
+                progress.report({ 
+                    message: `安装 ${packageName} (${index + 1}/${totalPackages})`,
+                    increment: (1 / totalPackages) * 100,
                 });
-            });
-        }
-
-        vscode.window.showInformationMessage('✅ Python 依赖包安装完成');
+                
+                // 使用exec而不是spawn，并用引号包裹路径
+                const childProcess = require('child_process');
+                
+                childProcess.exec(command, (error: any, stdout: string, stderr: string) => {
+                    if (error) {
+                        failedPackages.push(packageName);
+                        
+                        // 显示详细错误信息
+                        const detailOutput = 
+                            `安装 ${packageName} 失败\n\n` +
+                            `错误信息:\n${error.message}\n\n` +
+                            `标准错误:\n${stderr}\n\n` +
+                            `标准输出:\n${stdout}\n\n` +
+                            `命令:\n${command}`;
+                        
+                        vscode.workspace.openTextDocument({
+                            content: detailOutput,
+                            language: 'log',
+                        }).then(doc => {
+                            vscode.window.showTextDocument(doc);
+                        });
+                        
+                        // 询问用户是否继续
+                        vscode.window.showInformationMessage(
+                            `安装 ${packageName} 失败，是否继续?`, 
+                            '重试', '跳过', '中止',
+                        ).then(choice => {
+                            if (choice === '重试') {
+                                installNextPackage(index);
+                            } else if (choice === '跳过') {
+                                installNextPackage(index + 1);
+                            } else {
+                                showInstallationSummary(successPackages, failedPackages);
+                                reject(new Error(`用户中止安装: ${packageName}`));
+                            }
+                        });
+                    } else {
+                        successPackages.push(packageName);
+                        installedCount++;                          
+                        installNextPackage(index + 1);
+                    }
+                });
+            };
+            
+            // 开始安装第一个包
+            installNextPackage(0);
+        });
     });
 }
 
