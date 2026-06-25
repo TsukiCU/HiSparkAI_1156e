@@ -694,64 +694,78 @@ exit /b 0
 }
 
 // pip 清华镜像源（免安装 python 无全局 pip 配置，镜像通过命令行参数传入）
-// 安装wheel包
-// 策略：将所有 .whl 文件合并为一条 pip 命令批量安装，并加上 --no-deps。
-//
-// 为什么用 --no-deps：
-//   downloadToolChain.json 中的各个包版本（如 numpy 2.0.0 + scipy 1.10.1 +
-//   onnxruntime 1.16.0）在依赖元数据层面存在冲突（scipy 要求 numpy < 1.27，
-//   onnxruntime 要求 numpy < 2.0），但它们在二进制层面实际兼容、可正常运行。
-//   --no-deps 跳过 pip 的版本约束解析，直接解压安装提供的 .whl 文件，
-//   避免 "ResolutionImpossible" 错误。这是分发预选包集合时的标准做法。
-//
-// 关于 protobuf（onnx/onnxruntime/tensorflow 的传递依赖）：
-//   onnx 1.14.0 已将 protobuf 绑定编译进 wheel 内部，无需单独安装。
-//
-// .tar.gz 包（如 tkinter-embed）需要 --target 单独处理。
+/**
+ * 安装 Python 包。
+ *
+ * .whl 文件（wheel）本质上是 zip 文件，通过 PowerShell 直接解压到
+ * site-packages 目录，完全绕过 pip。这样可以避免：
+ *   - pip 的依赖版本冲突检查（ResolutionImpossible）
+ *   - pip 发起的网络请求（protobuf 等传递依赖的下载）
+ *   - 企业代理 407 问题
+ *   - pip.pyz 版本差异带来的各种行为不一致
+ *
+ * .tar.gz 包（tkinter-embed）仍用 pip.pyz + --no-deps + --target 安装，
+ * 因为它不是 zip 格式，无法直接解压到 site-packages。
+ */
 export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string): Promise<void> {
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
-        const pythonPath  = path.join(pythonDir, 'python.exe');
-        const pippyzPath  = path.join(downloadDir, 'pip.pyz');
         const childProcess = require('child_process');
+        const sitePackages = path.join(pythonDir, 'Lib', 'site-packages');
+        if (!fs.existsSync(sitePackages)) {
+            fs.mkdirSync(sitePackages, { recursive: true });
+        }
 
         const whlPaths = pipFilePaths.filter(p => p.endsWith('.whl'));
         const tarPaths = pipFilePaths.filter(p => p.includes('.tar.gz'));
 
-        // Step 1: 一次性批量安装所有 .whl 包，跳过版本约束检查（--no-deps）。
-        if (whlPaths.length > 0) {
-            progress.report({ message: `批量安装 ${whlPaths.length} 个 .whl 包...` });
-            const quotedPaths = whlPaths.map(p => `"${p}"`).join(' ');
-            const cmd = `"${pythonPath}" "${pippyzPath}" install --no-deps ${quotedPaths}`;
+        // Step 1: 将 .whl 逐个作为 zip 解压到 site-packages，不经过 pip。
+        for (const whlPath of whlPaths) {
+            const pkgName = path.basename(whlPath, '.whl').split('-')[0];
+            progress.report({ message: `解压 ${pkgName}...` });
+
+            const psScript = `
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$dest = '${sitePackages.replace(/\\/g, '\\\\')}'
+$zip  = [System.IO.Compression.ZipFile]::OpenRead('${whlPath.replace(/\\/g, '\\\\')}')
+foreach ($entry in $zip.Entries) {
+    if ($entry.FullName.EndsWith('/') -or $entry.FullName.EndsWith('\\\\')) { continue }
+    $target = [System.IO.Path]::Combine($dest, $entry.FullName)
+    $dir    = [System.IO.Path]::GetDirectoryName($target)
+    if (![System.IO.Directory]::Exists($dir)) { [System.IO.Directory]::CreateDirectory($dir) | Out-Null }
+    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+}
+$zip.Dispose()
+`.trim();
 
             await new Promise<void>((resolve, reject) => {
-                childProcess.exec(cmd, { maxBuffer: 100 * 1024 * 1024, timeout: 600000 }, (err: any, _stdout: string, stderr: string) => {
-                    if (err) {
-                        const detail = (stderr || err.message || '').trim();
-                        vscode.workspace.openTextDocument({ content: `批量安装 .whl 失败\n\n${detail}`, language: 'log' })
-                            .then(doc => vscode.window.showTextDocument(doc));
-                        reject(new Error(`批量安装 .whl 失败:\n${detail}`));
-                    } else {
-                        resolve();
-                    }
+                const proc = childProcess.spawn('powershell', ['-NoProfile', '-Command', psScript],
+                    { windowsHide: true });
+                let stderr = '';
+                proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+                proc.on('close', (code: number) => {
+                    if (code === 0) { resolve(); }
+                    else { reject(new Error(`解压 ${pkgName} 失败 (exit ${code}): ${stderr.trim()}`)); }
                 });
+                proc.on('error', reject);
             });
         }
 
-        // Step 2: 逐个安装 .tar.gz 包（需要 --target 参数）。
+        // Step 2: .tar.gz（tkinter-embed）用 pip.pyz + --no-deps + --target 安装。
         for (const packagePath of tarPaths) {
             const packageName = path.basename(packagePath, '.tar.gz');
             progress.report({ message: `安装 ${packageName}...` });
+            const pythonPath = path.join(pythonDir, 'python.exe');
+            const pippyzPath = path.join(downloadDir, 'pip.pyz');
             const cmd = `"${pythonPath}" "${pippyzPath}" install --target "${pythonDir}" --no-deps "${packagePath}"`;
 
             await new Promise<void>((resolve, reject) => {
                 childProcess.exec(cmd, { maxBuffer: 20 * 1024 * 1024, timeout: 120000 }, (err: any, _stdout: string, stderr: string) => {
                     if (err) {
-                        const detail = (stderr || err.message || '').trim();
-                        reject(new Error(`安装 ${packageName} 失败:\n${detail}`));
+                        reject(new Error(`安装 ${packageName} 失败:\n${(stderr || err.message || '').trim()}`));
                     } else {
                         resolve();
                     }
