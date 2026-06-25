@@ -25,11 +25,6 @@
       "type": "whl"
     },
     {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/20/9b/a4cc916bab46f64e56b85b090607a676f66b473e6b762e6f1d9d591eb2e8/protobuf-4.25.3-cp310-abi3-win_amd64.whl",
-      "name": "protobuf",
-      "type": "whl"
-    },
-    {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/a6/95/ce80f1180b27d6ef0cf65ea82abfea09d0c320f7cbecc36e0a78f20d7888/onnx-1.14.0-cp311-cp311-win_amd64.whl",
       "name": "onnx",
       "type": "whl"
