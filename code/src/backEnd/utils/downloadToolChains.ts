@@ -104,6 +104,30 @@ export function setIsDownloading(value: boolean): boolean {
     return isDownloading;
 }
 
+/**
+ * 检测清华 PyPI 镜像是否可达（超时 4 秒）。
+ * 内网环境下代理会拦截对清华源的访问，返回 false；外网可正常访问，返回 true。
+ */
+async function isTsinghuaReachable(): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+        const req = https.request(
+            {
+                hostname: 'pypi.tuna.tsinghua.edu.cn',
+                path: '/simple/',
+                method: 'HEAD',
+                timeout: 4000,
+                headers: getBrowserLikeHeaders(),
+            },
+            (res) => {
+                resolve((res.statusCode ?? 0) < 500);
+            }
+        );
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => { req.destroy(); resolve(false); });
+        req.end();
+    });
+}
+
 export async function downloadFileWithRetry(
     file: { url: string; name: string; type: string },
     saveDir: string,
@@ -700,13 +724,18 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
+        const useMirror = await isTsinghuaReachable();
+        vscode.window.showInformationMessage(
+            useMirror ? '检测到外网可用，使用清华源安装依赖' : '内网模式，不使用镜像源'
+        );
+
         return new Promise<void>((resolve, reject) => {
             const totalPackages = pipFilePaths.length;
             let installedCount = 0;
             // 记录成功和失败的包
             const successPackages: string[] = [];
             const failedPackages: string[] = [];
-            
+
             // 获取Python路径
             const pythonPath = path.join(pythonDir, 'python.exe');
             const pippyzPath = path.join(downloadDir, 'pip.pyz');
@@ -724,11 +753,11 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
                 
                 const packagePath = pipFilePaths[index];
                 let packageName = path.basename(packagePath, '.whl');
-                const mirror = '-i https://pypi.tuna.tsinghua.edu.cn/simple';
-                let command = `"${pythonPath}" ${pippyzPath} install "${packagePath}" ${mirror}`;
+                const mirrorFlag = useMirror ? '-i https://pypi.tuna.tsinghua.edu.cn/simple' : '';
+                let command = `"${pythonPath}" ${pippyzPath} install "${packagePath}" ${mirrorFlag}`;
                 if (packagePath.includes('.tar.gz')) {
                     packageName = path.basename(packagePath, '.tar.gz');
-                    command = `"${pythonPath}" ${pippyzPath} install --target "${pythonDir}" "${packagePath}" ${mirror}`;
+                    command = `"${pythonPath}" ${pippyzPath} install --target "${pythonDir}" "${packagePath}" ${mirrorFlag}`;
                 }
                 progress.report({ 
                     message: `安装 ${packageName} (${index + 1}/${totalPackages})`,
