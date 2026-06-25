@@ -105,28 +105,34 @@ export function setIsDownloading(value: boolean): boolean {
 }
 
 /**
- * 用 Python 的 urllib 测试清华 PyPI 是否可达（与 pip 使用完全相同的 HTTP 栈）。
- * Node.js 的 https 模块走 WinHTTP，能自动处理 NTLM 代理认证，结果不能代表 pip。
- * 用 Python 测试才能准确反映 pip 是否能访问到清华源。
+ * 用 Python urllib 测试清华 PyPI 是否可达，使用与 pip 相同的 HTTP 栈。
+ *
+ * 关键点：
+ *   - 免安装版 Python 没有内置 CA 证书，普通 HTTPS 请求会因 SSL 握手失败
+ *     而在内网/外网都报错，无法区分。
+ *   - 使用 ssl._create_unverified_context() 跳过证书验证：
+ *       外网：代理不拦截，连接清华源成功 → exit 0
+ *       内网：代理在 TCP 层返回 407，SSL 握手根本没机会进行 → 抛异常 → exit 1
+ *   - 这个跳过只用于连通性检测，实际 pip 安装时 pip.pyz 使用自带的 certifi，
+ *     安全性不受影响。
  */
 async function isTsinghuaReachable(pythonPath: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
         const childProcess = require('child_process');
         const script = [
-            'import urllib.request, sys',
+            'import urllib.request, ssl, sys',
+            'ctx = ssl._create_unverified_context()',
             'try:',
-            '    urllib.request.urlopen("https://pypi.tuna.tsinghua.edu.cn/simple/", timeout=4)',
+            '    urllib.request.urlopen("https://pypi.tuna.tsinghua.edu.cn/simple/", timeout=4, context=ctx)',
             '    sys.exit(0)',
             'except Exception:',
             '    sys.exit(1)',
-        ].join(';');
+        ].join('\n');
 
         const proc = childProcess.spawn(pythonPath, ['-c', script], { windowsHide: true });
         proc.on('close', (code: number) => resolve(code === 0));
         proc.on('error', () => resolve(false));
-
-        // 4 秒超时兜底（Python 内部 timeout 应先生效）
-        setTimeout(() => { try { proc.kill(); } catch { /* ignore */ } resolve(false); }, 5000);
+        setTimeout(() => { try { proc.kill(); } catch { /* ignore */ } resolve(false); }, 6000);
     });
 }
 
