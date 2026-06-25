@@ -105,26 +105,28 @@ export function setIsDownloading(value: boolean): boolean {
 }
 
 /**
- * 检测清华 PyPI 镜像是否可达（超时 4 秒）。
- * 内网环境下代理会拦截对清华源的访问，返回 false；外网可正常访问，返回 true。
+ * 用 Python 的 urllib 测试清华 PyPI 是否可达（与 pip 使用完全相同的 HTTP 栈）。
+ * Node.js 的 https 模块走 WinHTTP，能自动处理 NTLM 代理认证，结果不能代表 pip。
+ * 用 Python 测试才能准确反映 pip 是否能访问到清华源。
  */
-async function isTsinghuaReachable(): Promise<boolean> {
+async function isTsinghuaReachable(pythonPath: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-        const req = https.request(
-            {
-                hostname: 'pypi.tuna.tsinghua.edu.cn',
-                path: '/simple/',
-                method: 'HEAD',
-                timeout: 4000,
-                headers: getBrowserLikeHeaders(),
-            },
-            (res) => {
-                resolve((res.statusCode ?? 0) < 500);
-            }
-        );
-        req.on('error', () => resolve(false));
-        req.on('timeout', () => { req.destroy(); resolve(false); });
-        req.end();
+        const childProcess = require('child_process');
+        const script = [
+            'import urllib.request, sys',
+            'try:',
+            '    urllib.request.urlopen("https://pypi.tuna.tsinghua.edu.cn/simple/", timeout=4)',
+            '    sys.exit(0)',
+            'except Exception:',
+            '    sys.exit(1)',
+        ].join(';');
+
+        const proc = childProcess.spawn(pythonPath, ['-c', script], { windowsHide: true });
+        proc.on('close', (code: number) => resolve(code === 0));
+        proc.on('error', () => resolve(false));
+
+        // 4 秒超时兜底（Python 内部 timeout 应先生效）
+        setTimeout(() => { try { proc.kill(); } catch { /* ignore */ } resolve(false); }, 5000);
     });
 }
 
@@ -724,7 +726,8 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
-        const useMirror = await isTsinghuaReachable();
+        const pythonPath = path.join(pythonDir, 'python.exe');
+        const useMirror = await isTsinghuaReachable(pythonPath);
         vscode.window.showInformationMessage(
             useMirror ? '检测到外网可用，使用清华源安装依赖' : '内网模式，不使用镜像源'
         );
@@ -736,8 +739,6 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
             const successPackages: string[] = [];
             const failedPackages: string[] = [];
 
-            // 获取Python路径
-            const pythonPath = path.join(pythonDir, 'python.exe');
             const pippyzPath = path.join(downloadDir, 'pip.pyz');
             const installNextPackage = (index: number): void => {
                 if (index >= pipFilePaths.length) {
