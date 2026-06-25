@@ -20,12 +20,12 @@
       "type": "whl"
     },
     {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/cd/25/bcecc4974d09257ffcd1f098ee778f7834c3ad767fe5db785be9a4aa9cb2/numpy-1.26.4-cp311-cp311-win_amd64.whl",
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/3f/6b/5610004206cf7f8e7ad91c5a85a8c71b2f2f8051a0c0c4d5916b76d6cbb2/numpy-1.26.4-cp311-cp311-win_amd64.whl",
       "name": "numpy",
       "type": "whl"
     },
     {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/20/9b/a4cc916bab46f64e56b85b090607a676f66b473e6b762e6f1d9d591eb2e8/protobuf-4.25.3-cp310-abi3-win_amd64.whl",
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/ad/6e/1bed3b7c904cc178cb8ee8dbaf72934964452b3de95b7a63412591edb93c/protobuf-4.25.3-cp310-abi3-win_amd64.whl",
       "name": "protobuf",
       "type": "whl"
     },
@@ -80,7 +80,7 @@
       "type": "whl"
     },
     {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/00/06/0c5516a61e30c51936084ebc37091d116efe9ae74b2818cbd8b2006218e7/tensorflow-2.13.0-cp311-cp311-win_amd64.whl",
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9e/b8/ed5f794359d05cd0bffb894c6418da87b93016ee17b669d55c45d1bd5d5b/tensorflow-2.13.0-cp311-cp311-win_amd64.whl",
       "name": "tensorflow",
       "type": "whl"
     },
