@@ -647,7 +647,7 @@ export class Command {
         } else {
           // 3322 and others: exeom + dbg files on disk.
           const exeomFile = path.join(localDir, 'convert.exeom');
-          const dbgFile   = path.join(localDir, 'convert.dbg');
+          const dbgFile = path.join(localDir, 'convert.dbg');
           fileData = {
             type: 'fileSize',
             exeomSize: this.getFileSizeInKB(exeomFile),
@@ -1039,8 +1039,8 @@ export class Command {
   // ── 1156e: skip source-selection dialog, do connection health check instead ──
 
   static async newModelFor1156e(target: string): Promise<void> {
-    const source    = GlobalModel.instance.source;
-    const watcher   = RemoteHeartbeatWatcher.getInstance();
+    const source = GlobalModel.instance.source;
+    const watcher = RemoteHeartbeatWatcher.getInstance();
 
     if (source === 'linux') {
       const rbPath = path.join(common.getWorkFolderPath(), '.vscode', 'remote-build.json');
@@ -1167,7 +1167,7 @@ export class Command {
   static async filePickerSelectModelUnified(source: Source): Promise<void> {
     const target = extension.chipConfigPanel?.target;
     const chipName = GlobalModel.instance.chipName;
-    if (!target || !chipName) { return; }
+    if (!chipName || (target !== 'NPU' && target !== 'CPU')) { return; }
 
     let selectedPath = ''; // selected path for pipeline. On Linux: remote home, on wsl : linux path.
     let pickedFsPath: string | undefined; // wsl: windows/unc path for fs.stat/copy
@@ -1343,7 +1343,7 @@ export class Command {
 
       if (source === 'linux') {
         const remoteHome = GlobalModel.instance?.remoteHome;
-        if (!remoteHome || (target !== 'NPU' && target !== 'CPU')) { return; } // unlikely
+        if (!remoteHome) { return; } // unlikely
 
         const rootDir = remoteRootDir;
         await this.uploadScripts('NPU', 'model_select', rootDir);
@@ -1388,6 +1388,7 @@ export class Command {
         const wslPython = await this.getWSLPython(distro);
         const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} `
           + `--model ${common.shQuote(modelLinuxForRun)} `
+          + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `
           + `--output_path ${common.shQuote(parsedJsonWsl)}`;
         this.outputLogger.handleLogInfo(`Start running: ${parseCmd}\n`, 'info');
         const ret = await common.exeRunner({
@@ -1474,7 +1475,7 @@ export class Command {
 
     // All done. Notify front end.
     const skipQuantize = (is1156e || isPrecompiled) ? true : undefined;
-    const skipConvert  = isPrecompiled ? true : undefined;
+    const skipConvert = isPrecompiled ? true : undefined;
     extension.chipConfigPanel?.postMessage({ type: 'AllDone', params: { source, skipQuantize, skipConvert } });
   }
 
@@ -2501,7 +2502,7 @@ export class Command {
     extension.chipConfigPanel?.postMessage({ type: 'Source', params: { source: 'windows' } });
     if (mode === 'core') {
       const skipQuantize = GlobalModel.instance.soc === '1156e' || extension.mockLocalStorage?.getItem('skipQuantize') ? true : undefined;
-      const skipConvert  = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
+      const skipConvert = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
       const msg: Message = { type: 'AllDone', params: { source: 'windows', skipQuantize, skipConvert } };
       extension.chipConfigPanel?.postMessage(msg);
     }
@@ -2596,7 +2597,7 @@ export class Command {
       await this.newModelSetup();
     } else if (type === 'core') {
       const skipQuantize = GlobalModel.instance.soc === '1156e' || extension.mockLocalStorage?.getItem('skipQuantize') ? true : undefined;
-      const skipConvert  = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
+      const skipConvert = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
       connectedMsg = { type: 'AllDone', params: { source: 'linux', skipQuantize, skipConvert } };
     } else {
       this.logAndReportError('Unknown type when connecting to server.');
@@ -2673,7 +2674,7 @@ export class Command {
 
     GlobalModel.instance.wslDistro = distro; // set global wsldistro before notifying front end.
     const skipQuantize = GlobalModel.instance.soc === '1156e' || extension.mockLocalStorage?.getItem('skipQuantize') ? true : undefined;
-    const skipConvert  = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
+    const skipConvert = extension.mockLocalStorage?.getItem('skipConvert') ? true : undefined;
     const msg: Message = mode === 'newmodel'
       ? { type: 'WSLReady' }
       : { type: 'AllDone', params: { source: 'wsl', skipQuantize, skipConvert } };
@@ -2686,10 +2687,10 @@ export class Command {
     const workFolder = path.join(GlobalModel.instance.hiprojDir!, 'aicache', data.name, 'history');
     if (!fs.existsSync(workFolder)) { return this.NAV.AT_COMPRESS; }
 
-    const quantData   = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
+    const quantData = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
     const convertData = this.getModelStatusHistoryFilePath(workFolder, 'convert');
-    const deployData  = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
-    const benchData   = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
+    const deployData = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
+    const benchData = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
 
     if (!quantData.length) {
       this.clearConfig();
@@ -2791,7 +2792,7 @@ export class Command {
 
     // cpuValue[4] = validation_labels_cpu select (defaultValue = 'None' | 'Choose from File System')
     // cpuValue[5] = val_out_cpu file picker (content = actual .csv path chosen by user)
-    const validationLabelSel  = cpuValue[4]?.defaultValue ?? 'None';
+    const validationLabelSel = cpuValue[4]?.defaultValue ?? 'None';
     const validationLabelPath = validationLabelSel === 'Choose from File System'
       ? (String(cpuValue[5]?.content ?? '').trim())
       : '';
@@ -2914,13 +2915,13 @@ export class Command {
     // Key-based lookup — independent of insertion order.
     const byKey = (k: string): any => qatItems.find((item: any) => item.key === k);
     let networkStructure = byKey('network_structure')?.content;
-    let retrainInputs    = byKey('retrain_inputs')?.content;
+    let retrainInputs = byKey('retrain_inputs')?.content;
     let validationInputs = byKey('validation_inputs')?.content;
-    let retrainOutputs   = byKey('retrain_output')?.content;
+    let retrainOutputs = byKey('retrain_output')?.content;
     let validationOutput = byKey('valid_output')?.content;
-    const epochNum       = Number(byKey('epoch_num')?.content);
-    const batchSize      = Number(byKey('batch_size')?.content);
-    const learningRate   = Number(byKey('learning_rate')?.content);
+    const epochNum = Number(byKey('epoch_num')?.content);
+    const batchSize = Number(byKey('batch_size')?.content);
+    const learningRate = Number(byKey('learning_rate')?.content);
 
     if (source === 'wsl') {
       try {
@@ -3321,6 +3322,10 @@ export class Command {
   static async postCompression(ctx: QuantContext): Promise<void> {
     if (ctx.isCPU) { return; }
 
+    const target = extension.chipConfigPanel?.target;
+    const chipName = GlobalModel.instance.chipName;
+    if (!chipName || (target !== 'NPU' && target !== 'CPU')) { return; }
+
     const remoteDir = ctx.linuxCacheRoot;
     const localDir = ctx.paths.localOutputDir;
     const model = ctx.selectedFile;
@@ -3366,7 +3371,10 @@ export class Command {
 
       // Run parse.py
       const wslPython = await this.getWSLPython(distro);
-      const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} ` + `--model ${common.shQuote(fakeOnnxPathWsl)} ` + `--output_path ${common.shQuote(localModelPathWsl)}`;
+      const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} `
+        + `--model ${common.shQuote(fakeOnnxPathWsl)} `
+        + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `
+        + `--output_path ${common.shQuote(localModelPathWsl)}`;
       const ret = await common.exeRunner({ exe: 'wsl.exe', args: ['-d', distro, '--', 'bash', '-lc', parseCmd], mode: 'utf8', logger: this.outputLogger, python: true });
       if (ret.code !== 0) { throw new Error(`Post compression failed when analyzing .onnx file, exit code ${ret.code}`); }
     } else {
@@ -3377,8 +3385,9 @@ export class Command {
       await this.uploadScripts('NPU', folder, rootDir);
 
       const baseCmd = `cd ${remoteHome}/${rootDir}/ && `;
-      const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` +
-        `--model ${fakeOnnxPath} --output_path .cache/ai/parsedModel/parsedModel.json`;
+      const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py `
+        + `--model ${fakeOnnxPath} --output_path .cache/ai/parsedModel/parsedModel.json`
+        + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `;
 
       // Run parse.py
       let retValue: { exitCode: number; stdout: string; stderr: string };
@@ -3816,11 +3825,11 @@ export class Command {
   // ─── Navigator status constants ──────────────────────────────────────────
   // Step order: SelectModel | Quantize | Convert | Deploy | Benchmark
   private static readonly NAV = {
-    AT_COMPRESS:   ['finish', 'process', 'wait',    'wait',    'wait'   ],
-    AT_CONVERT:    ['finish', 'finish',  'process', 'wait',    'wait'   ],
-    AT_DEPLOY:     ['finish', 'finish',  'finish',  'process', 'wait'   ],
-    AT_BENCHMARK:  ['finish', 'finish',  'finish',  'finish',  'wait'   ],
-    DONE:          ['finish', 'finish',  'finish',  'finish',  'finish' ],
+    AT_COMPRESS: ['finish', 'process', 'wait', 'wait', 'wait'],
+    AT_CONVERT: ['finish', 'finish', 'process', 'wait', 'wait'],
+    AT_DEPLOY: ['finish', 'finish', 'finish', 'process', 'wait'],
+    AT_BENCHMARK: ['finish', 'finish', 'finish', 'finish', 'wait'],
+    DONE: ['finish', 'finish', 'finish', 'finish', 'finish'],
   } as const;
 
   /**
@@ -3833,7 +3842,7 @@ export class Command {
     benchmark: any[],
   ): readonly string[] {
     if (benchmark.some((i: any) => i.convertUUId === convertTime)) { return this.NAV.DONE; }
-    if (deploy.some((i: any) => i.convertUUId === convertTime))    { return this.NAV.AT_BENCHMARK; }
+    if (deploy.some((i: any) => i.convertUUId === convertTime)) { return this.NAV.AT_BENCHMARK; }
     return this.NAV.AT_DEPLOY;
   }
 
@@ -3842,11 +3851,11 @@ export class Command {
     const historyRootDir = GlobalModel.instance.aiCacheDir;
     if (!historyRootDir) { return this.NAV.AT_COMPRESS; }
 
-    const workFolder  = path.join(historyRootDir, 'history');
-    const quantData   = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
+    const workFolder = path.join(historyRootDir, 'history');
+    const quantData = this.getModelStatusHistoryFilePath(workFolder, 'quantize');
     const convertData = this.getModelStatusHistoryFilePath(workFolder, 'convert');
-    const deployData  = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
-    const benchData   = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
+    const deployData = this.getModelStatusHistoryFilePath(workFolder, 'deploy');
+    const benchData = this.getModelStatusHistoryFilePath(workFolder, 'benchmark');
 
     if (page === 'lastQuantTS') {
       const linked = convertData.filter((i: any) => i.quantUUId === timeStamp);
@@ -4085,30 +4094,30 @@ export class Command {
       const tgt = target.toLowerCase();
 
       if (!extension.mockLocalStorage?.getItem('compressionData') ||
-          common.parseArray(extension.mockLocalStorage.getItem('compressionData')).length === 0) {
+        common.parseArray(extension.mockLocalStorage.getItem('compressionData')).length === 0) {
         const compDefaults = tgt === 'cpu'
           ? [
-              { target: 'cpu', page: 'quant', kind: 'input',  group: 'Quantization', key: 'batch_num',        title: 'batch_num',             content: '1',           defaultValue: '1',           disabled: false },
-              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'validation_cpu',   title: 'Validation',             content: ['NONE','FILE'], defaultValue: 'NONE',       disabled: false },
-              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'bit_num_cpu',      title: 'Quantized Data Type',    content: ['int8'],        defaultValue: 'int8',       disabled: false },
-              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'quant_type',       title: 'Quant Type',             content: ['FULL_QUANT'],  defaultValue: 'FULL_QUANT', disabled: false },
-              { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'validation_labels_cpu', title: 'Validation Labels', content: ['None','Choose from File System'], defaultValue: 'None', disabled: false },
-              { target: 'cpu', page: 'quant', kind: 'file',   group: 'Quantization', key: 'val_out_cpu',      title: '',                       content: ' ',            defaultValue: ' ',          disabled: false, folder: false },
-            ]
+            { target: 'cpu', page: 'quant', kind: 'input', group: 'Quantization', key: 'batch_num', title: 'batch_num', content: '1', defaultValue: '1', disabled: false },
+            { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'validation_cpu', title: 'Validation', content: ['NONE', 'FILE'], defaultValue: 'NONE', disabled: false },
+            { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'bit_num_cpu', title: 'Quantized Data Type', content: ['int8'], defaultValue: 'int8', disabled: false },
+            { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'quant_type', title: 'Quant Type', content: ['FULL_QUANT'], defaultValue: 'FULL_QUANT', disabled: false },
+            { target: 'cpu', page: 'quant', kind: 'select', group: 'Quantization', key: 'validation_labels_cpu', title: 'Validation Labels', content: ['None', 'Choose from File System'], defaultValue: 'None', disabled: false },
+            { target: 'cpu', page: 'quant', kind: 'file', group: 'Quantization', key: 'val_out_cpu', title: '', content: ' ', defaultValue: ' ', disabled: false, folder: false },
+          ]
           : [
-              { target: 'npu', page: 'quant', type: 'ptq', kind: 'input',  group: 'Quantization', key: 'batch_num',          title: 'batch_num',          content: '1',              defaultValue: '1',        disabled: false },
-              { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'validation_npu',     title: 'Validation',         content: ['NONE','FILE'],  defaultValue: 'NONE',     disabled: false },
-              { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'bit_num_npu',        title: 'Quantized Data Type',content: ['int8','int16'], defaultValue: 'int8',     disabled: false },
-              { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'validation_labels_npu', title: 'Validation Labels', content: ['None','Choose from File System'], defaultValue: 'None', disabled: false },
-              { target: 'npu', page: 'quant', type: 'ptq', kind: 'file',   group: 'Quantization', key: 'vi2_file',           title: '',                   content: ' ',              defaultValue: ' ',        disabled: false, folder: false },
-              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'retrain_code',       title: 'Train Code',         content: 'import this',   defaultValue: 'import this', disabled: true  },
-              { target: 'npu', page: 'quant', type: 'qat', kind: 'select', group: 'Quantization', key: 'config_file',        title: 'Config File',        content: ['Default','Custom'], defaultValue: 'Default', disabled: false },
-              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'epoch_num',          title: 'Epoch Num',          content: '1',              defaultValue: '1',        disabled: false },
-              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'batch_size',         title: 'Batch Size',         content: '4',              defaultValue: '4',        disabled: false },
-              { target: 'npu', page: 'quant', type: 'qat', kind: 'input',  group: 'Quantization', key: 'learning_rate',      title: 'Learning Rate',      content: '0.00001',        defaultValue: '0.00001',  disabled: false },
-            ];
+            { target: 'npu', page: 'quant', type: 'ptq', kind: 'input', group: 'Quantization', key: 'batch_num', title: 'batch_num', content: '1', defaultValue: '1', disabled: false },
+            { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'validation_npu', title: 'Validation', content: ['NONE', 'FILE'], defaultValue: 'NONE', disabled: false },
+            { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'bit_num_npu', title: 'Quantized Data Type', content: ['int8', 'int16'], defaultValue: 'int8', disabled: false },
+            { target: 'npu', page: 'quant', type: 'ptq', kind: 'select', group: 'Quantization', key: 'validation_labels_npu', title: 'Validation Labels', content: ['None', 'Choose from File System'], defaultValue: 'None', disabled: false },
+            { target: 'npu', page: 'quant', type: 'ptq', kind: 'file', group: 'Quantization', key: 'vi2_file', title: '', content: ' ', defaultValue: ' ', disabled: false, folder: false },
+            { target: 'npu', page: 'quant', type: 'qat', kind: 'input', group: 'Quantization', key: 'retrain_code', title: 'Train Code', content: 'import this', defaultValue: 'import this', disabled: true },
+            { target: 'npu', page: 'quant', type: 'qat', kind: 'select', group: 'Quantization', key: 'config_file', title: 'Config File', content: ['Default', 'Custom'], defaultValue: 'Default', disabled: false },
+            { target: 'npu', page: 'quant', type: 'qat', kind: 'input', group: 'Quantization', key: 'epoch_num', title: 'Epoch Num', content: '1', defaultValue: '1', disabled: false },
+            { target: 'npu', page: 'quant', type: 'qat', kind: 'input', group: 'Quantization', key: 'batch_size', title: 'Batch Size', content: '4', defaultValue: '4', disabled: false },
+            { target: 'npu', page: 'quant', type: 'qat', kind: 'input', group: 'Quantization', key: 'learning_rate', title: 'Learning Rate', content: '0.00001', defaultValue: '0.00001', disabled: false },
+          ];
         extension.mockLocalStorage?.setItem('compressionData', compDefaults);
-        extension.mockLocalStorage?.setItem('compDataBackup',  compDefaults);
+        extension.mockLocalStorage?.setItem('compDataBackup', compDefaults);
       }
 
       // Output_Type is NPU-only (QuantizeConfig.txt had target:'npu').
@@ -4118,14 +4127,14 @@ export class Command {
       // (length=1 is odd, nodeNum=0, no-op loop, but avoids the "convertData not
       //  exists" error when a model is first loaded).
       if (tgt !== 'cpu' &&
-          (!extension.mockLocalStorage?.getItem('convertData') ||
-           common.parseArray(extension.mockLocalStorage.getItem('convertData')).length === 0)) {
+        (!extension.mockLocalStorage?.getItem('convertData') ||
+          common.parseArray(extension.mockLocalStorage.getItem('convertData')).length === 0)) {
         const convDefaults = [{
           target: 'npu', page: 'convert', kind: 'select', group: 'Convert',
           key: 'Output_Type', title: 'Output Type',
           content: ['float16', 'uint8', 'int8'], defaultValue: 'float16', disabled: false,
         }];
-        extension.mockLocalStorage?.setItem('convertData',    convDefaults);
+        extension.mockLocalStorage?.setItem('convertData', convDefaults);
         extension.mockLocalStorage?.setItem('convDataBackup', convDefaults);
       }
 
@@ -4134,8 +4143,8 @@ export class Command {
 
       const config = [
         { key: 'compressionData', value: compConfigArr },
-        { key: 'convertData',     value: convConfigArr },
-        { key: 'chipName',        value: GlobalModel.instance.chipName ?? '' },
+        { key: 'convertData', value: convConfigArr },
+        { key: 'chipName', value: GlobalModel.instance.chipName ?? '' },
       ];
       const frontEndConfigCallbackMessage: ConfigMessage = {
         method: ApiMethod.SAVE_CONFIG_CALLBACK,
@@ -5233,7 +5242,7 @@ export class Command {
     const hiprojContent = ini.parse(fs.readFileSync(hiprojPath, 'utf-8'));
     return {
       remoteSdkPath: String(hiprojContent?.information?.remote_sdk_path ?? ''),
-      localSdkPath:  String(hiprojContent?.information?.sdk_path ?? ''),
+      localSdkPath: String(hiprojContent?.information?.sdk_path ?? ''),
     };
   }
 
@@ -5254,9 +5263,9 @@ export class Command {
     const { remoteSdkPath } = this.read1156eSdkPath();
     if (!remoteSdkPath) { throw new Error('Remote SDK path not found in .hiproj.'); }
 
-    const installScriptLocal  = path.join(__dirname, '../resources/install_deps.sh');
+    const installScriptLocal = path.join(__dirname, '../resources/install_deps.sh');
     const installScriptRemote = `${remoteHome}/hispark_install_deps.sh`;
-    const remoteImagesDir     = `${remoteSdkPath}/output/tiangong2_cmcc_hgu_release/images`;
+    const remoteImagesDir = `${remoteSdkPath}/output/tiangong2_cmcc_hgu_release/images`;
 
     type R = { exitCode: number; stdout: string; stderr: string };
     let ret: R;
@@ -5280,7 +5289,7 @@ export class Command {
 
     // Step 3: verify output files, then download the fwpkg for flashing.
     const localImagesDir = this.prepareDeployDir();
-    const fwpkgRelPath  = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
     const fwpkgFileName = path.basename(fwpkgRelPath);
 
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Verifying build outputs...' } });
@@ -5355,9 +5364,9 @@ export class Command {
 
     // Step 3: verify output files, then copy the fwpkg for flashing.
     const localImagesDir = this.prepareDeployDir();
-    const fwpkgRelPath  = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
     const fwpkgFileName = path.basename(fwpkgRelPath);
-    const winImagesDir  = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
+    const winImagesDir = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
 
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Verifying build outputs...' } });
     for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
@@ -5430,21 +5439,21 @@ export class Command {
 
   static async startFlashing(message: any): Promise<void> {
     const {
-      port       = '',
-      baudRate   = '',
+      port = '',
+      baudRate = '',
       target,
-      chipName:  rawChipName,
-      ipAddr     = '',
-      ipAddress  = '',
+      chipName: rawChipName,
+      ipAddr = '',
+      ipAddress = '',
       subnetMask = '',
-      gateway    = '',
-      eraseTags  = [] as string[],
+      gateway = '',
+      eraseTags = [] as string[],
       emptyFlash = false,
     } = message.params ?? {};
 
-    const isCPU    = target === 'CPU';
+    const isCPU = target === 'CPU';
     const chipName = (rawChipName || (isCPU ? 'ws63' : '3322')) as ChipName;
-    const chip     = CHIP_CONFIG[chipName];
+    const chip = CHIP_CONFIG[chipName];
     if (!chip) {
       extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: `Unknown chip: ${chipName}` } });
       return;
@@ -5458,8 +5467,8 @@ export class Command {
     // Resolve bin_path: ws63/3322 use the SDK-relative fwpkg; 1156e uses the locally cached fwpkg.
     let binPath: string;
     if (chipName === '1156e') {
-      const aiCacheDir  = GlobalModel.instance.aiCacheDir;
-      const fwpkgName   = path.basename(chip.fwpkgRelPath);
+      const aiCacheDir = GlobalModel.instance.aiCacheDir;
+      const fwpkgName = path.basename(chip.fwpkgRelPath);
       binPath = aiCacheDir ? path.join(aiCacheDir, 'Deploy', 'images', fwpkgName) : '';
       if (!binPath || !fs.existsSync(binPath)) {
         extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Check if SDK is compiled.' } });
@@ -5485,23 +5494,23 @@ export class Command {
     if (!parsedContent.upload) { parsedContent.upload = {}; }
     const up = parsedContent.upload;
 
-    up.bin_path  = binPath;
-    up.protocol  = 'serial';
-    up.port      = port;
-    up.baud      = baudRate;
+    up.bin_path = binPath;
+    up.protocol = 'serial';
+    up.port = port;
+    up.baud = baudRate;
 
     if (chipName === '1156e') {
-      up.localip     = ipAddr;
-      up.ipaddr      = ipAddress;
-      up.subnetmask  = subnetMask;
-      up.gateway     = gateway;
+      up.localip = ipAddr;
+      up.ipaddr = ipAddress;
+      up.subnetmask = subnetMask;
+      up.gateway = gateway;
       up.eraseconfig = Array.isArray(eraseTags) ? eraseTags.join(',') : '';
-      up.emptyflash  = emptyFlash ? 'true' : 'false';
+      up.emptyflash = emptyFlash ? 'true' : 'false';
     }
 
     fs.writeFileSync(activeHiprojPath, ini.stringify(parsedContent), 'utf-8');
 
-    const flashCmd     = 'portionOfBurn';
+    const flashCmd = 'portionOfBurn';
     const availableCmds = await vscode.commands.getCommands(true);
     if (availableCmds.includes(flashCmd)) {
       try {
@@ -5788,8 +5797,8 @@ export class Command {
       } else {
         // Fallback: detect output files on disk (backward-compatible).
         const exeomFile = path.join(convertDir, 'convert.exeom');
-        const dbgFile   = path.join(convertDir, 'convert.dbg');
-        const dirFiles  = fs.readdirSync(convertDir);
+        const dbgFile = path.join(convertDir, 'convert.dbg');
+        const dirFiles = fs.readdirSync(convertDir);
         const omFileName = dirFiles.find(f => path.extname(f).toLowerCase() === '.om');
 
         if (fs.existsSync(exeomFile) && fs.existsSync(dbgFile)) {
@@ -6068,12 +6077,12 @@ export class Command {
     }
     if (project.path && fs.existsSync(project.path)) {
       const hiprojPath = project.path;
-      const hiprojDir2  = path.dirname(hiprojPath);
-      const projName2   = path.basename(hiprojDir2).replace(/_hiproj$/, '');
-      const projPath2   = path.dirname(hiprojDir2);
-      const wsFile      = path.join(projPath2, `${projName2}.code-workspace`);
+      const hiprojDir2 = path.dirname(hiprojPath);
+      const projName2 = path.basename(hiprojDir2).replace(/_hiproj$/, '');
+      const projPath2 = path.dirname(hiprojDir2);
+      const wsFile = path.join(projPath2, `${projName2}.code-workspace`);
 
-      const content    = fs.readFileSync(hiprojPath, 'utf-8');
+      const content = fs.readFileSync(hiprojPath, 'utf-8');
       const parsedData = ini.parse(content);
       // Prefer the workspace file (multi-root with hiproj+sdk); fall back to sdk_path
       // for legacy projects created before workspace-file support was added.
@@ -6443,7 +6452,7 @@ export class Command {
     const rootDir = remoteRootDir;
     const paths = this.paramsConfig(historyRootDir, remoteHome, 'quant');
 
-    const chip     = GlobalModel.instance.soc ?? '';
+    const chip = GlobalModel.instance.soc ?? '';
     const platform = this.getPlatform(chip, target);
 
     return {
@@ -6485,7 +6494,7 @@ export class Command {
     const rootDir = remoteRootDir;
     const paths = this.paramsConfig(historyRootDir, remoteHome, 'convert');
 
-    const chip     = GlobalModel.instance.soc ?? '';
+    const chip = GlobalModel.instance.soc ?? '';
     const platform = this.getPlatform(chip, target);
 
     return {
