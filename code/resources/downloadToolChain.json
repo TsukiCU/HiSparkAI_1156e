@@ -30,6 +30,11 @@
       "type": "whl"
     },
     {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl",
+      "name": "typing_extensions",
+      "type": "whl"
+    },
+    {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/a6/95/ce80f1180b27d6ef0cf65ea82abfea09d0c320f7cbecc36e0a78f20d7888/onnx-1.14.0-cp311-cp311-win_amd64.whl",
       "name": "onnx",
       "type": "whl"
