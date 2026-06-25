@@ -173,6 +173,20 @@ export async function downloadFileWithRetry(
                             token
                         );
                     }
+
+                    // 校验 .whl 文件合法性：
+                    // 有效的 wheel 至少数十 KB；若只有几 KB，说明服务器返回的是
+                    // 错误页面（HTML）而非真实文件，必须删掉并报错。
+                    if (file.type === 'whl') {
+                        const downloadedSize = fs.statSync(saveFilePath).size;
+                        if (downloadedSize < 10 * 1024) {
+                            fs.unlinkSync(saveFilePath);
+                            throw new Error(
+                                `${file.name} 下载内容无效（仅 ${downloadedSize} bytes），` +
+                                `URL 对应的文件在该镜像源不存在或已失效，请检查 downloadToolChain.json 中的 URL。`
+                            );
+                        }
+                    }
                 }
             );
             return;

@@ -85,11 +85,6 @@
       "type": "whl"
     },
     {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9e/b8/ed5f794359d05cd0bffb894c6418da87b93016ee17b669d55c45d1bd5d5b/tensorflow-2.13.0-cp311-cp311-win_amd64.whl",
-      "name": "tensorflow",
-      "type": "whl"
-    },
-    {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/65/76/903324159e4a3566e518c558aeb21571d642f781d842d8dd0fd9c6b0645a/scipy-1.10.1-cp311-cp311-win_amd64.whl",
       "name": "scipy",
       "type": "whl"
