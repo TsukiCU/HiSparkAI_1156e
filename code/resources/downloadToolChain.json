@@ -20,6 +20,11 @@
         "type": "whl"
     },
     {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9b/0f/022ca4783b6e6239a53b988a4d315d67f9ae7126227fb2255054a558bd72/numpy-2.0.0-cp311-cp311-win_amd64.whl",
+      "name": "numpy",
+      "type": "whl"
+    },
+    {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/a6/95/ce80f1180b27d6ef0cf65ea82abfea09d0c320f7cbecc36e0a78f20d7888/onnx-1.14.0-cp311-cp311-win_amd64.whl",
       "name": "onnx",
       "type": "whl"
@@ -62,11 +67,6 @@
     {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/8e/59/712db1d7040520de7a4965df15b774348980e6df45c129b8c64d0dbe74ef/pandas-2.3.3-cp311-cp311-win_amd64.whl",
       "name": "pandas",
-      "type": "whl"
-    },
-    {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9b/0f/022ca4783b6e6239a53b988a4d315d67f9ae7126227fb2255054a558bd72/numpy-2.0.0-cp311-cp311-win_amd64.whl",
-      "name": "numpy",
       "type": "whl"
     },
     {

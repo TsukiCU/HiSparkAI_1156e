@@ -693,94 +693,67 @@ exit /b 0
     });
 }
 
+// pip 清华镜像源（免安装 python 无全局 pip 配置，镜像通过命令行参数传入）
+const PIP_MIRROR = 'https://pypi.tuna.tsinghua.edu.cn/simple';
+
 // 安装wheel包
+// 策略：将所有 .whl 文件合并为一条 pip 命令批量安装。
+// pip 会对整批依赖做整体解析，自动推导正确的安装顺序，
+// 避免因 JSON 里包的先后顺序导致依赖未满足的问题。
+// 如果本地 .whl 列表不包含某个传递依赖，pip 会自动从清华源补充下载。
+// .tar.gz 包（如 tkinter-embed）需要 --target 单独处理。
 export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string): Promise<void> {
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
-        return new Promise<void>((resolve, reject) => {
-            const totalPackages = pipFilePaths.length;
-            let installedCount = 0;
-            // 记录成功和失败的包
-            const successPackages: string[] = [];
-            const failedPackages: string[] = [];
-            
-            // 获取Python路径
-            const pythonPath = path.join(pythonDir, 'python.exe');
-            const pippyzPath = path.join(downloadDir, 'pip.pyz');
-            const installNextPackage = (index: number): void => {
-                if (index >= pipFilePaths.length) {
-                    // 显示安装总结
-                    showInstallationSummary(successPackages, failedPackages);
-                    if (failedPackages.length !== 0) {
-                        reject(new Error(``));
-                        return;
-                    }
-                    resolve();
-                    return;
-                }
-                
-                const packagePath = pipFilePaths[index];
-                let packageName = path.basename(packagePath, '.whl');
-                let command = `"${pythonPath}" ${pippyzPath} install "${packagePath}"`;
-                if (packagePath.includes('.tar.gz')) {
-                    packageName = path.basename(packagePath, '.tar.gz');
-                    command = `"${pythonPath}" ${pippyzPath} install --target "${pythonDir}" "${packagePath}"`;
-                }
-                progress.report({ 
-                    message: `安装 ${packageName} (${index + 1}/${totalPackages})`,
-                    increment: (1 / totalPackages) * 100,
-                });
-                
-                // 使用exec而不是spawn，并用引号包裹路径
-                const childProcess = require('child_process');
-                
-                childProcess.exec(command, (error: any, stdout: string, stderr: string) => {
-                    if (error) {
-                        failedPackages.push(packageName);
-                        
-                        // 显示详细错误信息
-                        const detailOutput = 
-                            `安装 ${packageName} 失败\n\n` +
-                            `错误信息:\n${error.message}\n\n` +
-                            `标准错误:\n${stderr}\n\n` +
-                            `标准输出:\n${stdout}\n\n` +
-                            `命令:\n${command}`;
-                        
-                        vscode.workspace.openTextDocument({
-                            content: detailOutput,
-                            language: 'log',
-                        }).then(doc => {
-                            vscode.window.showTextDocument(doc);
-                        });
-                        
-                        // 询问用户是否继续
-                        vscode.window.showInformationMessage(
-                            `安装 ${packageName} 失败，是否继续?`, 
-                            '重试', '跳过', '中止',
-                        ).then(choice => {
-                            if (choice === '重试') {
-                                installNextPackage(index);
-                            } else if (choice === '跳过') {
-                                installNextPackage(index + 1);
-                            } else {
-                                showInstallationSummary(successPackages, failedPackages);
-                                reject(new Error(`用户中止安装: ${packageName}`));
-                            }
-                        });
+        const pythonPath  = path.join(pythonDir, 'python.exe');
+        const pippyzPath  = path.join(downloadDir, 'pip.pyz');
+        const childProcess = require('child_process');
+
+        const whlPaths = pipFilePaths.filter(p => p.endsWith('.whl'));
+        const tarPaths = pipFilePaths.filter(p => p.includes('.tar.gz'));
+
+        // Step 1: 一次性批量安装所有 .whl 包（pip 自动解析依赖顺序）
+        if (whlPaths.length > 0) {
+            progress.report({ message: `批量安装 ${whlPaths.length} 个 .whl 包...` });
+            const quotedPaths = whlPaths.map(p => `"${p}"`).join(' ');
+            const cmd = `"${pythonPath}" "${pippyzPath}" install ${quotedPaths} -i ${PIP_MIRROR}`;
+
+            await new Promise<void>((resolve, reject) => {
+                childProcess.exec(cmd, { maxBuffer: 100 * 1024 * 1024, timeout: 600000 }, (err: any, _stdout: string, stderr: string) => {
+                    if (err) {
+                        const detail = (stderr || err.message || '').trim();
+                        vscode.workspace.openTextDocument({ content: `批量安装 .whl 失败\n\n${detail}`, language: 'log' })
+                            .then(doc => vscode.window.showTextDocument(doc));
+                        reject(new Error(`批量安装 .whl 失败:\n${detail}`));
                     } else {
-                        successPackages.push(packageName);
-                        installedCount++;                          
-                        installNextPackage(index + 1);
+                        resolve();
                     }
                 });
-            };
-            
-            // 开始安装第一个包
-            installNextPackage(0);
-        });
+            });
+        }
+
+        // Step 2: 逐个安装 .tar.gz 包（需要 --target 参数）
+        for (const packagePath of tarPaths) {
+            const packageName = path.basename(packagePath, '.tar.gz');
+            progress.report({ message: `安装 ${packageName}...` });
+            const cmd = `"${pythonPath}" "${pippyzPath}" install --target "${pythonDir}" "${packagePath}" -i ${PIP_MIRROR}`;
+
+            await new Promise<void>((resolve, reject) => {
+                childProcess.exec(cmd, { maxBuffer: 20 * 1024 * 1024, timeout: 120000 }, (err: any, _stdout: string, stderr: string) => {
+                    if (err) {
+                        const detail = (stderr || err.message || '').trim();
+                        reject(new Error(`安装 ${packageName} 失败:\n${detail}`));
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+        }
+
+        showInstallationSummary(pipFilePaths.map(p => path.basename(p)), []);
     });
 }
 
