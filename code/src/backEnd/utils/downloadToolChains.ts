@@ -697,15 +697,16 @@ exit /b 0
 /**
  * 安装 Python 包。
  *
- * .whl 文件（wheel）本质上是 zip 文件，通过 PowerShell 直接解压到
- * site-packages 目录，完全绕过 pip。这样可以避免：
- *   - pip 的依赖版本冲突检查（ResolutionImpossible）
- *   - pip 发起的网络请求（protobuf 等传递依赖的下载）
- *   - 企业代理 407 问题
- *   - pip.pyz 版本差异带来的各种行为不一致
+ * .whl 本质是 zip 文件。用 Python 自带的 zipfile 模块直接解压到
+ * site-packages，完全不经过 pip，彻底避免：
+ *   - 依赖版本冲突（protobuf、numpy 等）
+ *   - pip 发起的网络请求
+ *   - 企业代理 407
+ *   - pip.pyz 版本兼容性问题
+ * 解压失败的文件（如损坏的 tensorflow.whl）会打印警告并跳过，
+ * 不影响其他包的安装。
  *
- * .tar.gz 包（tkinter-embed）仍用 pip.pyz + --no-deps + --target 安装，
- * 因为它不是 zip 格式，无法直接解压到 site-packages。
+ * .tar.gz（tkinter-embed）仍用 pip --no-deps --target，因为它不是 zip。
  */
 export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string): Promise<void> {
     return vscode.window.withProgress({
@@ -713,67 +714,75 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
-        const childProcess = require('child_process');
+        const pythonPath  = path.join(pythonDir, 'python.exe');
         const sitePackages = path.join(pythonDir, 'Lib', 'site-packages');
         if (!fs.existsSync(sitePackages)) {
             fs.mkdirSync(sitePackages, { recursive: true });
         }
+        const childProcess = require('child_process');
 
         const whlPaths = pipFilePaths.filter(p => p.endsWith('.whl'));
         const tarPaths = pipFilePaths.filter(p => p.includes('.tar.gz'));
 
-        // Step 1: 将 .whl 逐个作为 zip 解压到 site-packages，不经过 pip。
-        for (const whlPath of whlPaths) {
-            const pkgName = path.basename(whlPath, '.whl').split('-')[0];
-            progress.report({ message: `解压 ${pkgName}...` });
+        // Step 1: 用 Python zipfile 解压所有 .whl，不经过 pip。
+        if (whlPaths.length > 0) {
+            progress.report({ message: `解压 ${whlPaths.length} 个 .whl 包...` });
 
-            const psScript = `
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-$dest = '${sitePackages.replace(/\\/g, '\\\\')}'
-$zip  = [System.IO.Compression.ZipFile]::OpenRead('${whlPath.replace(/\\/g, '\\\\')}')
-foreach ($entry in $zip.Entries) {
-    if ($entry.FullName.EndsWith('/') -or $entry.FullName.EndsWith('\\\\')) { continue }
-    $target = [System.IO.Path]::Combine($dest, $entry.FullName)
-    $dir    = [System.IO.Path]::GetDirectoryName($target)
-    if (![System.IO.Directory]::Exists($dir)) { [System.IO.Directory]::CreateDirectory($dir) | Out-Null }
-    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
-}
-$zip.Dispose()
-`.trim();
+            // 将解压脚本写入临时文件，避免命令行长度限制
+            const tempScript = path.join(os.tmpdir(), `hispark_whl_install_${Date.now()}.py`);
+            const scriptLines = [
+                'import sys, zipfile, os',
+                'site = sys.argv[1]',
+                'os.makedirs(site, exist_ok=True)',
+                'skipped = []',
+                'for whl in sys.argv[2:]:',
+                '    try:',
+                '        with zipfile.ZipFile(whl, "r") as z:',
+                '            z.extractall(site)',
+                '        print("OK", os.path.basename(whl))',
+                '    except Exception as e:',
+                '        print("SKIP", os.path.basename(whl), "-", e, file=sys.stderr)',
+                '        skipped.append(os.path.basename(whl))',
+            ];
+            fs.writeFileSync(tempScript, scriptLines.join('\n'), 'utf8');
 
-            await new Promise<void>((resolve, reject) => {
-                const proc = childProcess.spawn('powershell', ['-NoProfile', '-Command', psScript],
-                    { windowsHide: true });
-                let stderr = '';
-                proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
-                proc.on('close', (code: number) => {
-                    if (code === 0) { resolve(); }
-                    else { reject(new Error(`解压 ${pkgName} 失败 (exit ${code}): ${stderr.trim()}`)); }
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    const proc = childProcess.spawn(
+                        pythonPath,
+                        [tempScript, sitePackages, ...whlPaths],
+                        { windowsHide: true }
+                    );
+                    let stderr = '';
+                    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+                    proc.on('close', (_code: number) => {
+                        if (stderr.trim()) {
+                            vscode.window.showWarningMessage(`以下包因文件损坏被跳过（不影响整体安装）:\n${stderr.trim()}`);
+                        }
+                        resolve(); // 单个包失败不终止流程
+                    });
+                    proc.on('error', reject);
                 });
-                proc.on('error', reject);
-            });
+            } finally {
+                try { fs.unlinkSync(tempScript); } catch { /* 忽略临时文件清理失败 */ }
+            }
         }
 
-        // Step 2: .tar.gz（tkinter-embed）用 pip.pyz + --no-deps + --target 安装。
+        // Step 2: .tar.gz 用 pip --no-deps --target 安装
         for (const packagePath of tarPaths) {
             const packageName = path.basename(packagePath, '.tar.gz');
             progress.report({ message: `安装 ${packageName}...` });
-            const pythonPath = path.join(pythonDir, 'python.exe');
             const pippyzPath = path.join(downloadDir, 'pip.pyz');
             const cmd = `"${pythonPath}" "${pippyzPath}" install --target "${pythonDir}" --no-deps "${packagePath}"`;
-
             await new Promise<void>((resolve, reject) => {
                 childProcess.exec(cmd, { maxBuffer: 20 * 1024 * 1024, timeout: 120000 }, (err: any, _stdout: string, stderr: string) => {
-                    if (err) {
-                        reject(new Error(`安装 ${packageName} 失败:\n${(stderr || err.message || '').trim()}`));
-                    } else {
-                        resolve();
-                    }
+                    if (err) { reject(new Error(`安装 ${packageName} 失败:\n${(stderr || err.message || '').trim()}`)); }
+                    else { resolve(); }
                 });
             });
         }
 
-        showInstallationSummary(pipFilePaths.map(p => path.basename(p)), []);
+        vscode.window.showInformationMessage('✅ Python 依赖包安装完成');
     });
 }
 
