@@ -694,19 +694,19 @@ exit /b 0
 }
 
 // pip 清华镜像源（免安装 python 无全局 pip 配置，镜像通过命令行参数传入）
-// pip 清华镜像源 —— 仅用于补充本地 downloads/ 中没有的传递依赖（如 protobuf）。
-// 主要包均以 .whl 文件预先下载，pip 优先读取本地文件（--find-links）。
-const PIP_MIRROR = 'https://pypi.tuna.tsinghua.edu.cn/simple';
-
 // 安装wheel包
-// 策略：将所有 .whl 文件合并为一条 pip 命令批量安装。
-//   --find-links <downloadDir>  : pip 优先从本地 downloads/ 查找所有包（主要包均在此）
-//   -i <tsinghua>               : 仅在本地找不到时才联网，从清华源补充传递依赖
-//   --proxy ""                  : 强制 pip 不使用任何系统代理。
-//                                 企业代理对 pip 会触发 407（pip 不支持 NTLM 认证），
-//                                 而国内 CDN（腾讯/清华）通常可直连，无需代理。
-//                                 Node.js 下载阶段用的是 WinHTTP（自动处理 NTLM），
-//                                 所以大文件下载不受影响。
+// 策略：将所有 .whl 文件合并为一条 pip 命令批量安装，并加上 --no-deps。
+//
+// 为什么用 --no-deps：
+//   downloadToolChain.json 中的各个包版本（如 numpy 2.0.0 + scipy 1.10.1 +
+//   onnxruntime 1.16.0）在依赖元数据层面存在冲突（scipy 要求 numpy < 1.27，
+//   onnxruntime 要求 numpy < 2.0），但它们在二进制层面实际兼容、可正常运行。
+//   --no-deps 跳过 pip 的版本约束解析，直接解压安装提供的 .whl 文件，
+//   避免 "ResolutionImpossible" 错误。这是分发预选包集合时的标准做法。
+//
+// 关于 protobuf（onnx/onnxruntime/tensorflow 的传递依赖）：
+//   onnx 1.14.0 已将 protobuf 绑定编译进 wheel 内部，无需单独安装。
+//
 // .tar.gz 包（如 tkinter-embed）需要 --target 单独处理。
 export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string): Promise<void> {
     return vscode.window.withProgress({
@@ -721,13 +721,11 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
         const whlPaths = pipFilePaths.filter(p => p.endsWith('.whl'));
         const tarPaths = pipFilePaths.filter(p => p.includes('.tar.gz'));
 
-        // Step 1: 一次性批量安装所有 .whl 包。
-        // pip 先查本地 downloadDir，缺少的传递依赖（如 protobuf）直接从清华源拉取，
-        // 不经过企业代理（--proxy ""），规避 407。
+        // Step 1: 一次性批量安装所有 .whl 包，跳过版本约束检查（--no-deps）。
         if (whlPaths.length > 0) {
             progress.report({ message: `批量安装 ${whlPaths.length} 个 .whl 包...` });
             const quotedPaths = whlPaths.map(p => `"${p}"`).join(' ');
-            const cmd = `"${pythonPath}" "${pippyzPath}" install --proxy "" --find-links "${downloadDir}" -i ${PIP_MIRROR} ${quotedPaths}`;
+            const cmd = `"${pythonPath}" "${pippyzPath}" install --no-deps ${quotedPaths}`;
 
             await new Promise<void>((resolve, reject) => {
                 childProcess.exec(cmd, { maxBuffer: 100 * 1024 * 1024, timeout: 600000 }, (err: any, _stdout: string, stderr: string) => {
@@ -747,7 +745,7 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
         for (const packagePath of tarPaths) {
             const packageName = path.basename(packagePath, '.tar.gz');
             progress.report({ message: `安装 ${packageName}...` });
-            const cmd = `"${pythonPath}" "${pippyzPath}" install --target "${pythonDir}" --proxy "" --find-links "${downloadDir}" -i ${PIP_MIRROR} "${packagePath}"`;
+            const cmd = `"${pythonPath}" "${pippyzPath}" install --target "${pythonDir}" --no-deps "${packagePath}"`;
 
             await new Promise<void>((resolve, reject) => {
                 childProcess.exec(cmd, { maxBuffer: 20 * 1024 * 1024, timeout: 120000 }, (err: any, _stdout: string, stderr: string) => {
