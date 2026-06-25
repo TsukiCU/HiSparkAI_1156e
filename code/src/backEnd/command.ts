@@ -1404,7 +1404,7 @@ export class Command {
         const python = path.join(toolRootPath, 'tools/python/python.exe');
         if (target !== 'CPU') { throw new Error('Script is running locally but it\'s on NPU platform'); }
         const pythonRootPath = path.join(__dirname, `../resources/scripts/${target.toLowerCase()}/profiling`);
-        const args = [scriptWin, '--model', parseLocalFile, '--output_path', parsedJson];
+        const args = [scriptWin, '--model', parseLocalFile, '--chip', chipName, '--platform', this.getPlatform(chipName, target), '--output_path', parsedJson];
         try {
           await this.runProcess(python, args, pythonRootPath, { cmd: `${python} ${args.join(' ')}` });
         } catch (err) {
