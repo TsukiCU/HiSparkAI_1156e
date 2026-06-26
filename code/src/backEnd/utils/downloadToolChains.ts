@@ -105,34 +105,43 @@ export function setIsDownloading(value: boolean): boolean {
 }
 
 /**
- * 用 Python urllib 测试清华 PyPI 是否可达，使用与 pip 相同的 HTTP 栈。
+ * 用 Python urllib 测试 pipMirror 是否可达，使用与 pip 相同的 HTTP 栈。
  *
- * 关键点：
- *   - 免安装版 Python 没有内置 CA 证书，普通 HTTPS 请求会因 SSL 握手失败
- *     而在内网/外网都报错，无法区分。
- *   - 使用 ssl._create_unverified_context() 跳过证书验证：
- *       外网：代理不拦截，连接清华源成功 → exit 0
- *       内网：代理在 TCP 层返回 407，SSL 握手根本没机会进行 → 抛异常 → exit 1
- *   - 这个跳过只用于连通性检测，实际 pip 安装时 pip.pyz 使用自带的 certifi，
- *     安全性不受影响。
+ * - 免安装版 Python 没有内置 CA 证书，用 ssl._create_unverified_context()
+ *   跳过证书验证：407 发生在 TCP 层（SSL 握手之前），跳过 SSL 不影响区分结果。
+ * - 测试 /numpy/ 子页面而非根路径，更贴近 pip 真实请求行为。
+ * - finished 守卫防止 setTimeout 与 proc.close 竞态导致 resolve 被调用两次。
+ * - exit 0：可达（外网）；exit 2：407 代理拦截（内网）；exit 1：其他错误。
  */
-async function isTsinghuaReachable(pythonPath: string): Promise<boolean> {
+async function isTsinghuaReachable(pythonPath: string, pipMirror: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
         const childProcess = require('child_process');
+        const testUrl = `${pipMirror.replace(/\/$/, '')}/numpy/`;
+
         const script = [
             'import urllib.request, ssl, sys',
             'ctx = ssl._create_unverified_context()',
             'try:',
-            '    urllib.request.urlopen("https://pypi.tuna.tsinghua.edu.cn/simple/", timeout=4, context=ctx)',
+            `    urllib.request.urlopen(${JSON.stringify(testUrl)}, timeout=4, context=ctx)`,
             '    sys.exit(0)',
-            'except Exception:',
+            'except Exception as e:',
+            '    msg = repr(e)',
+            '    if "407" in msg or "Proxy Authentication Required" in msg:',
+            '        sys.exit(2)',
             '    sys.exit(1)',
         ].join('\n');
 
+        let finished = false;
+        const done = (ok: boolean): void => {
+            if (finished) { return; }
+            finished = true;
+            resolve(ok);
+        };
+
         const proc = childProcess.spawn(pythonPath, ['-c', script], { windowsHide: true });
-        proc.on('close', (code: number) => resolve(code === 0));
-        proc.on('error', () => resolve(false));
-        setTimeout(() => { try { proc.kill(); } catch { /* ignore */ } resolve(false); }, 6000);
+        proc.on('close', (code: number) => done(code === 0));
+        proc.on('error', () => done(false));
+        setTimeout(() => { try { proc.kill(); } catch { /* ignore */ } done(false); }, 6000);
     });
 }
 
@@ -734,7 +743,7 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
     }, async (progress) => {
         const pythonPath = path.join(pythonDir, 'python.exe');
         // 仅在 JSON 配置了镜像源时才检测连通性；未配置则直接走内网模式
-        const useMirror = pipMirror ? await isTsinghuaReachable(pythonPath) : false;
+        const useMirror = pipMirror ? await isTsinghuaReachable(pythonPath, pipMirror) : false;
         vscode.window.showInformationMessage(
             useMirror ? `检测到外网可用，使用镜像源安装依赖` : '内网模式，不使用镜像源'
         );
