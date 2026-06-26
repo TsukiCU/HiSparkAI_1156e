@@ -1338,7 +1338,7 @@ export class Command {
     const parseLocalFile = onnxCompanionLocal ?? localModelPath;
 
     if (parseExt === 'onnx' || parseExt === 'tflite') {
-      const scriptWin = path.join(__dirname, '../resources/scripts/npu/model_select/model_arch_parse.py');
+      const scriptWin = path.join(__dirname, '../resources/scripts/common/model_select/model_arch_parse.py');
       const parsedJson = path.join(localModelDir, 'parsedModel.json');
 
       if (source === 'linux') {
@@ -3361,7 +3361,7 @@ export class Command {
       const distro = ctx.wslDistro;
       if (!distro) { return; } // unlikely.
 
-      const scriptWin = path.join(__dirname, '../resources/scripts/npu/model_select/model_arch_parse.py');
+      const scriptWin = path.join(__dirname, '../resources/scripts/common/model_select/model_arch_parse.py');
       const scriptWsl = await common.winToLinuxPathForWsl(distro, scriptWin, common.exeRunner);
       const fakeOnnxPathWsl = await common.winToLinuxPathForWsl(distro, fakeOnnxPath, common.exeRunner);
       const localModelPathWsl = await common.winToLinuxPathForWsl(distro, localModelPath, common.exeRunner);

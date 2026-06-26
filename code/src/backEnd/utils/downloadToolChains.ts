@@ -104,6 +104,47 @@ export function setIsDownloading(value: boolean): boolean {
     return isDownloading;
 }
 
+/**
+ * 用 Python urllib 测试 pipMirror 是否可达，使用与 pip 相同的 HTTP 栈。
+ *
+ * - 免安装版 Python 没有内置 CA 证书，用 ssl._create_unverified_context()
+ *   跳过证书验证：407 发生在 TCP 层（SSL 握手之前），跳过 SSL 不影响区分结果。
+ * - 测试 /numpy/ 子页面而非根路径，更贴近 pip 真实请求行为。
+ * - finished 守卫防止 setTimeout 与 proc.close 竞态导致 resolve 被调用两次。
+ * - exit 0：可达（外网）；exit 2：407 代理拦截（内网）；exit 1：其他错误。
+ */
+async function isTsinghuaReachable(pythonPath: string, pipMirror: string): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+        const childProcess = require('child_process');
+        const testUrl = `${pipMirror.replace(/\/$/, '')}/numpy/`;
+
+        const script = [
+            'import urllib.request, ssl, sys',
+            'ctx = ssl._create_unverified_context()',
+            'try:',
+            `    urllib.request.urlopen(${JSON.stringify(testUrl)}, timeout=4, context=ctx)`,
+            '    sys.exit(0)',
+            'except Exception as e:',
+            '    msg = repr(e)',
+            '    if "407" in msg or "Proxy Authentication Required" in msg:',
+            '        sys.exit(2)',
+            '    sys.exit(1)',
+        ].join('\n');
+
+        let finished = false;
+        const done = (ok: boolean): void => {
+            if (finished) { return; }
+            finished = true;
+            resolve(ok);
+        };
+
+        const proc = childProcess.spawn(pythonPath, ['-c', script], { windowsHide: true });
+        proc.on('close', (code: number) => done(code === 0));
+        proc.on('error', () => done(false));
+        setTimeout(() => { try { proc.kill(); } catch { /* ignore */ } done(false); }, 6000);
+    });
+}
+
 export async function downloadFileWithRetry(
     file: { url: string; name: string; type: string },
     saveDir: string,
@@ -694,21 +735,26 @@ exit /b 0
 }
 
 // 安装wheel包
-export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string): Promise<void> {
+export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string, pipMirror?: string): Promise<void> {
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
+        const pythonPath = path.join(pythonDir, 'python.exe');
+        // 仅在 JSON 配置了镜像源时才检测连通性；未配置则直接走内网模式
+        const useMirror = pipMirror ? await isTsinghuaReachable(pythonPath, pipMirror) : false;
+        vscode.window.showInformationMessage(
+            useMirror ? `检测到外网可用，使用镜像源安装依赖` : '内网模式，不使用镜像源'
+        );
+
         return new Promise<void>((resolve, reject) => {
             const totalPackages = pipFilePaths.length;
             let installedCount = 0;
             // 记录成功和失败的包
             const successPackages: string[] = [];
             const failedPackages: string[] = [];
-            
-            // 获取Python路径
-            const pythonPath = path.join(pythonDir, 'python.exe');
+
             const pippyzPath = path.join(downloadDir, 'pip.pyz');
             const installNextPackage = (index: number): void => {
                 if (index >= pipFilePaths.length) {
@@ -724,10 +770,11 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
                 
                 const packagePath = pipFilePaths[index];
                 let packageName = path.basename(packagePath, '.whl');
-                let command = `"${pythonPath}" ${pippyzPath} install "${packagePath}"`;
+                const mirrorFlag = (useMirror && pipMirror) ? `-i ${pipMirror}` : '';
+                let command = `"${pythonPath}" ${pippyzPath} install "${packagePath}" ${mirrorFlag}`;
                 if (packagePath.includes('.tar.gz')) {
                     packageName = path.basename(packagePath, '.tar.gz');
-                    command = `"${pythonPath}" ${pippyzPath} install --target "${pythonDir}" "${packagePath}"`;
+                    command = `"${pythonPath}" ${pippyzPath} install --target "${pythonDir}" "${packagePath}" ${mirrorFlag}`;
                 }
                 progress.report({ 
                     message: `安装 ${packageName} (${index + 1}/${totalPackages})`,
