@@ -224,7 +224,9 @@ export class Command {
     const validStages = ['model_select', 'quant', 'convert', 'common'];
     if (!validStages.includes(folder)) { return; } // unlikely.
 
-    const localFolder = path.join(__dirname, `../resources/scripts/${target.toLowerCase()}/${folder}`);
+    const localFolder = folder === 'model_select'
+      ? path.join(__dirname, `../resources/scripts/common/model_select`)
+      : path.join(__dirname, `../resources/scripts/${target.toLowerCase()}/${folder}`);
     const remoteFolder = `${remoteHome}/${rootDir}/scripts/${folder}`;
 
     try {
