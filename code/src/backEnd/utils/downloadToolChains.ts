@@ -726,16 +726,17 @@ exit /b 0
 }
 
 // 安装wheel包
-export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string): Promise<void> {
+export async function installPipPackages(pipFilePaths: string[], pythonDir: string, downloadDir: string, pipMirror?: string): Promise<void> {
     return vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: '正在安装 Python 依赖包',
         cancellable: false,
     }, async (progress) => {
         const pythonPath = path.join(pythonDir, 'python.exe');
-        const useMirror = await isTsinghuaReachable(pythonPath);
+        // 仅在 JSON 配置了镜像源时才检测连通性；未配置则直接走内网模式
+        const useMirror = pipMirror ? await isTsinghuaReachable(pythonPath) : false;
         vscode.window.showInformationMessage(
-            useMirror ? '检测到外网可用，使用清华源安装依赖' : '内网模式，不使用镜像源'
+            useMirror ? `检测到外网可用，使用镜像源安装依赖` : '内网模式，不使用镜像源'
         );
 
         return new Promise<void>((resolve, reject) => {
@@ -760,7 +761,7 @@ export async function installPipPackages(pipFilePaths: string[], pythonDir: stri
                 
                 const packagePath = pipFilePaths[index];
                 let packageName = path.basename(packagePath, '.whl');
-                const mirrorFlag = useMirror ? '-i https://pypi.tuna.tsinghua.edu.cn/simple' : '';
+                const mirrorFlag = (useMirror && pipMirror) ? `-i ${pipMirror}` : '';
                 let command = `"${pythonPath}" ${pippyzPath} install "${packagePath}" ${mirrorFlag}`;
                 if (packagePath.includes('.tar.gz')) {
                     packageName = path.basename(packagePath, '.tar.gz');

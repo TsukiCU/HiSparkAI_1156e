@@ -1,4 +1,6 @@
-[
+{
+  "pipMirror": "https://pypi.tuna.tsinghua.edu.cn/simple",
+  "packages": [
     {
       "url": "https://mirrors.huaweicloud.com/python/3.11.4/python-3.11.4-embed-amd64.zip",
       "name": "python",
@@ -115,3 +117,4 @@
       "type": "tar.gz"
     }
   ]
+}

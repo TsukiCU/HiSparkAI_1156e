@@ -276,13 +276,24 @@ export default class Extension {
 
         // 读取并解析JSON文件
         let filesToDownload: any;
+        let pipMirror: string | undefined;
         try {
           const fileContent = fs.readFileSync(manifestPath, 'utf8');
-          filesToDownload = JSON.parse(fileContent);
+          const manifest = JSON.parse(fileContent);
+
+          // 支持两种格式：
+          //   旧：数组  [{ url, name, type }, ...]
+          //   新：对象  { pipMirror: "...", packages: [...] }
+          if (Array.isArray(manifest)) {
+            filesToDownload = manifest;
+          } else {
+            filesToDownload = manifest.packages;
+            pipMirror = manifest.pipMirror || undefined;
+          }
 
           // 验证JSON格式是否正确
           if (!Array.isArray(filesToDownload)) {
-            throw new Error('下载清单格式错误，应为数组');
+            throw new Error('下载清单格式错误，packages 应为数组');
           }
 
           // 验证每个条目是否包含必要字段
@@ -373,7 +384,7 @@ export default class Extension {
         // 安装wheel包
         const pipFiles = filesToDownload.filter(file => (file.type === 'whl' || (file.type === 'tar.gz' && file.name === 'tkinter-embed')));
         try {
-          await installPipPackages(pipFiles.map(file => path.join(downloadDir, path.basename(file.url))), pythonExtractPath, downloadDir);
+          await installPipPackages(pipFiles.map(file => path.join(downloadDir, path.basename(file.url))), pythonExtractPath, downloadDir, pipMirror);
         } catch (error) {
           throw new Error(`安装Python依赖包失败: ${error}`);
         }
