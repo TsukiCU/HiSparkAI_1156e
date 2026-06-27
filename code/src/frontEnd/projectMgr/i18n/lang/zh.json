@@ -16,6 +16,7 @@
   "sdkPath":                  "SDK",
   "sdkPathInputPrompt":       "选择已有 SDK 文件夹",
   "sdkWrongInfo":             "无效的 SDK 目录。{{chip}} 的 SDK 应包含 build/config/target_config/{{chip}}/{{chip}}.json",
+  "sdkWrongInfo1156e":        "无效的 SDK 目录。1156E 的 SDK 应包含 chip/ 和 gateway/ 子目录",
   "projectPath":              "工程路径",
   "projectPathInputPrompt":   "选择工程存放路径",
   "finished":                 "完成",

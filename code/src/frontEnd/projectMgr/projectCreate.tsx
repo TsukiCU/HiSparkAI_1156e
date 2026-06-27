@@ -126,8 +126,10 @@ const ProjectCreate = (): JSX.Element => {
     if (sdkPathWrongInfo !== undefined) {
       setSdkValidated(true);
       setSdkContentWrong(true);
-      const chip = soc ? soc.toUpperCase() : 'SDK';
-      form.setFields([{ name: 'sdkPath', errors: [t('sdkWrongInfo', { chip })] }]);
+      const errMsg = soc === '1156e'
+        ? t('sdkWrongInfo1156e')
+        : t('sdkWrongInfo', { chip: soc ? soc.toUpperCase() : 'SDK' });
+      form.setFields([{ name: 'sdkPath', errors: [errMsg] }]);
     }
   }, [sdkPathWrongInfo]);
 
@@ -236,8 +238,10 @@ const ProjectCreate = (): JSX.Element => {
       validator: (): Promise<void> => {
         if (!sdkValidated || !SDK_VALIDATED_CHIPS.has(soc)) { return Promise.resolve(); }
         if (sdkContentWrong) {
-          const chip = soc.toUpperCase();
-          return Promise.reject(t('sdkWrongInfo', { chip }));
+          const errMsg = soc === '1156e'
+            ? t('sdkWrongInfo1156e')
+            : t('sdkWrongInfo', { chip: soc.toUpperCase() });
+          return Promise.reject(errMsg);
         }
         return Promise.resolve();
       },

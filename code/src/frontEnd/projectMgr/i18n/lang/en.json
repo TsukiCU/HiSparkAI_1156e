@@ -16,6 +16,7 @@
   "sdkPath":                  "SDK",
   "sdkPathInputPrompt":       "Select an existing SDK folder",
   "sdkWrongInfo":             "Invalid SDK directory. A valid {{chip}} SDK must contain build/config/target_config/{{chip}}/{{chip}}.json",
+  "sdkWrongInfo1156e":        "Invalid SDK directory. A valid 1156E SDK must contain chip/ and gateway/ subdirectories",
   "projectPath":              "Project Path",
   "projectPathInputPrompt":   "Select the path to store the project",
   "finished":                 "Finish",
