@@ -27,17 +27,17 @@ interface ImportItem {
 let drag: Drag | undefined;
 
 const ProjectImport = (): JSX.Element => {
-  const { t }    = useTranslation();
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
-  const [isOpen,       setIsOpen]       = useState(true);
-  const [importPath,   setImportPath]   = useState('');
-  const [items,        setItems]        = useState<ImportItem[]>([]);
+  const [isOpen, setIsOpen] = useState(true);
+  const [importPath, setImportPath] = useState('');
+  const [items, setItems] = useState<ImportItem[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
-  const importablePath:      any = useSelector((s: any) => s.entities.importablePath);
+  const importablePath: any = useSelector((s: any) => s.entities.importablePath);
   const importableItemsInfo: any = useSelector((s: any) => s.entities.importableItemsInfo);
-  const importResult:        any = useSelector((s: any) => s.entities.importResult);
+  const importResult: any = useSelector((s: any) => s.entities.importResult);
 
   useEffect(() => {
     if (isOpen && !drag) { drag = new Drag('ant-modal', 'ant-modal-header', 0); drag.init(); }
@@ -85,7 +85,7 @@ const ProjectImport = (): JSX.Element => {
     },
   ];
 
-  const allKeys    = items.filter((i) => !i.disabled).map((i) => i.key);
+  const allKeys = items.filter((i) => !i.disabled).map((i) => i.key);
   const allChecked = allKeys.length > 0 && allKeys.every((k) => selectedKeys.includes(k));
   const indeterminate = !allChecked && selectedKeys.length > 0;
 

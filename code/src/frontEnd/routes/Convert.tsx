@@ -45,7 +45,6 @@ type Target = 'CPU' | 'NPU' | 'NONE';
 type Source = 'wsl' | 'linux';
 
 // ─── Data types ───────────────────────────────────────────────────────────
-
 interface ConvertItem {
   target: string;
   page: string;
@@ -62,10 +61,10 @@ interface ConvertItem {
 type ConvertStarkDataType =
   | { type: 'fileSize'; exeomSize: number; dbgSize: number | null }
   | {
-      type: 'ramFlash';
-      ram:   { workspace: number; packWeight: number; stack: number; other: number };
-      flash: { code: number; data: number; weight: number };
-    };
+    type: 'ramFlash';
+    ram: { workspace: number; packWeight: number; stack: number; other: number };
+    flash: { code: number; data: number; weight: number };
+  };
 
 interface ConvertChartData {
   name: string;
@@ -81,17 +80,17 @@ interface ConvertChartData {
  * Uses current field values from state; appends switch data for NPU.
  */
 function buildConvertPayload(
-  base:        ConvertItem[],
-  inputs:      InputBoxProps[],
-  selects:     SelectBoxProps[],
-  files:       FileInputBoxProps[],
-  target:      Target,
-  switchStatus:   boolean,
-  switchInput:    string,
+  base: ConvertItem[],
+  inputs: InputBoxProps[],
+  selects: SelectBoxProps[],
+  files: FileInputBoxProps[],
+  target: Target,
+  switchStatus: boolean,
+  switchInput: string,
 ): ConvertItem[] {
-  const inputMap  = new Map(inputs.map(x => [x.key, x]));
+  const inputMap = new Map(inputs.map(x => [x.key, x]));
   const selectMap = new Map(selects.map(x => [x.key, x]));
-  const fileMap   = new Map(files.map(x => [x.key, x]));
+  const fileMap = new Map(files.map(x => [x.key, x]));
 
   const merged = base
     // Strip any stale switch entries — we re-append below with fresh values.
@@ -134,11 +133,11 @@ function buildConvertPayload(
  * All filtering is key/group-based — no positional indexing.
  */
 function splitConvertData(data: ConvertItem[]): {
-  shapeInputs:     InputBoxProps[];
+  shapeInputs: InputBoxProps[];
   nodeTypeSelects: SelectBoxProps[];
   outputTypeSelect: SelectBoxProps | undefined;
-  fileBoxes:       FileInputBoxProps[];
-  switchStatus:    boolean;
+  fileBoxes: FileInputBoxProps[];
+  switchStatus: boolean;
   switchInputValue: string;
 } {
   const isConvertPage = (d: ConvertItem): boolean => d.page === 'convert';
@@ -160,8 +159,10 @@ function splitConvertData(data: ConvertItem[]): {
   // Output Type select (NPU only, identified by key).
   const rawOut = data.find(d => isConvertPage(d) && d.key === CONVERT_KEYS.outputType);
   const outputTypeSelect: SelectBoxProps | undefined = rawOut
-    ? { group: rawOut.group, key: rawOut.key, title: rawOut.title,
-        content: rawOut.content, defaultValue: String(rawOut.defaultValue ?? ''), disabled: Boolean(rawOut.disabled) }
+    ? {
+      group: rawOut.group, key: rawOut.key, title: rawOut.title,
+      content: rawOut.content, defaultValue: String(rawOut.defaultValue ?? ''), disabled: Boolean(rawOut.disabled)
+    }
     : undefined;
 
   // File boxes — preserve the `folder` flag if the backend provides it.
@@ -174,47 +175,46 @@ function splitConvertData(data: ConvertItem[]): {
 
   // Switch state (from switch_config group, keyed by known keys).
   const switchStatusItem = data.find(d => isSwitchGroup(d) && d.key === CONVERT_KEYS.switchStatus);
-  const switchInputItem  = data.find(d => isSwitchGroup(d) && d.key === CONVERT_KEYS.switchInput);
+  const switchInputItem = data.find(d => isSwitchGroup(d) && d.key === CONVERT_KEYS.switchInput);
 
   return {
-    shapeInputs:      shapeInputs as InputBoxProps[],
-    nodeTypeSelects:  nodeTypeSelects as SelectBoxProps[],
+    shapeInputs: shapeInputs as InputBoxProps[],
+    nodeTypeSelects: nodeTypeSelects as SelectBoxProps[],
     outputTypeSelect,
-    fileBoxes:        fileBoxes as FileInputBoxProps[],
-    switchStatus:     switchStatusItem ? Boolean(switchStatusItem.defaultValue) : false,
-    switchInputValue: switchInputItem  ? String(switchInputItem.content)        : '',
+    fileBoxes: fileBoxes as FileInputBoxProps[],
+    switchStatus: switchStatusItem ? Boolean(switchStatusItem.defaultValue) : false,
+    switchInputValue: switchInputItem ? String(switchInputItem.content) : '',
   };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
-
 function Convert(props: { target: Target; source: Source }): React.JSX.Element {
   const { target, source } = props;
-  const navigate  = useNavigate();
-  const dispatch  = useDispatch();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // ── Model name ────────────────────────────────────────────────────────
   const [model, setModel] = useState<string>('');
 
   // ── Field state (single source of truth; no duplicated "new" mirrors) ─
-  const [shapeInputs,     setShapeInputs]     = useState<InputBoxProps[]>([]);
+  const [shapeInputs, setShapeInputs] = useState<InputBoxProps[]>([]);
   const [nodeTypeSelects, setNodeTypeSelects] = useState<SelectBoxProps[]>([]);
   const [outputTypeSelect, setOutputTypeSelect] = useState<SelectBoxProps | undefined>();
-  const [fileBoxes,       setFileBoxes]       = useState<FileInputBoxProps[]>([]);
+  const [fileBoxes, setFileBoxes] = useState<FileInputBoxProps[]>([]);
 
   // Switch (Advanced Options) — NPU only.
-  const [switchStatus,     setSwitchStatus]     = useState(false);
+  const [switchStatus, setSwitchStatus] = useState(false);
   const [switchInputValue, setSwitchInputValue] = useState('');
 
   // ── Redux selectors ───────────────────────────────────────────────────
-  const convertEnabled  = useSelector((state: any) => state.entities.convert);
-  const convertData     = useSelector((state: any) => state.entities.convertData);
-  const lastQuantTS     = useSelector((state: any) => state.entities.lastQuantTS);
-  const conStarkData    = useSelector((state: any) => state.entities.importConStarkCallbackData);
-  const convertPending  = useSelector((state: any) => state.entities.convertPending);
+  const convertEnabled = useSelector((state: any) => state.entities.convert);
+  const convertData = useSelector((state: any) => state.entities.convertData);
+  const lastQuantTS = useSelector((state: any) => state.entities.lastQuantTS);
+  const conStarkData = useSelector((state: any) => state.entities.importConStarkCallbackData);
+  const convertPending = useSelector((state: any) => state.entities.convertPending);
 
   // ── Chart state ───────────────────────────────────────────────────────
-  const [chartData,   setChartData]   = useState<ConvertStarkData[]>([]);
+  const [chartData, setChartData] = useState<ConvertStarkData[]>([]);
   const [chartParams, setChartParams] = useState<{ xTitle: string; yTitle: string; yAxisLabels: string[] }>();
   const [chartConfig, setChartConfig] = useState<{
     width?: string; height?: string; overflowX?: CSSProperties['overflowX'];
@@ -392,16 +392,16 @@ function Convert(props: { target: Target; source: Source }): React.JSX.Element {
       ];
       params = { xTitle: '', yTitle: '', yAxisLabels: ['filesize'] };
     } else if (raw.type === 'ramFlash') {
-      const ram   = ramFlashtoKBFunc({ ...raw.ram });
+      const ram = ramFlashtoKBFunc({ ...raw.ram });
       const flash = ramFlashtoKBFunc({ ...raw.flash });
       data = [
-        { name: 'workspace',  value: ram.workspace,  category: 'Ram',   itemStyle: { color: '#0087AB' } },
-        { name: 'stack',      value: ram.stack,      category: 'Ram',   itemStyle: { color: '#0087AB' } },
-        { name: 'pack_weight',value: ram.pack_weight,category: 'Ram',   itemStyle: { color: '#0087AB' } },
-        { name: 'other',      value: ram.other,      category: 'Ram',   itemStyle: { color: '#0087AB' } },
-        { name: 'code',       value: flash.code,     category: 'Flash', itemStyle: { color: '#1F9D69' } },
-        { name: 'data',       value: flash.data,     category: 'Flash', itemStyle: { color: '#1F9D69' } },
-        { name: 'weight',     value: flash.weight,   category: 'Flash', itemStyle: { color: '#1F9D69' } },
+        { name: 'workspace', value: ram.workspace, category: 'Ram', itemStyle: { color: '#0087AB' } },
+        { name: 'stack', value: ram.stack, category: 'Ram', itemStyle: { color: '#0087AB' } },
+        { name: 'pack_weight', value: ram.pack_weight, category: 'Ram', itemStyle: { color: '#0087AB' } },
+        { name: 'other', value: ram.other, category: 'Ram', itemStyle: { color: '#0087AB' } },
+        { name: 'code', value: flash.code, category: 'Flash', itemStyle: { color: '#1F9D69' } },
+        { name: 'data', value: flash.data, category: 'Flash', itemStyle: { color: '#1F9D69' } },
+        { name: 'weight', value: flash.weight, category: 'Flash', itemStyle: { color: '#1F9D69' } },
       ];
       params = { xTitle: '', yTitle: '', yAxisLabels: ['RAM', 'Flash'] };
     }
@@ -558,15 +558,15 @@ function Convert(props: { target: Target; source: Source }): React.JSX.Element {
           children={
             chartData.length > 0
               ? <ConvertStarkGraph
-                  xTitle={chartParams?.xTitle || ''}
-                  yTitle={chartParams?.yTitle || ''}
-                  yAxisLabels={chartParams?.yAxisLabels || []}
-                  convertStarkData={chartData}
-                  width={chartConfig.width}
-                  height={chartConfig.height}
-                  overflowX={chartConfig.overflowX}
-                  target={target}
-                />
+                xTitle={chartParams?.xTitle || ''}
+                yTitle={chartParams?.yTitle || ''}
+                yAxisLabels={chartParams?.yAxisLabels || []}
+                convertStarkData={chartData}
+                width={chartConfig.width}
+                height={chartConfig.height}
+                overflowX={chartConfig.overflowX}
+                target={target}
+              />
               : <Empty style={{ height: '300px' }} />
           }
         />

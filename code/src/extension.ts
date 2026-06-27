@@ -34,9 +34,9 @@ import { SerialPortWatcher } from './backEnd/watchers/SerialPortWatcher';
 import { LocalIpWatcher } from './backEnd/watchers/LocalIpWatcher';
 import { RemoteHeartbeatWatcher } from './backEnd/watchers/RemoteHeartbeatWatcher';
 import { OutputChannelManager } from './backEnd/output/channelManager';
-import { ProjectMgrContext }   from './backEnd/projectMgr/context';
-import { ProjectMgrPanel }     from './backEnd/projectMgr/panels/projectMgrPanel';
-import { ImportPanel }     from './backEnd/projectMgr/panels/importPanel';
+import { ProjectMgrContext } from './backEnd/projectMgr/context';
+import { ProjectMgrPanel } from './backEnd/projectMgr/panels/projectMgrPanel';
+import { ImportPanel } from './backEnd/projectMgr/panels/importPanel';
 
 const HISPARKAI_CHANNEL = 'HiSpark Studio AI';
 
@@ -111,11 +111,11 @@ export default class Extension {
 
     // Connection type read from .hiproj — used later in the projectMgrPendingOpen block.
     let hiprojConnType = '';
-    let hiprojSocId    = '';
+    let hiprojSocId = '';
 
     if (isActiveProjectFound) {
       GlobalModel.instance.hiprojPath = iniPath;
-      GlobalModel.instance.hiprojDir  = path.dirname(iniPath!);
+      GlobalModel.instance.hiprojDir = path.dirname(iniPath!);
 
       if (iniPath && fs.existsSync(iniPath)) {
         try {
@@ -141,7 +141,7 @@ export default class Extension {
           // Restore connection type (wsl / linux) from .hiproj.
           hiprojConnType = String(hiprojContent?.information?.connection_type ?? '');
           if (hiprojConnType === 'wsl') {
-            GlobalModel.instance.source    = 'wsl';
+            GlobalModel.instance.source = 'wsl';
             GlobalModel.instance.wslDistro = String(hiprojContent?.information?.wsl_distro ?? '');
           } else if (hiprojConnType === 'linux') {
             GlobalModel.instance.source = 'linux';
@@ -163,10 +163,10 @@ export default class Extension {
     }
 
     // Initialise projectMgr context so projectMgr commands can access extension globals.
-    ProjectMgrContext.globalStoragePath    = context.globalStorageUri.fsPath;
-    ProjectMgrContext.extensionPath        = context.extensionPath;
+    ProjectMgrContext.globalStoragePath = context.globalStorageUri.fsPath;
+    ProjectMgrContext.extensionPath = context.extensionPath;
     // Computed identically to ChipConfigPanel.configPath so both point to the same file.
-    ProjectMgrContext.mainProjectListPath  = path.join(context.globalStorageUri.fsPath, '../../../projectlist.json');
+    ProjectMgrContext.mainProjectListPath = path.join(context.globalStorageUri.fsPath, '../../../projectlist.json');
     ProjectMgrContext.pendingOpenMarkerPath = pendingMarkerPath;
 
     const homeTreeProvider = new HomeTreeDataProvider();
@@ -427,9 +427,9 @@ export default class Extension {
 
       // Read the platform and hiproj path written by getProjectData via ProjectMgrContext.
       // This avoids fragile path-string comparisons against projectdata.json.
-      const pendingPlatform   = ProjectMgrContext.pendingPlatform;
+      const pendingPlatform = ProjectMgrContext.pendingPlatform;
       const pendingHiprojPath = ProjectMgrContext.pendingHiprojPath;
-      ProjectMgrContext.pendingPlatform   = undefined;
+      ProjectMgrContext.pendingPlatform = undefined;
       ProjectMgrContext.pendingHiprojPath = undefined;
 
       let freshTarget: Target = 'NONE';
@@ -441,7 +441,7 @@ export default class Extension {
       // Update GlobalModel so the AI panel has the correct hiproj context.
       if (pendingHiprojPath) {
         GlobalModel.instance.hiprojPath = pendingHiprojPath;
-        GlobalModel.instance.hiprojDir  = path.dirname(pendingHiprojPath);
+        GlobalModel.instance.hiprojDir = path.dirname(pendingHiprojPath);
       }
 
       // Dispose any existing AI panel and open a fresh one with the correct target.
@@ -475,8 +475,8 @@ export default class Extension {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const ini = require('ini');
             const hiprojContent = ini.parse(fs.readFileSync(path.join(folderPath, hiprojFiles[0]), 'utf-8'));
-            const chipSoc    = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
-            const connType   = String(hiprojContent?.information?.connection_type ?? '');
+            const chipSoc = String(hiprojContent?.information?.['board_build.mcu'] ?? '');
+            const connType = String(hiprojContent?.information?.connection_type ?? '');
             const storedHost = String(hiprojContent?.information?.host ?? '');
             const storedPort = String(hiprojContent?.information?.port ?? '22');
 
@@ -502,7 +502,7 @@ export default class Extension {
                 const distro = String(hiprojContent?.information?.wsl_distro ?? '');
                 ch.info(`[1156e] Opening project — restoring WSL connection (distro: ${distro})...`);
                 ch.show(true);
-                GlobalModel.instance.source    = 'wsl';
+                GlobalModel.instance.source = 'wsl';
                 GlobalModel.instance.wslDistro = distro;
                 ch.info('[1156e] WSL distro restored. Connection will be verified at SelectModel.');
               }

@@ -35,8 +35,8 @@ export const CONVERT_KEYS = {
 // Modify header text or column alignment here.
 export const NODE_TABLE_HEADERS: Array<{ label: string; style?: CSSProperties }> = [
   { label: 'Input Node' },
-  { label: 'Shape',     style: { marginLeft: '-85px' } },
-  { label: 'Data Type', style: { marginLeft:  '73px'  } },
+  { label: 'Shape', style: { marginLeft: '-85px' } },
+  { label: 'Data Type', style: { marginLeft: '73px' } },
 ];
 
 // ─── Static field definitions (replaces QuantizeConfig.txt for Convert) ───
@@ -44,10 +44,10 @@ export const NODE_TABLE_HEADERS: Array<{ label: string; style?: CSSProperties }>
 // If the backend renames the key or changes options, update CONVERT_KEYS and here.
 export const CONVERT_FIELD_SPECS = {
   outputType: {
-    kind:         'select' as const,
-    group:        'Convert',
-    title:        'Output Type',
-    options:      ['float16', 'uint8', 'int8'] as string[],
+    kind: 'select' as const,
+    group: 'Convert',
+    title: 'Output Type',
+    options: ['float16', 'uint8', 'int8'] as string[],
     defaultValue: 'float16',
   },
 };
@@ -56,17 +56,17 @@ export const CONVERT_FIELD_SPECS = {
 export const CONVERT_TEXT = {
   sectionTitle: 'Convert Config',
   buttons: {
-    convert:    'Convert',
+    convert: 'Convert',
     converting: 'Processing...',
-    abort:      'Abort',
+    abort: 'Abort',
   },
   advancedSwitch: {
-    label:       'Advanced Options',
+    label: 'Advanced Options',
     placeholder: 'Additional Arguments',
-    tooltip:     '可选参数，允许为空',
+    tooltip: '可选参数，允许为空',
   },
   validation: {
-    shapeRegex:    /^[0-9,]+$/,
+    shapeRegex: /^[0-9,]+$/,
     shapeErrorMsg: 'Illegal input. Should only contain numbers and commas.',
   },
 } as const;

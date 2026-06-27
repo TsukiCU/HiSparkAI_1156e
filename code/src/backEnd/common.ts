@@ -301,7 +301,7 @@ export function parseArrayString(str: any): any {
 export function parseCSVLine(line: any): any {
   const matches = line.match(/(?:"(?:[^"]|"")*"|[^,]*),?/g);
   if (!matches) { return []; }
- 
+
   return matches.map((field: any) => {
     let fielded = field.endsWith(',') ? field.slice(0, -1) : field;
     if (fielded.startsWith('"') && fielded.endsWith('"')) {

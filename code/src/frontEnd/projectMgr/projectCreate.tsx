@@ -25,50 +25,49 @@ const ALLOWED_SOCS = new Set(['ws63', '3322', '1156e']);
 // 1156e is intentionally absent so both CPU and NPU can be selected
 // (chiplist.json: defaultPlatform='CPU', platformFixed=false).
 const PLATFORM_MAP: Record<string, { platform: 'CPU' | 'NPU'; fixed: boolean }> = {
-  ws63:   { platform: 'CPU', fixed: true },
+  ws63: { platform: 'CPU', fixed: true },
   '3322': { platform: 'NPU', fixed: true },
 };
 
 // Chips for which SDK path validation is performed.
 const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322']);
 // 1156e SDK is validated at selection time (inside selectSdkPathFor1156e).
-
 let drag: Drag | undefined;
 
 const ProjectCreate = (): JSX.Element => {
-  const { t }    = useTranslation();
+  const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [form]   = Form.useForm();
+  const [form] = Form.useForm();
 
   // ── form state ────────────────────────────────────────────────────────────
-  const [soc,             setSoc]             = useState('');
-  const [board,           setBoard]           = useState('');
-  const [boardList,       setBoardList]       = useState<string[]>([]);
-  const [platform,        setPlatform]        = useState<'CPU' | 'NPU' | ''>('');
-  const [platformFixed,   setPlatformFixed]   = useState(false);
-  const [sdkPath,         setSdkPath]         = useState('');
-  const [projectPath,     setProjectPath]     = useState('');
-  const [projectName,     setProjectName]     = useState('');
+  const [soc, setSoc] = useState('');
+  const [board, setBoard] = useState('');
+  const [boardList, setBoardList] = useState<string[]>([]);
+  const [platform, setPlatform] = useState<'CPU' | 'NPU' | ''>('');
+  const [platformFixed, setPlatformFixed] = useState(false);
+  const [sdkPath, setSdkPath] = useState('');
+  const [projectPath, setProjectPath] = useState('');
+  const [projectName, setProjectName] = useState('');
 
   // ── validation state ──────────────────────────────────────────────────────
   const [projectPathWrong, setProjectPathWrong] = useState(false);
-  const [sdkContentWrong,  setSdkContentWrong]  = useState(false);
-  const [sdkValidated,     setSdkValidated]     = useState(false); // true once user picked a path
+  const [sdkContentWrong, setSdkContentWrong] = useState(false);
+  const [sdkValidated, setSdkValidated] = useState(false); // true once user picked a path
 
   // ── modal state ───────────────────────────────────────────────────────────
-  const [isOpen,    setIsOpen]    = useState(true);
+  const [isOpen, setIsOpen] = useState(true);
   const [isErrOpen, setIsErrOpen] = useState(false);
 
   // ── redux ─────────────────────────────────────────────────────────────────
-  const chipList: SocGroupItem[]  = useSelector((s: any) => s.entities.chipList  ?? []);
-  const userConfig: any           = useSelector((s: any) => s.entities.userConfig ?? null);
-  const sdkPathInfo: any          = useSelector((s: any) => s.entities.sdkPathInfo);
-  const sdkPathRightInfo: any     = useSelector((s: any) => s.entities.sdkPathRightInfo);
-  const sdkPathWrongInfo: any     = useSelector((s: any) => s.entities.sdkPathWrongInfo);
-  const projectPathInfo: any      = useSelector((s: any) => s.entities.projectPathInfo);
+  const chipList: SocGroupItem[] = useSelector((s: any) => s.entities.chipList ?? []);
+  const userConfig: any = useSelector((s: any) => s.entities.userConfig ?? null);
+  const sdkPathInfo: any = useSelector((s: any) => s.entities.sdkPathInfo);
+  const sdkPathRightInfo: any = useSelector((s: any) => s.entities.sdkPathRightInfo);
+  const sdkPathWrongInfo: any = useSelector((s: any) => s.entities.sdkPathWrongInfo);
+  const projectPathInfo: any = useSelector((s: any) => s.entities.projectPathInfo);
   const projectPathRightInfo: any = useSelector((s: any) => s.entities.projectPathRightInfo);
   const projectPathWrongInfo: any = useSelector((s: any) => s.entities.projectPathWrongInfo);
-  const thisProjectExists: any    = useSelector((s: any) => s.entities.thisProjectExists);
+  const thisProjectExists: any = useSelector((s: any) => s.entities.thisProjectExists);
   const thisProjectNotExists: any = useSelector((s: any) => s.entities.thisProjectNotExists);
 
   // ── drag init ─────────────────────────────────────────────────────────────
@@ -81,9 +80,9 @@ const ProjectCreate = (): JSX.Element => {
 
   // ── mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    dispatch(getInfo({ operationType: 'getLanguage',   paramData: '',                              source: 'projectMgr' }));
-    dispatch(getInfo({ operationType: 'getJsonInfo',   paramData: { fileName: 'chiplist.json' }, source: 'projectMgr' }));
-    dispatch(getInfo({ operationType: 'getUserConfig', paramData: '',                              source: 'projectMgr' }));
+    dispatch(getInfo({ operationType: 'getLanguage', paramData: '', source: 'projectMgr' }));
+    dispatch(getInfo({ operationType: 'getJsonInfo', paramData: { fileName: 'chiplist.json' }, source: 'projectMgr' }));
+    dispatch(getInfo({ operationType: 'getUserConfig', paramData: '', source: 'projectMgr' }));
   }, [dispatch]);
 
   // ── userConfig → pre-fill project path ────────────────────────────────────
@@ -142,8 +141,8 @@ const ProjectCreate = (): JSX.Element => {
   }, [projectPathWrongInfo]);
 
   // ── project exists / created ───────────────────────────────────────────────
-  useEffect(() => { if (thisProjectExists)    { setIsErrOpen(true);  } }, [thisProjectExists]);
-  useEffect(() => { if (thisProjectNotExists) { setIsOpen(false); }     }, [thisProjectNotExists]);
+  useEffect(() => { if (thisProjectExists) { setIsErrOpen(true); } }, [thisProjectExists]);
+  useEffect(() => { if (thisProjectNotExists) { setIsOpen(false); } }, [thisProjectNotExists]);
 
   // ── SOC change ────────────────────────────────────────────────────────────
   const onSocChange = (value: string): void => {
@@ -198,7 +197,7 @@ const ProjectCreate = (): JSX.Element => {
         operationType: 'getProjectData',
         projectData: { soc, board, platform, projectName, projectPath, sdkPath },
       }));
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   const onCancel = (): void => {
@@ -215,7 +214,7 @@ const ProjectCreate = (): JSX.Element => {
   const nameRules: any[] = [
     { required: true, message: t('fieldCannotEmpty', { field: t('projectName') }) },
     { pattern: /^[\w\-\s.]+$/i, message: t('nameRule') },
-    { pattern: /^.*[^\s.]$/i,   message: t('nameRule2') },
+    { pattern: /^.*[^\s.]$/i, message: t('nameRule2') },
     { max: 50, message: t('overMmaxLength', { length: '50' }) },
   ];
   const pathRules: any[] = [

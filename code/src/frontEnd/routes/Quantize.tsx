@@ -77,9 +77,9 @@ function buildState(
   const fix = target === 'NPU' ? FIXED_KEYS.npu : FIXED_KEYS.cpu;
 
   // ── 1. Schema defaults for fixed fields ────────────────────────────────
-  const fixedInputs:  InputBoxProps[]  = [];
+  const fixedInputs: InputBoxProps[] = [];
   const fixedSelects: SelectBoxProps[] = [];
-  const fixedFiles:   FileInputBoxProps[] = [];
+  const fixedFiles: FileInputBoxProps[] = [];
 
   for (const [key, spec] of Object.entries(QUANT_FIELD_SPECS)) {
     if (!fix.inputs.has(key) && !fix.selects.has(key) && !fix.files.has(key)) { continue; }
@@ -114,22 +114,22 @@ function buildState(
 
   // ── 3. Dynamic items (per-node data, not in any fixed set) ─────────────
   const allFixed = new Set([...fix.inputs, ...fix.selects, ...fix.files,
-    QUANT_KEYS.switchStatus, QUANT_KEYS.switchInput, QUANT_KEYS.selectedOutput]);
+  QUANT_KEYS.switchStatus, QUANT_KEYS.switchInput, QUANT_KEYS.selectedOutput]);
 
   const dynamic = (compressionData ?? []).filter(
     d => d.page === 'quant' && d.type !== 'switch' && d.group !== QUANT_KEYS.switchGroup && !allFixed.has(d.key)
   );
-  const dynInputs  = dynamic.filter(d => d.kind === 'input')
+  const dynInputs = dynamic.filter(d => d.kind === 'input')
     .map(d => ({ group: d.group, key: d.key, title: d.title, content: d.content, disabled: Boolean(d.disabled) }));
   const dynSelects = dynamic.filter(d => d.kind === 'select')
     .map(d => ({ group: d.group, key: d.key, title: d.title, content: d.content, defaultValue: String(d.defaultValue ?? ''), disabled: Boolean(d.disabled) }));
-  const dynFiles   = dynamic.filter(d => d.kind === 'file')
+  const dynFiles = dynamic.filter(d => d.kind === 'file')
     .map(d => ({ group: d.group, key: d.key, title: d.title, content: d.content ?? '', folder: Boolean(d.folder), disabled: Boolean(d.disabled) }));
 
   return {
-    inputs:  [...mergedInputs,  ...dynInputs]  as InputBoxProps[],
+    inputs: [...mergedInputs, ...dynInputs] as InputBoxProps[],
     selects: [...mergedSelects, ...dynSelects] as SelectBoxProps[],
-    files:   [...mergedFiles,   ...dynFiles]   as FileInputBoxProps[],
+    files: [...mergedFiles, ...dynFiles] as FileInputBoxProps[],
   };
 }
 
@@ -141,28 +141,28 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const [activeTab,          setActiveTab]          = useState<'PTQ' | 'QAT'>('PTQ');
-  const [model,              setModel]              = useState('');
-  const [inputBoxes,         setInputBoxes]         = useState<InputBoxProps[]>([]);
-  const [selectBoxes,        setSelectBoxes]        = useState<SelectBoxProps[]>([]);
-  const [fileBoxes,          setFileBoxes]          = useState<FileInputBoxProps[]>([]);
-  const [layerCfgData,       setLayerCfgData]       = useState<LayerBoxProps[]>([]);
-  const [isModalOpen,        setModalOpen]          = useState(false);
-  const [disableBtn,         setDisableBtn]         = useState(true);   // show/hide Validation Inputs
-  const [disable,            setDisable]            = useState(true);   // QAT config file: Default = disabled
-  const [switchStatus,       setSwitchStatus]       = useState(false);  // Advanced Options switch
-  const [switchInputValue,   setSwitchInputValue]   = useState('');
-  const [netStrucQatStatus,  setNetStrucQatStatus]  = useState(true);   // QAT network struct empty
-  const [outputNames,        setOutputNames]        = useState<string[]>([]);
-  const [selectedOutput,     setSelectedOutput]     = useState('');
+  const [activeTab, setActiveTab] = useState<'PTQ' | 'QAT'>('PTQ');
+  const [model, setModel] = useState('');
+  const [inputBoxes, setInputBoxes] = useState<InputBoxProps[]>([]);
+  const [selectBoxes, setSelectBoxes] = useState<SelectBoxProps[]>([]);
+  const [fileBoxes, setFileBoxes] = useState<FileInputBoxProps[]>([]);
+  const [layerCfgData, setLayerCfgData] = useState<LayerBoxProps[]>([]);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [disableBtn, setDisableBtn] = useState(true);   // show/hide Validation Inputs
+  const [disable, setDisable] = useState(true);   // QAT config file: Default = disabled
+  const [switchStatus, setSwitchStatus] = useState(false);  // Advanced Options switch
+  const [switchInputValue, setSwitchInputValue] = useState('');
+  const [netStrucQatStatus, setNetStrucQatStatus] = useState(true);   // QAT network struct empty
+  const [outputNames, setOutputNames] = useState<string[]>([]);
+  const [selectedOutput, setSelectedOutput] = useState('');
 
   const compressionData = useSelector((state: any) => state.entities.compressionData);
-  const layerData       = useSelector((state: any) => state.entities.layerwiseData);
-  const hisGraphData    = useSelector((state: RootState) => state.entities.compressionHisgraphData);
-  const ptqEnabled      = useSelector((state: any) => state.entities.ptq);
-  const qatEnabled      = useSelector((state: any) => state.entities.qat);
-  const convertEnabled  = useSelector((state: any) => state.entities.convert);
-  const quantPending    = useSelector((state: any) => state.entities.quantPending);
+  const layerData = useSelector((state: any) => state.entities.layerwiseData);
+  const hisGraphData = useSelector((state: RootState) => state.entities.compressionHisgraphData);
+  const ptqEnabled = useSelector((state: any) => state.entities.ptq);
+  const qatEnabled = useSelector((state: any) => state.entities.qat);
+  const convertEnabled = useSelector((state: any) => state.entities.convert);
+  const quantPending = useSelector((state: any) => state.entities.quantPending);
   const [histogramData, setHistogramData] = useState<HistogramGraphData[]>([]);
   interface ChartConfig { width?: string; height?: string; overflowX?: CSSProperties['overflowX'] }
   const [chartConfig, setChartConfig] = useState<ChartConfig>({});
@@ -170,16 +170,16 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
   // ─── Key-based state lookups (used in render) ──────────────────────────
   // These always reflect the CURRENT user-modified state, never stale Redux data.
   const selByKey = (key: string): SelectBoxProps | undefined => selectBoxes.find(s => s.key === key);
-  const inpByKey = (key: string): InputBoxProps  | undefined => inputBoxes.find(i => i.key === key);
+  const inpByKey = (key: string): InputBoxProps | undefined => inputBoxes.find(i => i.key === key);
   const filByKey = (key: string): FileInputBoxProps | undefined => fileBoxes.find(f => f.key === key);
 
   // Dynamic items = state entries NOT in fixed key sets.
   const { dynInputs, dynSelects, dynFiles } = useMemo(() => {
     const fix = target === 'NPU' ? FIXED_KEYS.npu : FIXED_KEYS.cpu;
     return {
-      dynInputs:  inputBoxes.filter(i => !fix.inputs.has(i.key)),
+      dynInputs: inputBoxes.filter(i => !fix.inputs.has(i.key)),
       dynSelects: selectBoxes.filter(s => !fix.selects.has(s.key)),
-      dynFiles:   fileBoxes.filter(f => !fix.files.has(f.key)),
+      dynFiles: fileBoxes.filter(f => !fix.files.has(f.key)),
     };
   }, [inputBoxes, selectBoxes, fileBoxes, target]);
 
@@ -223,9 +223,11 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
         case 'QuantSuccess': dispatch(updateEntity('quantPending', false)); break;
         case 'QuantFailed':
           dispatch(updateEntity('quantPending', false));
-          { const desc = msg.params?.description || '';
+          {
+            const desc = msg.params?.description || '';
             notify(desc.includes('aborted by user') ? 'Quantization aborted.' : `Failed to quantize. ${desc}`,
-              { type: desc.includes('aborted by user') ? 'warning' : 'error', stack: false, duration: 2 }); }
+              { type: desc.includes('aborted by user') ? 'warning' : 'error', stack: false, duration: 2 });
+          }
           break;
         case 'LostConnection':
           if (quantPending) { dispatch(updateEntity('quantPending', false)); notify('Lost connection to remote server', { type: 'error', stack: false, duration: 2 }); }
@@ -286,9 +288,9 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
   useEffect(() => {
     if (inputBoxes.length === 0 && selectBoxes.length === 0 && fileBoxes.length === 0) { return; }
 
-    const inputMap  = new Map(inputBoxes.map(b => [b.key, b]));
+    const inputMap = new Map(inputBoxes.map(b => [b.key, b]));
     const selectMap = new Map(selectBoxes.map(b => [b.key, b]));
-    const fileMap   = new Map(fileBoxes.map(b => [b.key, b]));
+    const fileMap = new Map(fileBoxes.map(b => [b.key, b]));
     // QAT key set is used to assign the correct `type` field (ptq/qat/undefined).
     const QAT_KEYS_SET = new Set(Object.values(QUANT_KEYS.npu.qat) as string[]);
     const itemType = (key: string): string | undefined =>
@@ -296,9 +298,9 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
 
     // Update items already in compressionData.
     const updated: CompressionItem[] = (compressionData ?? []).map((d: CompressionItem) => {
-      const inp = inputMap.get(d.key);  if (inp)  { return { ...d, content: inp.content  }; }
-      const sel = selectMap.get(d.key); if (sel)  { return { ...d, defaultValue: sel.defaultValue, content: sel.content, disabled: sel.disabled }; }
-      const fil = fileMap.get(d.key);   if (fil)  { return { ...d, content: fil.content  }; }
+      const inp = inputMap.get(d.key); if (inp) { return { ...d, content: inp.content }; }
+      const sel = selectMap.get(d.key); if (sel) { return { ...d, defaultValue: sel.defaultValue, content: sel.content, disabled: sel.disabled }; }
+      const fil = fileMap.get(d.key); if (fil) { return { ...d, content: fil.content }; }
       return d;
     });
 
@@ -330,7 +332,7 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
   useEffect(() => { if (Array.isArray(layerData)) { setLayerCfgData(layerData); } }, [layerData]);
 
   // ─── Validation helpers ─────────────────────────────────────────────────
-  const validateShape    = (v: string): { valid: boolean; errorMsg?: string } => {
+  const validateShape = (v: string): { valid: boolean; errorMsg?: string } => {
     const ok = /^[0-9,]+$/.test(v) && v[0] !== ',' && v[v.length - 1] !== ',';
     return { valid: ok, errorMsg: ok ? undefined : QUANT_TEXT.validation.shapeErrorMsg };
   };
@@ -340,14 +342,14 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
   };
 
   // ─── Field update handlers ──────────────────────────────────────────────
-  const updateInput  = (value: string | string[], key: string): void =>
+  const updateInput = (value: string | string[], key: string): void =>
     setInputBoxes(prev => prev.map(b => b.key === key ? { ...b, content: value } : b));
 
   const updateSelect = (value: string, key: string, isCtrlOthers?: boolean): void => {
     if (key === QUANT_KEYS.selectedOutput) { setSelectedOutput(value); return; }
     if (isCtrlOthers) {
-      if (value === 'Default') { setDisable(true);  }
-      if (value === 'Custom')  { setDisable(false); }
+      if (value === 'Default') { setDisable(true); }
+      if (value === 'Custom') { setDisable(false); }
     }
     if (key === QUANT_KEYS.npu.ptq.validation || key === QUANT_KEYS.cpu.validation) {
       setDisableBtn(value === 'NONE');
@@ -406,17 +408,17 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
 
   // ─── Payload helpers ────────────────────────────────────────────────────
   const buildPayload = (): CompressionItem[] => {
-    const inputMap  = new Map(inputBoxes.map(b => [b.key, b]));
+    const inputMap = new Map(inputBoxes.map(b => [b.key, b]));
     const selectMap = new Map(selectBoxes.map(b => [b.key, b]));
-    const fileMap   = new Map(fileBoxes.map(b => [b.key, b]));
+    const fileMap = new Map(fileBoxes.map(b => [b.key, b]));
 
     const baseData: CompressionItem[] = compressionData ?? [];
     const merged = baseData
       .filter(d => d.key !== QUANT_KEYS.switchStatus && d.key !== QUANT_KEYS.switchInput && d.key !== QUANT_KEYS.selectedOutput)
       .map(d => {
-        const inp = inputMap.get(d.key);  if (inp)  { return { ...d, content: inp.content,  disabled: inp.disabled  }; }
-        const sel = selectMap.get(d.key); if (sel)  { return { ...d, defaultValue: sel.defaultValue, content: sel.content, disabled: sel.disabled }; }
-        const fil = fileMap.get(d.key);   if (fil)  { return { ...d, content: fil.content,  disabled: fil.disabled  }; }
+        const inp = inputMap.get(d.key); if (inp) { return { ...d, content: inp.content, disabled: inp.disabled }; }
+        const sel = selectMap.get(d.key); if (sel) { return { ...d, defaultValue: sel.defaultValue, content: sel.content, disabled: sel.disabled }; }
+        const fil = fileMap.get(d.key); if (fil) { return { ...d, content: fil.content, disabled: fil.disabled }; }
         return d;
       });
 
@@ -432,17 +434,19 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
       if (existingKeys.has(key)) { continue; }
       const state = inputMap.get(key) ?? selectMap.get(key) ?? fileMap.get(key);
       if (state) {
-        merged.push({ target: target.toLowerCase(), page: 'quant', type: itemType(key),
+        merged.push({
+          target: target.toLowerCase(), page: 'quant', type: itemType(key),
           kind: spec.kind, group: spec.group, key, title: spec.title,
           content: (state as any).content ?? (state as any).defaultValue ?? spec.defaultValue,
-          defaultValue: (state as any).defaultValue ?? spec.defaultValue, disabled: Boolean((state as any).disabled) });
+          defaultValue: (state as any).defaultValue ?? spec.defaultValue, disabled: Boolean((state as any).disabled)
+        });
       }
     }
 
     if (target === 'NPU') {
       merged.push(
         { target, type: 'switch', page: 'quant', kind: 'input', group: QUANT_KEYS.switchGroup, key: QUANT_KEYS.switchStatus, title: 'Switch Status', content: switchStatus, defaultValue: switchStatus, disabled: false },
-        { target, type: 'switch', page: 'quant', kind: 'input', group: QUANT_KEYS.switchGroup, key: QUANT_KEYS.switchInput,  title: 'Switch Input Value', content: switchInputValue, defaultValue: switchInputValue, disabled: false },
+        { target, type: 'switch', page: 'quant', kind: 'input', group: QUANT_KEYS.switchGroup, key: QUANT_KEYS.switchInput, title: 'Switch Input Value', content: switchInputValue, defaultValue: switchInputValue, disabled: false },
       );
     }
     merged.push({ target, type: 'output', page: 'quant', kind: 'input', group: 'output_config', key: QUANT_KEYS.selectedOutput, title: 'Selected Output Node', content: selectedOutput, defaultValue: selectedOutput, disabled: false });
@@ -523,10 +527,8 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
   );
 
   // ─── NPU PTQ rendering ─────────────────────────────────────────────────
-  //
   // All fields read from state (selByKey / inpByKey / filByKey / dynInputs…).
   // No positional slicing.  No calls to splitQuantizeData.
-  //
   const renderNpuPtq = (): React.JSX.Element => {
     const numNodes = dynInputs.length; // shape inputs = one per calibration node
 
@@ -706,10 +708,9 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
         </div>
 
         {/* configFile, modelPath, trainCode are in the payload but not shown in the original UI */}
-
         <div className="row-qat threeQat">
-          {inpByKey(QUANT_KEYS.npu.qat.epochNum)     && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.epochNum)!}     labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
-          {inpByKey(QUANT_KEYS.npu.qat.batchSize)    && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.batchSize)!}    labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
+          {inpByKey(QUANT_KEYS.npu.qat.epochNum) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.epochNum)!} labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
+          {inpByKey(QUANT_KEYS.npu.qat.batchSize) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.batchSize)!} labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
           {inpByKey(QUANT_KEYS.npu.qat.learningRate) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.learningRate)!} labelOrP={true} transmitStyle={true} getInputed={updateInput} editable={true} />}
         </div>
 
@@ -760,8 +761,8 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
 
             {/* First row: bitNum + quantType */}
             <div className="row-ptq">
-              {selByKey(QUANT_KEYS.cpu.bitNum)    && <div className="gutter-row"><SelectBoxComponent selectBox={selByKey(QUANT_KEYS.cpu.bitNum)!}    labelOrP={true} labelWidth={140} transmitStyle={true} getSelected={updateSelect} /></div>}
-              {selByKey(QUANT_KEYS.cpu.quantType) && <div className="gutter-row"><SelectBoxComponent selectBox={selByKey(QUANT_KEYS.cpu.quantType)!} labelOrP={true} labelWidth={97}  transmitStyle={true} getSelected={updateSelect} /></div>}
+              {selByKey(QUANT_KEYS.cpu.bitNum) && <div className="gutter-row"><SelectBoxComponent selectBox={selByKey(QUANT_KEYS.cpu.bitNum)!} labelOrP={true} labelWidth={140} transmitStyle={true} getSelected={updateSelect} /></div>}
+              {selByKey(QUANT_KEYS.cpu.quantType) && <div className="gutter-row"><SelectBoxComponent selectBox={selByKey(QUANT_KEYS.cpu.quantType)!} labelOrP={true} labelWidth={97} transmitStyle={true} getSelected={updateSelect} /></div>}
             </div>
 
             {/* Calibration Inputs table.

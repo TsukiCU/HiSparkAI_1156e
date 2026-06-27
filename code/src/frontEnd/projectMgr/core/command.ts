@@ -4,9 +4,9 @@
  */
 import type { GetInfoCallBack, LanguageSetMessage, ThemeChangeMessage } from '../interface/api';
 import { updateEntity } from './store/actions';
-import { IStore }       from './store/store';
-import { State }        from '../state';
-import i18n             from '../i18n/fronEndTrans';
+import { IStore } from './store/store';
+import { State } from '../state';
+import i18n from '../i18n/fronEndTrans';
 
 export class Command {
   static changeTheme(message: ThemeChangeMessage): void {

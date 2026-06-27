@@ -4,8 +4,8 @@
  */
 
 export const ApiMethod = {
-  CHANGE_THEME:     'changeTheme',
-  SET_LANGUAGE:     'setLanguage',
+  CHANGE_THEME: 'changeTheme',
+  SET_LANGUAGE: 'setLanguage',
   GET_INFO_CALLBAK: 'getInfoCallBack',
 } as const;
 

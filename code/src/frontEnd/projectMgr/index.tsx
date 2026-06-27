@@ -8,8 +8,8 @@ import { createRoot } from 'react-dom/client';
 
 import ProjectCreate from './projectCreate';
 import ProjectImport from './projectImport/projectImport';
-import { Command }   from './core/command';
-import { IStore }    from './core/store/store';
+import { Command } from './core/command';
+import { IStore } from './core/store/store';
 import type { Message } from './interface/api';
 
 type VSCodeApi = {
@@ -23,7 +23,7 @@ declare const module: any;
 
 export const vscode = acquireVsCodeApi();
 
-const root      = document.getElementById('app');
+const root = document.getElementById('app');
 const flagCreate = document.getElementById('flagCreate');
 const flagImport = document.getElementById('flagImport');
 

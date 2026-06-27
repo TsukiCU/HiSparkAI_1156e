@@ -62,7 +62,7 @@ function Navbar(): React.JSX.Element {
   const navbarStatus = useSelector((state: any) => state.entities.navbarStatus);
   const selectedFileNames = useSelector((state: any) => state.entities.selectedFileName);
   const skipQuantize = useSelector((state: any) => Boolean(state.entities.skipQuantize));
-  const skipConvert  = useSelector((state: any) => Boolean(state.entities.skipConvert));
+  const skipConvert = useSelector((state: any) => Boolean(state.entities.skipConvert));
   const [serverHost, setServerHost] = useState(window.initialData?.kind);
   const [current, setCurrent] = useState(0);
   const { pathname } = useLocation();
@@ -205,7 +205,7 @@ function Navbar(): React.JSX.Element {
   return (
     <div className="navbar-container">
       <div className="nav-buttons">
-        <Steps current={current} className={(themeData === 'dark' || (!themeData && serverHost === 2)) ? '' : 'step-process'} labelPlacement="vertical" items={items} onChange={handleChange} responsive={false}/>
+        <Steps current={current} className={(themeData === 'dark' || (!themeData && serverHost === 2)) ? '' : 'step-process'} labelPlacement="vertical" items={items} onChange={handleChange} responsive={false} />
       </div>
 
       <div className="outlet-container">
