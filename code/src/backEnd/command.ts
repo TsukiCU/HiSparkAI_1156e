@@ -1444,7 +1444,6 @@ export class Command {
 
     errMsg = this.generateConfig(target, modelEndsWith, 'full', true);
     if (errMsg !== undefined) {
-      vscode.window.showErrorMessage(`Model config generation failed: ${errMsg}`);
       this.logAndReportError(errMsg);
       return;
     }
@@ -2024,10 +2023,17 @@ export class Command {
       port: port ?? 22,
       username: username ?? 'root',
     };
-    let historyList: HistoryInfo[] = [];
-    const historyData = fs.readFileSync(filePath, 'utf-8');
-    if (historyData) {
-      historyList = JSON.parse(historyData);
+    // getHistoryFilePath() already returns the parsed JSON (or [] if missing/empty).
+    // Re-reading the file here would throw when history.json doesn't exist yet.
+    let historyList: HistoryInfo[] = Array.isArray(_) ? [..._] : [];
+    try {
+      if (!historyList.length && fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        if (raw) { historyList = JSON.parse(raw); }
+      }
+    } catch (err) {
+      logger.error(`Failed to read history.json: ${this.handleError(err)}`);
+      historyList = [];
     }
     historyList.push(historyInfo);
     fs.writeFileSync(filePath, JSON.stringify(historyList), 'utf8');

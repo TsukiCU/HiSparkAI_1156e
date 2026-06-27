@@ -65,7 +65,10 @@ function validateSdkForChip(soc: string, sdkPath: string): boolean {
     const jsonPath = path.join(sdkPath, 'build', 'config', 'target_config', soc, `${soc}.json`);
     return fs.existsSync(jsonPath);
   }
-  // 1156e validation is performed inside selectSdkPathFor1156e before the path is committed.
+  if (soc === '1156e') {
+    // Local (WSL) paths only — remote Linux paths are validated in selectSdkPathFor1156e.
+    return fs.existsSync(path.join(sdkPath, 'chip')) && fs.existsSync(path.join(sdkPath, 'gateway'));
+  }
   return true;
 }
 
@@ -274,13 +277,12 @@ export class ProjectMgrCommand {
       });
       if (!result?.[0]?.fsPath) { return; }
 
-      // Always commit the path; send validation result so the form shows a red error.
+      // Commit the path — updateSdkTips (called by sdkPathInfo effect) validates
+      // chip/ and gateway/ locally via validateSdkForChip and sends sdkPathWrongInfo.
       const sdkWinPath = result[0].fsPath;
-      const isValidWsl = fs.existsSync(path.join(sdkWinPath, 'chip')) && fs.existsSync(path.join(sdkWinPath, 'gateway'));
       ProjectMgrContext.pendingConnectionType = 'wsl';
       ProjectMgrContext.pendingWslDistro      = selectedDistro;
       callback(key, sdkWinPath);
-      callback(isValidWsl ? 'sdkPathRightInfo' : 'sdkPathWrongInfo', sdkWinPath);
     }
   }
 

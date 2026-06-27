@@ -100,9 +100,11 @@ const ProjectCreate = (): JSX.Element => {
     form.setFieldsValue({ sdkPath: sdkPathInfo });
     setSdkPath(sdkPathInfo);
     setSdkValidated(true);
-    // 1156e: validation result arrives directly via sdkPathRightInfo/sdkPathWrongInfo.
-    // ws63/3322: trigger updateSdkTips for backend validation.
-    if (soc === '1156e') { return; }
+    // 1156e Linux (remote) paths start with '/'; validation comes directly from
+    // selectSdkPathFor1156e via sdkPathRightInfo/sdkPathWrongInfo — skip updateSdkTips.
+    // 1156e WSL paths are Windows-format; fall through to updateSdkTips below so
+    // validateSdkForChip checks chip/ and gateway/ locally, same as ws63/3322.
+    if (soc === '1156e' && sdkPathInfo.startsWith('/')) { return; }
     if (soc && SDK_VALIDATED_CHIPS.has(soc)) {
       dispatch(getInfo({ operationType: 'updateSdkTips', paramData: { soc, sdkPath: sdkPathInfo }, source: 'projectMgr' }));
     } else {
@@ -114,24 +116,14 @@ const ProjectCreate = (): JSX.Element => {
   useEffect(() => {
     if (sdkPathRightInfo !== undefined) {
       setSdkContentWrong(false);
-      // For 1156e, set the field error directly to avoid the state-update timing
-      // race where the validator closure still sees the old sdkContentWrong value.
-      if (soc === '1156e') {
-        form.setFields([{ name: 'sdkPath', errors: [] }]);
-      } else {
-        form.validateFields(['sdkPath']);
-      }
+      form.validateFields(['sdkPath']);
     }
   }, [sdkPathRightInfo]);
 
   useEffect(() => {
     if (sdkPathWrongInfo !== undefined) {
       setSdkContentWrong(true);
-      if (soc === '1156e') {
-        form.setFields([{ name: 'sdkPath', errors: [t('sdkWrongInfo', { chip: '1156E' })] }]);
-      } else {
-        form.validateFields(['sdkPath']);
-      }
+      form.validateFields(['sdkPath']);
     }
   }, [sdkPathWrongInfo]);
 
@@ -238,16 +230,11 @@ const ProjectCreate = (): JSX.Element => {
     { required: true, message: t('fieldCannotEmpty', { field: t('sdkPath') }) },
     {
       validator: (): Promise<void> => {
-        const chip = soc.toUpperCase();
-        // 1156e: sdkContentWrong is set directly by sdkPathWrongInfo effect.
-        // No sdkValidated guard — form.setFields already handles the display;
-        // this validator fires on Finish to block submission when still wrong.
-        if (soc === '1156e') {
-          if (sdkContentWrong) { return Promise.reject(t('sdkWrongInfo', { chip })); }
-          return Promise.resolve();
-        }
         if (!sdkValidated || !SDK_VALIDATED_CHIPS.has(soc)) { return Promise.resolve(); }
-        if (sdkContentWrong) { return Promise.reject(t('sdkWrongInfo', { chip })); }
+        if (sdkContentWrong) {
+          const chip = soc.toUpperCase();
+          return Promise.reject(t('sdkWrongInfo', { chip }));
+        }
         return Promise.resolve();
       },
     },
