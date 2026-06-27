@@ -545,7 +545,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
                 onInputChange={(value, key): void => handleInputChange(value, key, provalidation.group)}
                 filePickerType="local"
                 inputPlaceholder={BENCHMARK_TEXT.labels.labelFilePlaceholder}
-                customEditableStyle={{ marginLeft: 0, pointerEvents: 'auto' }}
+                customEditableStyle={{ marginLeft: 0, pointerEvents: 'none' }}
               />
               {!onnxAvailable && (
                 <div style={{ position: 'absolute', inset: 0, cursor: 'not-allowed', pointerEvents: 'auto' }} onClick={notifyNoOnnx} />

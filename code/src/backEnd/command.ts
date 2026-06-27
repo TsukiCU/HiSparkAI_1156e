@@ -2792,18 +2792,21 @@ export class Command {
 
     const bitNumMap: Record<string, number> = { int8: 8, float16: 16, 8: 8 }; // Temporary map for "quantized data type" transition
 
-    // cpuValue[4] = validation_labels_cpu select (defaultValue = 'None' | 'Choose from File System')
-    // cpuValue[5] = val_out_cpu file picker (content = actual .csv path chosen by user)
-    const validationLabelSel = cpuValue[4]?.defaultValue ?? 'None';
+    // Use key-based lookup — positional indexing is fragile when array ordering changes.
+    const byKey = (key: string): any => cpuValue.find((item: any) => item.key === key) ?? {};
+    const validationVal      = String(byKey('validation_cpu').defaultValue ?? 'NONE');
+    const bitNumVal          = String(byKey('bit_num_cpu').defaultValue ?? 'int8');
+    const quantTypeVal       = String(byKey('quant_type').defaultValue ?? 'FULL_QUANT');
+    const validationLabelSel = String(byKey('validation_labels_cpu').defaultValue ?? 'None');
     const validationLabelPath = validationLabelSel === 'Choose from File System'
-      ? (String(cpuValue[5]?.content ?? '').trim())
+      ? String(byKey('val_out_cpu').content ?? '').trim()
       : '';
 
     const quantConfig = {
       quantConfig: {
-        validation: cpuValue[1].defaultValue ?? 'validation',
-        bitNum: bitNumMap[cpuValue[2].defaultValue] ?? 'bitNum',
-        quantType: cpuValue[3].defaultValue ?? 'quantType',
+        validation: validationVal,
+        bitNum: bitNumMap[bitNumVal] ?? 8,
+        quantType: quantTypeVal,
         caliInputs: caliInputList,
         valiInputs: valiInputList,
         valiOutputs: {
