@@ -1444,6 +1444,7 @@ export class Command {
 
     errMsg = this.generateConfig(target, modelEndsWith, 'full', true);
     if (errMsg !== undefined) {
+      vscode.window.showErrorMessage(`Model config generation failed: ${errMsg}`);
       this.logAndReportError(errMsg);
       return;
     }
