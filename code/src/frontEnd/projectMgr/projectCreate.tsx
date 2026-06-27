@@ -110,17 +110,6 @@ const ProjectCreate = (): JSX.Element => {
     }
   }, [sdkPathInfo]);
 
-  // ── 1156e: re-validate SDK field after sdkContentWrong commits ────────────
-  // sdkPathRightInfo/sdkPathWrongInfo arrive simultaneously with sdkPathInfo; due to
-  // React's batched state updates, the sdkContentWrong value set by these effects may
-  // not be visible when form.validateFields is first called. This effect re-validates
-  // after all state updates in the batch have committed.
-  useEffect(() => {
-    if (soc === '1156e' && sdkPath) {
-      form.validateFields(['sdkPath']);
-    }
-  }, [sdkContentWrong, soc]);
-
   // ── SDK validation result ─────────────────────────────────────────────────
   useEffect(() => {
     if (sdkPathRightInfo !== undefined) {
@@ -239,15 +228,11 @@ const ProjectCreate = (): JSX.Element => {
     { required: true, message: t('fieldCannotEmpty', { field: t('sdkPath') }) },
     {
       validator: (): Promise<void> => {
-        const chip = soc.toUpperCase();
-        if (soc === '1156e') {
-          // 1156e validation result arrives via sdkPathRightInfo/sdkPathWrongInfo directly.
-          // sdkValidated is not a reliable guard here due to batched state update timing.
-          if (sdkContentWrong) { return Promise.reject(t('sdkWrongInfo', { chip })); }
-          return Promise.resolve();
-        }
         if (!sdkValidated || !SDK_VALIDATED_CHIPS.has(soc)) { return Promise.resolve(); }
-        if (sdkContentWrong) { return Promise.reject(t('sdkWrongInfo', { chip })); }
+        if (sdkContentWrong) {
+          const chip = soc.toUpperCase();
+          return Promise.reject(t('sdkWrongInfo', { chip }));
+        }
         return Promise.resolve();
       },
     },

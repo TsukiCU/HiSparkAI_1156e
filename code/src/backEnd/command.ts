@@ -1404,11 +1404,9 @@ export class Command {
         }
 
         const wslPython = await this.getWSLPython(distro);
-        // Note: --chip/--platform are intentionally omitted for WSL; the local script
-        // may be an older version that does not accept these arguments.  Linux uses the
-        // remote (up-to-date) script which does support them.
         const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} `
           + `--model ${common.shQuote(modelLinuxForRun)} `
+          + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `
           + `--output_path ${common.shQuote(parsedJsonWsl)}`;
         this.outputLogger.handleLogInfo(`Start running: ${parseCmd}\n`, 'info');
         const ret = await common.exeRunner({
@@ -1416,8 +1414,6 @@ export class Command {
           mode: 'utf8', logger: this.outputLogger, python: true,
         });
         if (ret.code !== 0) {
-          const detail = (ret.stderr || ret.stdout || '').trim().slice(0, 200);
-          vscode.window.showErrorMessage(`Model parsing failed (exit ${ret.code})${detail ? ': ' + detail : ''}. Check Output panel for details.`);
           this.logAndReportError(`Error when executing parse.py, exit code ${ret.code}`);
           return;
         }
@@ -1448,7 +1444,6 @@ export class Command {
 
     errMsg = this.generateConfig(target, modelEndsWith, 'full', true);
     if (errMsg !== undefined) {
-      vscode.window.showErrorMessage(`Failed to generate model config: ${errMsg}`);
       this.logAndReportError(errMsg);
       return;
     }
