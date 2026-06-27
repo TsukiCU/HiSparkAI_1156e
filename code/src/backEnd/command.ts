@@ -1082,22 +1082,38 @@ export class Command {
       await Command.filePickerSelectModel();
 
     } else if (source === 'wsl') {
-      const distro = GlobalModel.instance.wslDistro ?? '';
-      let distroOk = false;
-      try {
-        const list = await Command.getWslLists();
-        distroOk = list.includes(distro);
-      } catch { /* distroOk stays false */ }
+      let distro = GlobalModel.instance.wslDistro ?? '';
 
-      if (!distroOk) {
-        vscode.window.showWarningMessage(
-          `WSL distro '${distro}' is not available. Please reconnect.`,
-        );
-        extension.chipConfigPanel?.postMessage({ type: 'ConnectToWsl' });
-        return;
+      // If no distro is stored (e.g. first session after project creation), prompt the
+      // user to select one rather than showing a confusing "not available" warning.
+      if (!distro) {
+        const distros = await Command.getWslLists();
+        if (!distros.length) {
+          vscode.window.showWarningMessage('No WSL distributions found. Please install WSL first.');
+          return;
+        }
+        const selected = await vscode.window.showQuickPick(distros, {
+          title: 'Select WSL Distribution',
+          placeHolder: 'Choose the WSL distro that has your model file...',
+        });
+        if (!selected) { return; }
+        distro = selected;
+        GlobalModel.instance.wslDistro = distro;
+      } else {
+        // Distro is stored — verify it is still available.
+        let distroOk = false;
+        try {
+          const list = await Command.getWslLists();
+          distroOk = list.includes(distro);
+        } catch { /* distroOk stays false */ }
+        if (!distroOk) {
+          vscode.window.showWarningMessage(`WSL distro '${distro}' is not available. Please reconnect.`);
+          extension.chipConfigPanel?.postMessage({ type: 'ConnectToWsl' });
+          return;
+        }
       }
 
-      // Distro is available — go directly to the WSL file picker.
+      // Distro is resolved — open the WSL file picker.
       await Command.filePickerWslSelectModel();
     } else {
       // Fallback: source not set yet, use normal picker.

@@ -245,14 +245,12 @@ export class ProjectMgrCommand {
         'remoteBuild.api.executeCommand',
         `test -d "${remotePath}/chip" && test -d "${remotePath}/gateway" && echo "VALID" || echo "INVALID"`,
       );
-      if (checkResult?.stdout?.trim() !== 'VALID') {
-        vscode.window.showWarningMessage(
-          `Invalid 1156E SDK: "${remotePath}" must contain chip/ and gateway/ subdirectories.`,
-        );
-        return; // Do not commit the invalid path.
-      }
+      const isValid = checkResult?.stdout?.trim() === 'VALID';
 
+      // Always commit the path so the form field is updated; send validation result
+      // so the form shows a red error (like ws63/3322) instead of a popup warning.
       callback(key, remotePath);
+      callback(isValid ? 'sdkPathRightInfo' : 'sdkPathWrongInfo', remotePath);
 
     } else {
       // WSL: let user choose a distribution, then pick a local folder.
@@ -276,18 +274,13 @@ export class ProjectMgrCommand {
       });
       if (!result?.[0]?.fsPath) { return; }
 
-      // Validate locally: chip/ and gateway/ must exist.
+      // Always commit the path; send validation result so the form shows a red error.
       const sdkWinPath = result[0].fsPath;
-      if (!fs.existsSync(path.join(sdkWinPath, 'chip')) || !fs.existsSync(path.join(sdkWinPath, 'gateway'))) {
-        vscode.window.showWarningMessage(
-          `Invalid 1156E SDK: "${sdkWinPath}" must contain chip/ and gateway/ subdirectories.`,
-        );
-        return; // Do not commit the invalid path.
-      }
-
+      const isValidWsl = fs.existsSync(path.join(sdkWinPath, 'chip')) && fs.existsSync(path.join(sdkWinPath, 'gateway'));
       ProjectMgrContext.pendingConnectionType = 'wsl';
       ProjectMgrContext.pendingWslDistro      = selectedDistro;
       callback(key, sdkWinPath);
+      callback(isValidWsl ? 'sdkPathRightInfo' : 'sdkPathWrongInfo', sdkWinPath);
     }
   }
 

@@ -29,9 +29,10 @@ const PLATFORM_MAP: Record<string, { platform: 'CPU' | 'NPU'; fixed: boolean }> 
   '3322': { platform: 'NPU', fixed: true },
 };
 
-// Chips for which SDK path validation is performed.
-const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322']);
-// 1156e SDK is validated at selection time (inside selectSdkPathFor1156e).
+// Chips whose SDK field shows inline red error text on invalid path.
+// 1156e sends sdkPathRightInfo/sdkPathWrongInfo directly from selectSdkPathFor1156e
+// (not via updateSdkTips), so it is listed here but skips updateSdkTips below.
+const SDK_VALIDATED_CHIPS = new Set(['ws63', '3322', '1156e']);
 let drag: Drag | undefined;
 
 const ProjectCreate = (): JSX.Element => {
@@ -99,11 +100,12 @@ const ProjectCreate = (): JSX.Element => {
     form.setFieldsValue({ sdkPath: sdkPathInfo });
     setSdkPath(sdkPathInfo);
     setSdkValidated(true);
-    // Trigger backend validation for ws63 / 3322.
+    // 1156e: validation result arrives directly via sdkPathRightInfo/sdkPathWrongInfo.
+    // ws63/3322: trigger updateSdkTips for backend validation.
+    if (soc === '1156e') { return; }
     if (soc && SDK_VALIDATED_CHIPS.has(soc)) {
       dispatch(getInfo({ operationType: 'updateSdkTips', paramData: { soc, sdkPath: sdkPathInfo }, source: 'projectMgr' }));
     } else {
-      // No validation needed for this chip — mark as valid.
       setSdkContentWrong(false);
     }
   }, [sdkPathInfo]);
