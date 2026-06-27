@@ -2816,7 +2816,7 @@ export class Command {
     const validationLabelSel = String(byKey('validation_labels_cpu').defaultValue ?? 'None');
     const validationLabelPath = validationLabelSel === 'Choose from File System'
       ? String(byKey('val_out_cpu').content ?? '').trim()
-      : '';
+      : ' ';
 
     const quantConfig = {
       quantConfig: {
