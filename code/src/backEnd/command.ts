@@ -1113,6 +1113,10 @@ export class Command {
         }
       }
 
+      // Tell the frontend the source is WSL before opening the file picker.
+      // This ensures Convert / Quantize pages send the correct source in their requests.
+      extension.chipConfigPanel?.postMessage({ type: 'Source', params: { source: 'wsl' } });
+
       // Distro is resolved — open the WSL file picker.
       await Command.filePickerWslSelectModel();
     } else {

@@ -100,11 +100,9 @@ const ProjectCreate = (): JSX.Element => {
     form.setFieldsValue({ sdkPath: sdkPathInfo });
     setSdkPath(sdkPathInfo);
     setSdkValidated(true);
-    // 1156e Linux (remote) paths start with '/'; validation comes directly from
-    // selectSdkPathFor1156e via sdkPathRightInfo/sdkPathWrongInfo — skip updateSdkTips.
-    // 1156e WSL paths are Windows-format; fall through to updateSdkTips below so
-    // validateSdkForChip checks chip/ and gateway/ locally, same as ws63/3322.
-    if (soc === '1156e' && sdkPathInfo.startsWith('/')) { return; }
+    // 1156e: selectSdkPathFor1156e validates both Linux and WSL paths itself and
+    // sends sdkPathRightInfo/sdkPathWrongInfo directly — skip updateSdkTips entirely.
+    if (soc === '1156e') { return; }
     if (soc && SDK_VALIDATED_CHIPS.has(soc)) {
       dispatch(getInfo({ operationType: 'updateSdkTips', paramData: { soc, sdkPath: sdkPathInfo }, source: 'projectMgr' }));
     } else {
@@ -113,17 +111,23 @@ const ProjectCreate = (): JSX.Element => {
   }, [sdkPathInfo]);
 
   // ── SDK validation result ─────────────────────────────────────────────────
+  // Use form.setFields for immediate display — form.validateFields relies on state
+  // that may not yet be committed (React batches setState in effects), so it can
+  // return a stale value when the path and the validation result arrive together.
   useEffect(() => {
     if (sdkPathRightInfo !== undefined) {
+      setSdkValidated(true);
       setSdkContentWrong(false);
-      form.validateFields(['sdkPath']);
+      form.setFields([{ name: 'sdkPath', errors: [] }]);
     }
   }, [sdkPathRightInfo]);
 
   useEffect(() => {
     if (sdkPathWrongInfo !== undefined) {
+      setSdkValidated(true);
       setSdkContentWrong(true);
-      form.validateFields(['sdkPath']);
+      const chip = soc ? soc.toUpperCase() : 'SDK';
+      form.setFields([{ name: 'sdkPath', errors: [t('sdkWrongInfo', { chip })] }]);
     }
   }, [sdkPathWrongInfo]);
 

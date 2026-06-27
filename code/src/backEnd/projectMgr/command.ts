@@ -277,12 +277,16 @@ export class ProjectMgrCommand {
       });
       if (!result?.[0]?.fsPath) { return; }
 
-      // Commit the path — updateSdkTips (called by sdkPathInfo effect) validates
-      // chip/ and gateway/ locally via validateSdkForChip and sends sdkPathWrongInfo.
       const sdkWinPath = result[0].fsPath;
       ProjectMgrContext.pendingConnectionType = 'wsl';
       ProjectMgrContext.pendingWslDistro      = selectedDistro;
+
+      // Always commit the path so the form field is updated.
       callback(key, sdkWinPath);
+
+      // Validate locally and send result directly (mirrors the Linux remote check above).
+      const isValid = fs.existsSync(path.join(sdkWinPath, 'chip')) && fs.existsSync(path.join(sdkWinPath, 'gateway'));
+      callback(isValid ? 'sdkPathRightInfo' : 'sdkPathWrongInfo', sdkWinPath);
     }
   }
 
