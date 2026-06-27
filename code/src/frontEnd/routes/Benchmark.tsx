@@ -77,7 +77,6 @@ interface ProfilingParams {
 type ProfilingCommandMsg = Omit<CommandMsg, 'params'> & { params: ProfilingParams };
 
 // ─── History modal sub-components ─────────────────────────────────────────
-
 const BenchmarkModal = (
   { isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }
 ): React.JSX.Element | null => {
@@ -106,7 +105,7 @@ function ModalFooter({ children }: { children: React.ReactNode }): React.JSX.Ele
   return <div className="modal-footer">{children}</div>;
 }
 BenchmarkModal.Header = ModalHeader;
-BenchmarkModal.Body   = ModalBody;
+BenchmarkModal.Body = ModalBody;
 BenchmarkModal.Footer = ModalFooter;
 
 const csvRawData: any = {
@@ -134,61 +133,60 @@ function splitBenchmarkData(data: FileInputBoxProps[]) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
-
 function Benchmark(props: { target: Target; source: Source }): React.JSX.Element {
   const { target, source } = props;
-  const navigate    = useNavigate();
-  const dispatch    = useDispatch();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { Option } = Select;
 
   // ── Serial port state ─────────────────────────────────────────────────
-  const [port1,      setPort1]      = useState<string>('');
-  const [port2,      setPort2]      = useState<string>('');
-  const [baudRate1,  setBaudRate1]  = useState<string>('');
-  const [baudRate2,  setBaudRate2]  = useState<string>('');
+  const [port1, setPort1] = useState<string>('');
+  const [port2, setPort2] = useState<string>('');
+  const [baudRate1, setBaudRate1] = useState<string>('');
+  const [baudRate2, setBaudRate2] = useState<string>('');
 
   // ── Redux selectors ───────────────────────────────────────────────────
   // CPU performance
-  const timeValue     = useSelector((state: any) => state.entities.timeValue);
-  const ramValue      = useSelector((state: any) => state.entities.ramValue);
-  const flashValue    = useSelector((state: any) => state.entities.flashValue);
+  const timeValue = useSelector((state: any) => state.entities.timeValue);
+  const ramValue = useSelector((state: any) => state.entities.ramValue);
+  const flashValue = useSelector((state: any) => state.entities.flashValue);
   const lastConvertTS = useSelector((state: any) => state.entities.lastConvertTS);
   // NPU performance
-  const dbgSize       = useSelector((state: any) => state.entities.dbgSize);
-  const modelSize     = useSelector((state: any) => state.entities.modelSize);
+  const dbgSize = useSelector((state: any) => state.entities.dbgSize);
+  const modelSize = useSelector((state: any) => state.entities.modelSize);
   const inferenceTime = useSelector((state: any) => state.entities.inferenceTime);
   // Accuracy
-  const accuracyValue    = useSelector((state: any) => state.entities.balancedAccuracy);
+  const accuracyValue = useSelector((state: any) => state.entities.balancedAccuracy);
   const cosineSimilarity = useSelector((state: any) => state.entities.cosineSimilarity);
 
   const benchmarkSelectValue = useSelector((state: any) => state.entities.benchmarkSelectValue);
-  const selectResultRecord   = useSelector((state: any) => state.entities.selectResultRecord);
-  const profHistoryData      = useSelector((state: any) => state.entities.profHistoryData);
-  const profilingData        = useSelector((state: any) => state.entities.profilingData) as ProfilingItem[];
+  const selectResultRecord = useSelector((state: any) => state.entities.selectResultRecord);
+  const profHistoryData = useSelector((state: any) => state.entities.profHistoryData);
+  const profilingData = useSelector((state: any) => state.entities.profilingData) as ProfilingItem[];
   // True when the selected model is onnx (or a precompiled model with companion onnx).
   // Default true so existing onnx-only workflows are unaffected.
-  const onnxAvailable        = useSelector((state: any) => Boolean(state.entities.onnxAvailable ?? true));
-  const proGraphData         = useSelector((state: any) => state.entities.importProGraphCallbackData);
-  const proValidationData    = useSelector((state: any) => state.entities.importProValidationCallbackData);
-  const ports                = useSelector((state: any) => state.entities.ports) as [];
+  const onnxAvailable = useSelector((state: any) => Boolean(state.entities.onnxAvailable ?? true));
+  const proGraphData = useSelector((state: any) => state.entities.importProGraphCallbackData);
+  const proValidationData = useSelector((state: any) => state.entities.importProValidationCallbackData);
+  const ports = useSelector((state: any) => state.entities.ports) as [];
 
   // ── File input state (single source — no new* duplicate) ──────────────
-  const [fileBoxes,    setFileBoxes]    = useState<FileInputBoxProps[]>([]);
+  const [fileBoxes, setFileBoxes] = useState<FileInputBoxProps[]>([]);
   const [profilingBoxes, setProfilingBoxes] = useState<ProfilingItem[]>([]);
-  const [mappedData,   setMappedData]   = useState<ProfilingItem[]>([]);
+  const [mappedData, setMappedData] = useState<ProfilingItem[]>([]);
 
   // ── Output node ───────────────────────────────────────────────────────
-  const [outputNames,    setOutputNames]    = useState<string[]>([]);
-  const [selectedOutput, setSelectedOutput] = useState<string>('');
+  const [outputNames, setOutputNames] = useState<string[]>([]);
+  const [selectedOutput, setSelectedOutput] = useState<string>('None');
 
   // ── Modal / pending ───────────────────────────────────────────────────
-  const [isModalOpen,        setModalOpen]          = useState(false);
+  const [isModalOpen, setModalOpen] = useState(false);
   const [exportMessageState, setExportMessageState] = useState(false);
-  const [pending,            setPending]            = useState(false);
+  const [pending, setPending] = useState(false);
   const [performancePending, setPerformancePending] = useState(false);
-  const [accuracyPending,    setAccuracyPending]    = useState(false);
-  const [selectedRowKeys,    setSelectedRowKeys]    = useState<number[]>([]);
-  const [selectedRows,       setSelectedRows]       = useState([]);
+  const [accuracyPending, setAccuracyPending] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState([]);
 
   // ── Chart config ──────────────────────────────────────────────────────
   interface ChartConfig { width?: string; height?: string; overflowX?: CSSProperties['overflowX'] }
@@ -196,11 +194,11 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   const [tableConfig, setTableConfig] = useState<ChartConfig>({});
 
   // ── Graph data ────────────────────────────────────────────────────────
-  const [profilingCfgData,   setProfilingCfgData]   = useState<ProfilingGraphData[]>([]);
+  const [profilingCfgData, setProfilingCfgData] = useState<ProfilingGraphData[]>([]);
   const [proValidationCfgData, setProValidationCfgData] = useState<ProfilingValidationData[]>([]);
 
   // ── Flashing ──────────────────────────────────────────────────────────
-  let isFlashed    = useSelector((state: any) => state.entities.isFlashed);
+  let isFlashed = useSelector((state: any) => state.entities.isFlashed);
   let skipFlashing = useSelector((state: any) => state.entities.skipFlashing);
 
   const setIsFlashed = (v: boolean): void => {
@@ -236,7 +234,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
     const names = store.getState().entities.modelOutputNames || [];
     const withNone = ['None', ...names];
     setOutputNames(withNone);
-    if (names.length > 0) { setSelectedOutput(withNone[0]); }
+    setSelectedOutput(withNone[0]); // always default to first option ('None' or first output name)
     setFileBoxes([]);
     setProfilingBoxes([]);
     setMappedData([]);
@@ -435,7 +433,6 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   };
 
   // ─── Action handlers ────────────────────────────────────────────────────
-
   const notifyNoOnnx = (): void => {
     vscode.postMessage({ method: 'showInfo', params: { text: 'ONNX model not available — accuracy evaluation is disabled.' } });
   };
@@ -538,19 +535,20 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
           {provalidation && (
             // The CSS rule ".AVC-container-last-row .fileInputContainer { margin-left: -120px }"
             // compensates for the empty 120px label inside FileInputBoxComponent.
-            // Moving that offset to this wrapper div prevents the negative margin from
-            // causing fileInputContainer to overflow left and occlude the adjacent Select.
-            <div style={{ position: 'relative', marginLeft: '-120px' }}>
+            // We move that offset to this wrapper div and reset it inside via customEditableStyle.
+            // pointerEvents: 'none' on the wrapper ensures the Select to the left is not blocked
+            // in the overlapping region; the FileInputBoxComponent restores 'auto' for itself.
+            <div style={{ position: 'relative', marginLeft: '-120px', pointerEvents: 'none' }}>
               <FileInputBoxComponent
                 fileInputBox={{ ...provalidation, disabled: !onnxAvailable || selectedOutput === 'None', content: selectedOutput === 'None' ? '' : provalidation.content }}
                 isShowInput={false} fileExt="csv"
                 onInputChange={(value, key): void => handleInputChange(value, key, provalidation.group)}
                 filePickerType="local"
                 inputPlaceholder={BENCHMARK_TEXT.labels.labelFilePlaceholder}
-                customEditableStyle={{ marginLeft: 0 }}
+                customEditableStyle={{ marginLeft: 0, pointerEvents: 'auto' }}
               />
               {!onnxAvailable && (
-                <div style={{ position: 'absolute', inset: 0, cursor: 'not-allowed' }} onClick={notifyNoOnnx} />
+                <div style={{ position: 'absolute', inset: 0, cursor: 'not-allowed', pointerEvents: 'auto' }} onClick={notifyNoOnnx} />
               )}
             </div>
           )}
@@ -597,8 +595,8 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   // Port / baud-rate options.
   const portOptions = ports?.map((p: PortInfo) => ({ value: p.path, label: p.label }));
   const baudrateOptions = {
-    baudrate1: [{ value: '921600',  label: '921600'  }],
-    baudrate2: [{ value: '115200',  label: '115200'  }],
+    baudrate1: [{ value: '921600', label: '921600' }],
+    baudrate2: [{ value: '115200', label: '115200' }],
   };
 
   // Performance metric values for the current target (from schema, no hardcoded strings).
@@ -687,7 +685,6 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
               </div>
             </div>
           </div>
-
           <div className="AVC-container-2">
             <CommonCard title="Evaluation Data" width="50vw" chartChange={setTableConfig}
               children={<ProValidation profilingValidationData={proValidationCfgData} overflowX={tableConfig.overflowX} target={target} />} />
@@ -696,7 +693,6 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
                 ? <ProfilingGraph width={chartConfig.width} height={chartConfig.height} overflowX={chartConfig.overflowX} profilingGraphData={profilingCfgData} />
                 : <Empty style={{ height: '300px' }} />} />
           </div>
-
         </div>
       </div>
 

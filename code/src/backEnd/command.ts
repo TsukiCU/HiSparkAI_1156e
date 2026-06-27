@@ -5282,40 +5282,57 @@ export class Command {
       throw new Error(`install_deps.sh failed (exit ${ret.exitCode}):\n${detail}`);
     }
 
-    // Step 2: run cbuild.py.
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building on remote server...' } });
-    const buildCmd = `cd "${remoteSdkPath}" && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release'`;
-    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, buildCmd);
-    if (this.buildChip !== '1156e') { return; } // abort signal set by stopBuilding
-    if (ret.exitCode) { throw new Error(`Build failed (exit ${ret.exitCode}): ${ret.stderr}`); }
-
-    // Step 3: verify output files, then download the fwpkg for flashing.
-    const localImagesDir = this.prepareDeployDir();
-    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
-    const fwpkgFileName = path.basename(fwpkgRelPath);
-
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Verifying build outputs...' } });
-    for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
-      const remoteFile = `${remoteImagesDir}/${fileName}`;
-      // Check the file exists and is non-empty on remote.
-      const sizeRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
-        `stat -c%s "${remoteFile}" 2>/dev/null || echo 0`);
-      const size = parseInt((sizeRet.stdout || '').trim(), 10);
-      if (isNaN(size) || size === 0) {
-        vscode.window.showErrorMessage(
-          `1156e build failed: output file "${fileName}" is missing or empty (0 B). ` +
-          'Check the build environment and try again.'
-        );
-        throw new Error(`Output file missing or empty: ${fileName}`);
+    // Helper: check whether the images dir and all output files are present and non-empty.
+    const checkRemoteFilesOk = async (): Promise<boolean> => {
+      const dirRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+        `test -d "${remoteImagesDir}" && echo "EXISTS" || echo "NOT_EXISTS"`);
+      if (dirRet?.stdout?.trim() !== 'EXISTS') { return false; }
+      for (const f of this.BUILD_1156E_OUTPUT_FILES) {
+        const sRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+          `stat -c%s "${remoteImagesDir}/${f}" 2>/dev/null || echo 0`);
+        if (isNaN(parseInt((sRet.stdout || '').trim(), 10)) || parseInt((sRet.stdout || '').trim(), 10) === 0) { return false; }
       }
-      // Individual files are verified but not downloaded — only the fwpkg is needed for flashing.
-      // await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFile, path.join(localImagesDir, fileName));
+      return true;
+    };
+
+    // Step 2: full build — only when images folder or output files are missing.
+    if (!await checkRemoteFilesOk()) {
+      extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building on remote server...' } });
+      const buildCmd = `cd "${remoteSdkPath}" && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release'`;
+      ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, buildCmd);
+      if (this.buildChip !== '1156e') { return; }
+      if (ret.exitCode) { throw new Error(`Build failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+
+      // Verify output files after full build.
+      for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
+        const sizeRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+          `stat -c%s "${remoteImagesDir}/${fileName}" 2>/dev/null || echo 0`);
+        const size = parseInt((sizeRet.stdout || '').trim(), 10);
+        if (isNaN(size) || size === 0) {
+          vscode.window.showErrorMessage(`1156e build failed: "${fileName}" is missing or empty. Check the build environment.`);
+          throw new Error(`Output file missing or empty: ${fileName}`);
+        }
+      }
     }
 
-    // Download the packaged fwpkg.
+    // Step 3: package fwpkg.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg...' } });
+    const fwpkgCmd = `cd "${remoteSdkPath}" && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`;
+    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, fwpkgCmd);
+    if (this.buildChip !== '1156e') { return; }
+    if (ret.exitCode) { throw new Error(`fwpkg packaging failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+
+    // Step 4: download fwpkg to local deploy directory.
+    const fwpkgRelPath   = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const remoteFwpkg    = `${remoteSdkPath}/${fwpkgRelPath}`;
+    const localImagesDir = this.prepareDeployDir();
+    const fwpkgExistRet  = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+      `test -f "${remoteFwpkg}" && echo "EXISTS" || echo "NOT_EXISTS"`);
+    if (fwpkgExistRet?.stdout?.trim() !== 'EXISTS') {
+      throw new Error(`fwpkg not found after packaging: ${remoteFwpkg}`);
+    }
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading fwpkg...' } });
-    const remoteFwpkg = `${remoteSdkPath}/${fwpkgRelPath}`;
-    await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFwpkg, path.join(localImagesDir, fwpkgFileName));
+    await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFwpkg, path.join(localImagesDir, path.basename(fwpkgRelPath)));
   }
 
   /** 1156e build via WSL. */
@@ -5358,36 +5375,48 @@ export class Command {
     let ret = await this.runWslBuildCmd(distro, `sed 's/\\r$//' ${common.shQuote(wslScript)} | bash`);
     if (ret.code !== 0) { throw new Error(`install_deps.sh failed (WSL, exit ${ret.code})`); }
 
-    // Step 2: run cbuild.py inside WSL (tracked for abort).
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building (WSL)...' } });
-    ret = await this.runWslBuildCmd(distro,
-      `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release`);
-    if (ret.code !== 0) { throw new Error(`cbuild.py failed (WSL, exit ${ret.code})`); }
-
-    // Step 3: verify output files, then copy the fwpkg for flashing.
+    const winImagesDir   = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
+    const fwpkgRelPath   = CHIP_CONFIG['1156e'].fwpkgRelPath;
     const localImagesDir = this.prepareDeployDir();
-    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
-    const fwpkgFileName = path.basename(fwpkgRelPath);
-    const winImagesDir = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
 
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Verifying build outputs...' } });
-    for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
-      const srcFile = path.join(winImagesDir, fileName);
-      if (!fs.existsSync(srcFile) || fs.statSync(srcFile).size === 0) {
-        vscode.window.showErrorMessage(
-          `1156e build failed: output file "${fileName}" is missing or empty (0 B). ` +
-          'Check the build environment and try again.'
-        );
-        throw new Error(`Output file missing or empty: ${fileName}`);
+    // Helper: check whether all output files are present and non-empty on Windows path.
+    const checkWslFilesOk = (): boolean => {
+      if (!fs.existsSync(winImagesDir)) { return false; }
+      for (const f of this.BUILD_1156E_OUTPUT_FILES) {
+        const p = path.join(winImagesDir, f);
+        if (!fs.existsSync(p) || fs.statSync(p).size === 0) { return false; }
       }
-      // Individual files are verified but not copied — only the fwpkg is needed for flashing.
-      // await fs.promises.copyFile(srcFile, path.join(localImagesDir, fileName));
+      return true;
+    };
+
+    // Step 2: full build — only when images folder or output files are missing.
+    if (!checkWslFilesOk()) {
+      extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building (WSL)...' } });
+      ret = await this.runWslBuildCmd(distro,
+        `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release`);
+      if (ret.code !== 0) { throw new Error(`cbuild.py failed (WSL, exit ${ret.code})`); }
+
+      // Verify output files after full build.
+      for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
+        const srcFile = path.join(winImagesDir, fileName);
+        if (!fs.existsSync(srcFile) || fs.statSync(srcFile).size === 0) {
+          vscode.window.showErrorMessage(`1156e build failed: "${fileName}" is missing or empty. Check the build environment.`);
+          throw new Error(`Output file missing or empty: ${fileName}`);
+        }
+      }
     }
 
-    // Copy the packaged fwpkg.
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Copying fwpkg...' } });
+    // Step 3: package fwpkg.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg (WSL)...' } });
+    ret = await this.runWslBuildCmd(distro,
+      `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`);
+    if (ret.code !== 0) { throw new Error(`fwpkg packaging failed (WSL, exit ${ret.code})`); }
+
+    // Step 4: copy fwpkg to local deploy directory.
     const srcFwpkg = path.join(localSdkPath, fwpkgRelPath);
-    await fs.promises.copyFile(srcFwpkg, path.join(localImagesDir, fwpkgFileName));
+    if (!fs.existsSync(srcFwpkg)) { throw new Error(`fwpkg not found after packaging: ${srcFwpkg}`); }
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Copying fwpkg...' } });
+    await fs.promises.copyFile(srcFwpkg, path.join(localImagesDir, path.basename(fwpkgRelPath)));
   }
 
   static async cpuDeploySetup(message: any): Promise<void> {
