@@ -1,3 +1,5 @@
+# 适用于普通Linux服务器与Docker镜像
+
 #!/bin/bash
 
 set -Eeuo pipefail
@@ -15,11 +17,6 @@ APT_MIRROR_ACTIVE=0
 PIP_MIRROR_ACTIVE=0
 APT_BACKUP_DIR=""
 PIP_BACKUP_DIR=""
-
-# ===== WSL 专用状态 =====
-WSL_DNS_BACKUP_FILE=""
-WSL_DNS_FALLBACK_ACTIVE=0
-WSL_APT_PROXY_ACTIVE=0
 
 log() {
     echo ""
@@ -52,181 +49,9 @@ else
     SUDO=()
 fi
 
-# ============================================================
-# WSL 专用辅助函数
-# ============================================================
-
-is_wsl() {
-    grep -qiE "microsoft|wsl" /proc/version 2>/dev/null
-}
-
-get_wsl_host_ip() {
-    awk '/^nameserver / {print $2; exit}' /etc/resolv.conf 2>/dev/null || true
-}
-
-rewrite_localhost_proxy_for_wsl() {
-    local value="$1"
-    local host_ip
-
-    host_ip="$(get_wsl_host_ip)"
-
-    if [ -z "$host_ip" ]; then
-        echo "$value"
-        return 0
-    fi
-
-    # WSL2 中，Windows 上的代理软件经常不能通过 127.0.0.1 直接访问。
-    # 把 http://127.0.0.1:7890 / http://localhost:7890
-    # 转成 http://<WindowsHostIP>:7890。
-    echo "$value" | sed \
-        -e "s#://127\.0\.0\.1:#://${host_ip}:#g" \
-        -e "s#://localhost:#://${host_ip}:#g"
-}
-
-normalize_proxy_env_for_wsl() {
-    local changed=0
-
-    if ! is_wsl; then
-        return 0
-    fi
-
-    for name in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY; do
-        local old="${!name-}"
-        if [ -n "$old" ]; then
-            local new
-            new="$(rewrite_localhost_proxy_for_wsl "$old")"
-            if [ "$new" != "$old" ]; then
-                export "$name=$new"
-                changed=1
-            fi
-        fi
-    done
-
-    if [ "$changed" -eq 1 ]; then
-        warn "检测到 WSL，已将 localhost/127.0.0.1 代理地址转换为 Windows Host IP。"
-        info "http_proxy=${http_proxy-}"
-        info "https_proxy=${https_proxy-}"
-    fi
-}
-
-activate_wsl_apt_proxy_if_needed() {
-    local proxy=""
-
-    if ! is_wsl; then
-        return 0
-    fi
-
-    proxy="${https_proxy-${HTTPS_PROXY-${http_proxy-${HTTP_PROXY-}}}}"
-
-    if [ -z "$proxy" ]; then
-        return 0
-    fi
-
-    if [ "$WSL_APT_PROXY_ACTIVE" = "1" ]; then
-        return 0
-    fi
-
-    WSL_APT_PROXY_ACTIVE=1
-
-    warn "检测到 WSL 代理环境变量，为 apt 写入临时代理配置。脚本退出时会删除。"
-
-    "${SUDO[@]}" mkdir -p /etc/apt/apt.conf.d
-
-    cat <<EOF | "${SUDO[@]}" tee /etc/apt/apt.conf.d/99-wsl-temp-proxy >/dev/null
-Acquire::http::Proxy "$proxy";
-Acquire::https::Proxy "$proxy";
-EOF
-}
-
-remove_wsl_apt_proxy() {
-    if ! is_wsl; then
-        return 0
-    fi
-
-    if [ "$WSL_APT_PROXY_ACTIVE" = "1" ]; then
-        info "删除 WSL 临时 apt 代理配置..."
-        "${SUDO[@]}" rm -f /etc/apt/apt.conf.d/99-wsl-temp-proxy
-    fi
-}
-
-backup_wsl_dns_conf() {
-    if [ -n "$WSL_DNS_BACKUP_FILE" ]; then
-        return 0
-    fi
-
-    WSL_DNS_BACKUP_FILE="/tmp/resolv.conf.chatgpt.wsl.bak.$$"
-
-    if [ -e /etc/resolv.conf ] || [ -L /etc/resolv.conf ]; then
-        cp -aL /etc/resolv.conf "$WSL_DNS_BACKUP_FILE" 2>/dev/null || true
-    else
-        touch "$WSL_DNS_BACKUP_FILE"
-    fi
-}
-
-activate_wsl_dns_fallback() {
-    if ! is_wsl; then
-        return 0
-    fi
-
-    if [ "$WSL_DNS_FALLBACK_ACTIVE" = "1" ]; then
-        return 0
-    fi
-
-    backup_wsl_dns_conf
-    WSL_DNS_FALLBACK_ACTIVE=1
-
-    warn "WSL 下 apt update 失败，临时写入 DNS fallback。脚本退出时会恢复原 /etc/resolv.conf。"
-
-    "${SUDO[@]}" rm -f /etc/resolv.conf
-
-    cat <<'EOF' | "${SUDO[@]}" tee /etc/resolv.conf >/dev/null
-nameserver 1.1.1.1
-nameserver 8.8.8.8
-nameserver 223.5.5.5
-options timeout:2 attempts:2 rotate
-EOF
-}
-
-restore_wsl_dns_fallback() {
-    if ! is_wsl; then
-        return 0
-    fi
-
-    if [ "$WSL_DNS_FALLBACK_ACTIVE" != "1" ]; then
-        return 0
-    fi
-
-    if [ -z "$WSL_DNS_BACKUP_FILE" ] || [ ! -f "$WSL_DNS_BACKUP_FILE" ]; then
-        return 0
-    fi
-
-    info "恢复 WSL 原 DNS 配置..."
-
-    "${SUDO[@]}" rm -f /etc/resolv.conf
-    "${SUDO[@]}" cp -a "$WSL_DNS_BACKUP_FILE" /etc/resolv.conf
-    rm -f "$WSL_DNS_BACKUP_FILE"
-}
-
-# 只给 WSL 使用，Linux / Docker 不受影响。
-apt_update_wsl_force_ipv4() {
-    run_with_timeout "$APT_UPDATE_TIMEOUT" \
-        "${SUDO[@]}" apt-get \
-        "${APT_OPTS[@]}" \
-        -o Acquire::ForceIPv4=true \
-        update
-}
-
-# ============================================================
-# 退出恢复
-# ============================================================
-
 on_exit() {
     local code=$?
     set +e
-
-    # 只在 WSL 下生效，不影响 Linux / Docker。
-    remove_wsl_apt_proxy
-    restore_wsl_dns_fallback
 
     if [ "$PIP_MIRROR_ACTIVE" = "1" ]; then
         restore_pip_conf
@@ -245,17 +70,7 @@ on_exit() {
         echo "" >&2
         echo "============================================" >&2
         echo " ❌ 依赖安装失败，退出码：$code" >&2
-        echo " 请检查上方 [ERROR]/[WARN] 日志。" >&2
-        if is_wsl; then
-            echo " WSL 常见原因：" >&2
-            echo "  1. DNS 仍不可达。" >&2
-            echo "  2. Windows 代理没有开启 Allow LAN / 允许局域网连接。" >&2
-            echo "  3. 代理端口不对，例如 7890、10809、8080。" >&2
-            echo "  4. VPN / 公司网络没有透传到 WSL。" >&2
-            echo "  5. mirrors.tools.huawei.com 只在特定内网可访问。" >&2
-        else
-            echo " 如果默认源和华为源都失败，通常是容器网络/DNS/代理不可达。" >&2
-        fi
+        echo " 请检查上方 [ERROR]/[WARN] 日志；如果默认源和华为源都失败，通常是容器网络/DNS/代理不可达。" >&2
         echo "============================================" >&2
     fi
 
@@ -480,53 +295,20 @@ pip_install() {
         "${PIP_PACKAGES[@]}"
 }
 
-# ============================================================
-# main
-# ============================================================
-
 require_command apt-get
-
-if is_wsl; then
-    warn "检测到 WSL 环境，启用 WSL 网络兼容逻辑。"
-    normalize_proxy_env_for_wsl
-    activate_wsl_apt_proxy_if_needed
-fi
 
 log "[1/4] 清理 apt 缓存"
 apt_clean
 
 log "[2/4] 更新 apt 软件包索引：默认源"
 if ! apt_update; then
-    if is_wsl; then
-        warn "WSL 下默认 apt 源更新失败，尝试 IPv4/DNS/代理兼容重试。"
+    warn "默认 apt 源更新失败，准备切换华为 apt 源重试。"
+    activate_huawei_apt_mirror
 
-        log "[2/4] 更新 apt 软件包索引：WSL IPv4 重试"
-        apt_clean
-        if ! apt_update_wsl_force_ipv4; then
-            activate_wsl_dns_fallback
-
-            log "[2/4] 更新 apt 软件包索引：WSL DNS fallback 重试"
-            apt_clean
-            if ! apt_update_wsl_force_ipv4; then
-                warn "WSL 默认源仍失败，准备切换华为 apt 源重试。"
-                activate_huawei_apt_mirror
-
-                log "[2/4] 更新 apt 软件包索引：WSL 华为源"
-                apt_clean
-                if ! apt_update_wsl_force_ipv4; then
-                    die "WSL 下默认 apt 源和华为 apt 源均无法完成 apt update。请检查 WSL DNS、代理、VPN 或镜像源可达性。"
-                fi
-            fi
-        fi
-    else
-        warn "默认 apt 源更新失败，准备切换华为 apt 源重试。"
-        activate_huawei_apt_mirror
-
-        log "[2/4] 更新 apt 软件包索引：华为源"
-        apt_clean
-        if ! apt_update; then
-            die "默认 apt 源和华为 apt 源均无法完成 apt update。请检查 Docker 容器网络、DNS、代理或镜像源可达性。"
-        fi
+    log "[2/4] 更新 apt 软件包索引：华为源"
+    apt_clean
+    if ! apt_update; then
+        die "默认 apt 源和华为 apt 源均无法完成 apt update。请检查 Docker 容器网络、DNS、代理或镜像源可达性。"
     fi
 fi
 
@@ -538,15 +320,8 @@ if ! apt_install; then
 
         log "[3/4] 安装 apt 软件包：华为源"
         apt_clean
-
-        if is_wsl; then
-            if ! apt_update_wsl_force_ipv4; then
-                die "切换华为 apt 源后 apt update 仍失败，停止安装。"
-            fi
-        else
-            if ! apt_update; then
-                die "切换华为 apt 源后 apt update 仍失败，停止安装。"
-            fi
+        if ! apt_update; then
+            die "切换华为 apt 源后 apt update 仍失败，停止安装。"
         fi
     else
         warn "当前已经在使用华为 apt 源。"
@@ -568,7 +343,7 @@ if ! pip_install; then
 
     log "[4/4] 安装 pip 软件包：华为 PyPI 源"
     if ! pip_install; then
-        die "默认 PyPI 源和华为 PyPI 源均无法安装 Python 依赖。请检查 Docker/WSL 网络、DNS、代理或镜像源可达性。"
+        die "默认 PyPI 源和华为 PyPI 源均无法安装 Python 依赖。请检查 Docker 容器网络、DNS、代理或镜像源可达性。"
     fi
 fi
 
