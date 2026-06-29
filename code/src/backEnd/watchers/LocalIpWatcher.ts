@@ -36,6 +36,18 @@ export class LocalIpWatcher implements vscode.Disposable {
     this.timer = setInterval(() => this.poll(), interval);
   }
 
+  dispose(): void {
+    this.stop();
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = undefined;
+    }
+    this.lastIps = [];
+  }
+
   private poll(): void {
     const interfaces = os.networkInterfaces();
     const ipList: IpInfo[] = [];
@@ -60,17 +72,5 @@ export class LocalIpWatcher implements vscode.Disposable {
       };
       extension.chipConfigPanel?.postMessage(message);
     }
-  }
-
-  dispose(): void {
-    this.stop();
-  }
-
-  stop(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = undefined;
-    }
-    this.lastIps = [];
   }
 }

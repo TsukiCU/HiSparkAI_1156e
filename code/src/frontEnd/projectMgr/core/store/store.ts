@@ -6,7 +6,7 @@ import createSagaMiddleware from 'redux-saga';
 import { applyMiddleware, createStore } from 'redux';
 import type { AnyAction, Store } from 'redux';
 import rootReducer from './reducers';
-import rootSaga    from './sagas';
+import rootSaga from './sagas';
 
 export class IStore {
   private static store: Store | undefined;

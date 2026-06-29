@@ -74,7 +74,7 @@ const ProjectImport = (): JSX.Element => {
         <Checkbox
           checked={selectedKeys.includes(record.key)}
           disabled={record.disabled}
-          onChange={(e) => setSelectedKeys((prev) => e.target.checked ? [...prev, record.key] : prev.filter((k) => k !== record.key))}
+          onChange={(e): void => setSelectedKeys((prev) => e.target.checked ? [...prev, record.key] : prev.filter((k) => k !== record.key))}
         />
       ),
     },
@@ -113,7 +113,7 @@ const ProjectImport = (): JSX.Element => {
 
       {items.length > 0 && (
         <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Checkbox indeterminate={indeterminate} checked={allChecked} onChange={(e) => setSelectedKeys(e.target.checked ? allKeys : [])} />
+          <Checkbox indeterminate={indeterminate} checked={allChecked} onChange={(e): void => setSelectedKeys(e.target.checked ? allKeys : [])} />
           <span style={{ color: '#a3a3a3', fontSize: 12 }}>{t('discoveredProjects')}{items.length} {t('name')}</span>
         </div>
       )}

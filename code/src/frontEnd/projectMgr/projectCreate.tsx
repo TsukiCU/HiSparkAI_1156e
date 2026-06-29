@@ -300,7 +300,7 @@ const ProjectCreate = (): JSX.Element => {
                   placeholder={t('selectBoard')}
                   disabled={!soc}
                   value={board || undefined}
-                  onChange={(v: string) => setBoard(v)}
+                  onChange={(v: string): void => setBoard(v)}
                 >
                   {boardList.map((b) => (
                     <Option key={b} value={b}>{b}</Option>
@@ -318,7 +318,7 @@ const ProjectCreate = (): JSX.Element => {
                 <Select
                   value={platform || undefined}
                   disabled={platformFixed || !soc}
-                  onChange={(v: 'CPU' | 'NPU') => setPlatform(v)}
+                  onChange={(v: 'CPU' | 'NPU'): void => setPlatform(v)}
                   placeholder="—"
                 >
                   <Option value="CPU">{t('CPU')}</Option>
@@ -335,7 +335,7 @@ const ProjectCreate = (): JSX.Element => {
                 <Input
                   placeholder={t('projectNameInputPrompt')}
                   value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
+                  onChange={(e): void => setProjectName(e.target.value)}
                 />
               </Form.Item>
             </Col>
@@ -396,7 +396,7 @@ const ProjectCreate = (): JSX.Element => {
         visible={isErrOpen}
         closable={false}
         centered
-        footer={<Button type="primary" onClick={() => setIsErrOpen(false)}>{t('finished')}</Button>}
+        footer={<Button type="primary" onClick={(): void => setIsErrOpen(false)}>{t('finished')}</Button>}
       >
         <span>
           {t('createProjectFailedInfo1')}

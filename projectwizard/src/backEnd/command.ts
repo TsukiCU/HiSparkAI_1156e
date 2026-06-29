@@ -137,7 +137,7 @@ export class Command {
         armGccBat.stdout.on('data', (data: any) => {
           stdout += data.toString();
         });
-    
+
         armGccBat.on('close', (code: number) => {
           if (code === 0) {
             resolve(0);
@@ -189,8 +189,8 @@ export class Command {
         return;
       }
     } else if (!projectData.projectType) {
-        showMessageModal({content: res('jsonNotExist'), infoType: 'err'});
-        return;
+      showMessageModal({ content: res('jsonNotExist'), infoType: 'err' });
+      return;
     } else {
       if (isSupportMultiChip && projectData.projectNewType === 'multiCoreProject') {
         newProjPath = path.join(projectData.projectPath, projectData.himpwName);
@@ -215,7 +215,7 @@ export class Command {
         try {
           fs.mkdirSync(hiProjFilePath);
         } catch {
-          showMessageModal({content: res('createFolderFailed', [hiProjFilePath]), infoType: 'err'});
+          showMessageModal({ content: res('createFolderFailed', [hiProjFilePath]), infoType: 'err' });
           return;
         }
         this.sendProjectMessage('thisProjectNotExists');
@@ -242,7 +242,7 @@ export class Command {
       // create debug launchinit and attachinit file
       toolChain = getToolChainString(projectData);
       creCCppConfigJson(pathToOpen, toolChain, projectData.seriesName);
-    }   
+    }
     if (projectData.seriesName === 'cfbb') {
       creDebugInitFile(pathToOpen, 'jlink', projectData.projectType);
     } else if (projectData.seriesName === '3071') {
@@ -417,7 +417,7 @@ export class Command {
         message = `${existingPaths.join(', ')}`;
       }
       if (existingPaths.length > 0) {
-        showMessageModal({content: res('multiProjectExist', [message]), infoType: 'tips'});
+        showMessageModal({ content: res('multiProjectExist', [message]), infoType: 'tips' });
         return false;
       }
     }
@@ -430,9 +430,9 @@ export class Command {
       const cpu2RelativePath = `.${path.sep}${path.basename(cpu2PathToOpen)}`;
       const data = {
         folders: [
-          {path: cpu0RelativePath},
-          {path: cpu1RelativePath},
-          {path: cpu2RelativePath},
+          { path: cpu0RelativePath },
+          { path: cpu1RelativePath },
+          { path: cpu2RelativePath },
         ],
       };
       const dataString = JSON.stringify(data, null, 2);
@@ -472,24 +472,24 @@ export class Command {
     creCCppConfigJson(cpu2PathToOpen, toolChain, projectData.seriesName);
   }
 
-  static deleteWorkspace(cpuPathToOpen:string, hiprojName: string): void {
+  static deleteWorkspace(cpuPathToOpen: string, hiprojName: string): void {
     const cpupuProject = path.join(cpuPathToOpen, `${hiprojName}.hiproj`);
     if (fs.existsSync(cpupuProject)) {
       // 读取文件内容
       fs.readFile(cpupuProject, 'utf8', (err, data) => {
         if (err) {
-            return;
+          return;
         }
         // 处理每一行，删除等号前后的空格
         const lines = data.split('\n');
         const processedLines = lines.map(line => {
-            return line.replace(/\s*=\s*/, '=');
+          return line.replace(/\s*=\s*/, '=');
         });
 
         // 将处理后的内容写回文件
         const processedData = processedLines.join('\n');
         fs.writeFileSync(cpupuProject, processedData);
-    });
+      });
     }
   }
 
@@ -533,8 +533,8 @@ export class Command {
       return;
     }
 
-    if (operate.paramData.fileName && operate.paramData.sdkPath) {    
-        // 读取文件内容
+    if (operate.paramData.fileName && operate.paramData.sdkPath) {
+      // 读取文件内容
       fs.readFile(userconfigPath, 'utf8', (err, data) => {
         if (err) {
           showMessageModal({
@@ -544,10 +544,10 @@ export class Command {
           return;
         }
         let config = JSON.parse(data);
-  
+
         // 获取ldflags
         const ldflags = config.system[0].subsystem.find((sub: { name: string }) => sub.name === 'compile_frame').ldflags;
-  
+
         // 将sdkPath转换为相对路径
         const relativeSdkPath = `..\\${path.dirname(operate.paramData.sdkPath).replace(/\\/g, '\\\\')}\\${path.basename(operate.paramData.sdkPath)}`;
 
@@ -555,17 +555,17 @@ export class Command {
           // 添加新的.o文件路径
           ldflags.push(relativeSdkPath);
         }
-  
+
         // 写回文件
         try {
-           fs.writeFileSync(userconfigPath, JSON.stringify(config, null, 2));
+          fs.writeFileSync(userconfigPath, JSON.stringify(config, null, 2));
         } catch (error) {
           const errorMsg = error as Error;
           vscode.window.showErrorMessage(res('writeFailed', [userconfigPath, errorMsg.message]));
         }
       });
     } else {
-        // 读取文件内容
+      // 读取文件内容
       fs.readFile(userconfigPath, 'utf8', (err, data) => {
         if (err) {
           showMessageModal({
@@ -574,18 +574,18 @@ export class Command {
           });
           return;
         }
-  
+
         let config = JSON.parse(data);
-  
+
         // 获取ldflags
         const ldflags = config.system[0].subsystem.find((sub: { name: string }) => sub.name === 'compile_frame').ldflags;
-   
+
         // 过滤掉以.o结尾的参数
         const filteredLdflags = ldflags.filter((flag: string) => !flag.endsWith('.o'));
-  
+
         // 更新ldflags
         config.system[0].subsystem.find((sub: { name: string }) => sub.name === 'compile_frame').ldflags = filteredLdflags;
-  
+
         // 写回文件
         try {
           fs.writeFileSync(userconfigPath, JSON.stringify(config, null, 2));
@@ -607,7 +607,7 @@ export class Command {
 
   static async getSampleJsonInfo(operate: GetJsonInfoStruct): Promise<void> {
     const jsonPath = path.join(operate.paramData.sdkPath, 'build_config.json');
-    fs.readFile(jsonPath, 'utf-8', (err, data:any) => {
+    fs.readFile(jsonPath, 'utf-8', (err, data: any) => {
       let jsonData;
       if (err) {
         showMessageModal({
@@ -719,7 +719,7 @@ export class Command {
 
     const updatedJsonData = JSON.stringify(launch);
     fs.writeFileSync(launchJsonPath, updatedJsonData, 'utf-8');
-    
+
     const updatedContent = ini.stringify(parsedData);
     fs.writeFileSync(hiprojPath, updatedContent, 'utf-8');
     if (parsedData?.debug?.elf_path) {
@@ -741,7 +741,7 @@ export class Command {
       };
       extension.settingPanel?.postMessage(messageElfPathNew);
     }
-    
+
     if (parsedData?.upload?.bin_path) {
       const messageBinPathInfo: GetInfoCallBack = {
         method: ApiMethod.GET_INFO_CALLBAK,
@@ -767,10 +767,10 @@ export class Command {
     extension.settingPanel?.postMessage(callBackMessage);
   }
 
-   /**
-   * update folder path
-   */
-   static async updateFolderPath(): Promise<void> {
+  /**
+  * update folder path
+  */
+  static async updateFolderPath(): Promise<void> {
     const hiprojPath = await getActiveIniPath();
     const content = fs.readFileSync(hiprojPath, 'utf-8');
     const projectFile = ini.parse(content);
@@ -811,9 +811,9 @@ export class Command {
     extension.settingPanel?.postMessage(message);
   }
 
-    /**
-   * update default bin path
-   */
+  /**
+ * update default bin path
+ */
   static async updateDefaultBinPath(): Promise<void> {
     // 默认值读取芯片配置json文件里的初始值
     const chipInfo = await getChipInfo();
@@ -895,7 +895,7 @@ export class Command {
             editUserConfigJson({
               projectCreate_last_samplePath: newSelectPath,
             }, extension.globalStoragePath);
-            
+
             const jsonPath = path.join(newSelectPath, 'build_config.json');
             if (!fs.existsSync(jsonPath)) {
               showMessageModal({
@@ -1027,7 +1027,7 @@ export class Command {
       }
     });
   }
-  
+
   static async getFileAndFolder(operate: any): Promise<void> {
     const key: string = operate?.paramData?.key ? operate.paramData?.key : '';
 
@@ -1569,7 +1569,7 @@ export class Command {
         const debugTool = iniInfo?.debug?.tool;
         if ((debugTool === 'HiSpark-Trace' || debugTool === 'HiSpark-Link') && params?.bin_path) {
           Command.updateLaunch(iniInfo, 'loadFiles');
-          Command.updateLaunch(iniInfo, 'serverArgs');   
+          Command.updateLaunch(iniInfo, 'serverArgs');
         }
       }
     }
@@ -1670,8 +1670,8 @@ export class Command {
     return '';
   }
 
-   // NB芯片存在多核，需要根据不同的核配置不同的脚本文件
-  static getNbOpenOcdCfg(iniInfo:any, config: any): void {
+  // NB芯片存在多核，需要根据不同的核配置不同的脚本文件
+  static getNbOpenOcdCfg(iniInfo: any, config: any): void {
     if (!iniInfo?.information?.board.includes('nb')) {
       return;
     }
@@ -1874,7 +1874,7 @@ export class Command {
           config.toolchainBinDir = getLaunchToolChainBinDir(iniInfo?.compile?.tool_chain);
         } else if (config.request === 'launch' && iniInfo?.information?.project_type === 'MCU' &&
           key === 'loadFiles') {
-            Command.setBurnCommand(iniInfo, config, workspaceFolderPath);
+          Command.setBurnCommand(iniInfo, config, workspaceFolderPath);
         } else {
           return;
         }
@@ -1940,34 +1940,34 @@ export class Command {
       const result = spawnSync(exePath, [usblistArg], { encoding: 'utf-8' });
       const usbValueListInfo = result.output[1].toString();
       if (usbValueListInfo) {
-          // 将字符串分割成数组
-          const usbDevices = usbValueListInfo.split('\n').filter(Boolean);
-          if (usbDevices) {
-            const usbValueList = usbDevices.map((usbDevice: any) => {
-              // 使用正则表达式解析设备信息
-              const nameMatch = usbDevice.match(/Name:(?<name>[\s\S]*?),/);
-              const pidMatch = usbDevice.match(/PID:(?<pid>.*?),/);
-              const vidMatch = usbDevice.match(/VID:(?<vid>.*?),/);
-              const usageMatch = usbDevice.match(/Usage:(?<usage>.*?),/);
-              const usagePageMatch = usbDevice.match(/UsagePage:(?<usagePage>.*?)\r/);
-              return {
-                name: nameMatch ? nameMatch[1] : '',
-                pid: pidMatch ? pidMatch[1] : '',
-                vid: vidMatch ? vidMatch[1] : '',
-                usage: usageMatch ? usageMatch[1] : '',
-                usagePage: usagePageMatch ? usagePageMatch[1] : '',
-              };
-            });
-            const getUsbValueListInfoCallbackMessage: GetInfoCallBack = {
-              method: ApiMethod.GET_INFO_CALLBAK,
-              params: {
-                data: usbValueList,
-                key: 'usbValueList',
-              },
+        // 将字符串分割成数组
+        const usbDevices = usbValueListInfo.split('\n').filter(Boolean);
+        if (usbDevices) {
+          const usbValueList = usbDevices.map((usbDevice: any) => {
+            // 使用正则表达式解析设备信息
+            const nameMatch = usbDevice.match(/Name:(?<name>[\s\S]*?),/);
+            const pidMatch = usbDevice.match(/PID:(?<pid>.*?),/);
+            const vidMatch = usbDevice.match(/VID:(?<vid>.*?),/);
+            const usageMatch = usbDevice.match(/Usage:(?<usage>.*?),/);
+            const usagePageMatch = usbDevice.match(/UsagePage:(?<usagePage>.*?)\r/);
+            return {
+              name: nameMatch ? nameMatch[1] : '',
+              pid: pidMatch ? pidMatch[1] : '',
+              vid: vidMatch ? vidMatch[1] : '',
+              usage: usageMatch ? usageMatch[1] : '',
+              usagePage: usagePageMatch ? usagePageMatch[1] : '',
             };
-            extension.settingPanel?.postMessage(getUsbValueListInfoCallbackMessage);
-          }
+          });
+          const getUsbValueListInfoCallbackMessage: GetInfoCallBack = {
+            method: ApiMethod.GET_INFO_CALLBAK,
+            params: {
+              data: usbValueList,
+              key: 'usbValueList',
+            },
+          };
+          extension.settingPanel?.postMessage(getUsbValueListInfoCallbackMessage);
         }
+      }
     } catch {
       vscode.window.showErrorMessage('Fail to get get Usb Device List');
     }

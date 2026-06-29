@@ -139,6 +139,16 @@ export class Command {
     silentExecuteCmd: 'remoteBuild.executeCommandSilent', // Execute commands but print no output.
   };
 
+  // ─── Navigator status constants ──────────────────────────────────────────
+  // Step order: SelectModel | Quantize | Convert | Deploy | Benchmark
+  private static readonly NAV = {
+    AT_COMPRESS: ['finish', 'process', 'wait', 'wait', 'wait'],
+    AT_CONVERT: ['finish', 'finish', 'process', 'wait', 'wait'],
+    AT_DEPLOY: ['finish', 'finish', 'finish', 'process', 'wait'],
+    AT_BENCHMARK: ['finish', 'finish', 'finish', 'finish', 'wait'],
+    DONE: ['finish', 'finish', 'finish', 'finish', 'finish'],
+  } as const;
+
   static setLog4jsMessage(log4jsMessage: Log4jsMessage): void {
     const { level, data } = log4jsMessage.params.log4jsData;
     logger[level](data);
@@ -1372,10 +1382,10 @@ export class Command {
 
         const baseCmd = `cd ${remoteHome}/${rootDir}/ && `;
         const python = getRemotePython(target, GlobalModel.instance.soc);
-        const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py `
-          + `--model ${parseRemoteFile} `
-          + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `
-          + `--output_path .cache/ai/parsedModel/parsedModel.json`;
+        const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` +
+          `--model ${parseRemoteFile} ` +
+          `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} ` +
+          `--output_path .cache/ai/parsedModel/parsedModel.json`;
 
         let ret: exeCmdRetType;
         try {
@@ -1408,10 +1418,10 @@ export class Command {
         }
 
         const wslPython = await this.getWSLPython(distro);
-        const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} `
-          + `--model ${common.shQuote(modelLinuxForRun)} `
-          + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `
-          + `--output_path ${common.shQuote(parsedJsonWsl)}`;
+        const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} ` +
+          `--model ${common.shQuote(modelLinuxForRun)} ` +
+          `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} ` +
+          `--output_path ${common.shQuote(parsedJsonWsl)}`;
         this.outputLogger.handleLogInfo(`Start running: ${parseCmd}\n`, 'info');
         const ret = await common.exeRunner({
           exe: 'wsl.exe', args: ['-d', distro, '--', 'bash', '-lc', parseCmd],
@@ -2821,9 +2831,9 @@ export class Command {
 
     // Use key-based lookup — positional indexing is fragile when array ordering changes.
     const byKey = (key: string): any => cpuValue.find((item: any) => item.key === key) ?? {};
-    const validationVal      = String(byKey('validation_cpu').defaultValue ?? 'NONE');
-    const bitNumVal          = String(byKey('bit_num_cpu').defaultValue ?? 'int8');
-    const quantTypeVal       = String(byKey('quant_type').defaultValue ?? 'FULL_QUANT');
+    const validationVal = String(byKey('validation_cpu').defaultValue ?? 'NONE');
+    const bitNumVal = String(byKey('bit_num_cpu').defaultValue ?? 'int8');
+    const quantTypeVal = String(byKey('quant_type').defaultValue ?? 'FULL_QUANT');
     const validationLabelSel = String(byKey('validation_labels_cpu').defaultValue ?? 'None');
     const validationLabelPath = validationLabelSel === 'Choose from File System'
       ? String(byKey('val_out_cpu').content ?? '').trim()
@@ -3403,10 +3413,10 @@ export class Command {
 
       // Run parse.py
       const wslPython = await this.getWSLPython(distro);
-      const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} `
-        + `--model ${common.shQuote(fakeOnnxPathWsl)} `
-        + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `
-        + `--output_path ${common.shQuote(localModelPathWsl)}`;
+      const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} ` +
+        `--model ${common.shQuote(fakeOnnxPathWsl)} ` +
+        `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} ` +
+        `--output_path ${common.shQuote(localModelPathWsl)}`;
       const ret = await common.exeRunner({ exe: 'wsl.exe', args: ['-d', distro, '--', 'bash', '-lc', parseCmd], mode: 'utf8', logger: this.outputLogger, python: true });
       if (ret.code !== 0) { throw new Error(`Post compression failed when analyzing .onnx file, exit code ${ret.code}`); }
     } else {
@@ -3417,9 +3427,9 @@ export class Command {
       await this.uploadScripts('NPU', folder, rootDir);
 
       const baseCmd = `cd ${remoteHome}/${rootDir}/ && `;
-      const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py `
-        + `--model ${fakeOnnxPath} --output_path .cache/ai/parsedModel/parsedModel.json`
-        + `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `;
+      const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` +
+        `--model ${fakeOnnxPath} --output_path .cache/ai/parsedModel/parsedModel.json` +
+        `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `;
 
       // Run parse.py
       let retValue: { exitCode: number; stdout: string; stderr: string };
@@ -3852,30 +3862,6 @@ export class Command {
       params: { config },
     };
     extension.chipConfigPanel?.postMessage(frontEndConfigCallbackMessage);
-  }
-
-  // ─── Navigator status constants ──────────────────────────────────────────
-  // Step order: SelectModel | Quantize | Convert | Deploy | Benchmark
-  private static readonly NAV = {
-    AT_COMPRESS: ['finish', 'process', 'wait', 'wait', 'wait'],
-    AT_CONVERT: ['finish', 'finish', 'process', 'wait', 'wait'],
-    AT_DEPLOY: ['finish', 'finish', 'finish', 'process', 'wait'],
-    AT_BENCHMARK: ['finish', 'finish', 'finish', 'finish', 'wait'],
-    DONE: ['finish', 'finish', 'finish', 'finish', 'finish'],
-  } as const;
-
-  /**
-   * Given a confirmed convert timestamp, determine what step comes next by
-   * checking whether deploy / benchmark history entries reference it.
-   */
-  private static navAfterConvert(
-    convertTime: number,
-    deploy: any[],
-    benchmark: any[],
-  ): readonly string[] {
-    if (benchmark.some((i: any) => i.convertUUId === convertTime)) { return this.NAV.DONE; }
-    if (deploy.some((i: any) => i.convertUUId === convertTime)) { return this.NAV.AT_BENCHMARK; }
-    return this.NAV.AT_DEPLOY;
   }
 
   static getNowStatusPath(selectItem: any): readonly string[] {
@@ -5212,6 +5198,16 @@ export class Command {
     }
   }
 
+  static hasDitingCommunity(filePath: string): boolean {
+    if (!fs.existsSync(filePath)) {
+      throw new Error('Check if SDK is complete.');
+    }
+    const content = fs.readFileSync(filePath, 'utf8');
+    const match = content.match(/target_group\s*=\s*\{([\s\S]*?)\n\}/);
+    if (!match) { return false; }
+    return /['"]pack_diting_community['"]\s*:/.test(match[1]);
+  }
+
   static async startBuilding(message: any): Promise<void> {
     const rootPath = common.getWorkFolderPath();
     const { buildTarget, target, chipName: rawChipName } = message;
@@ -5255,139 +5251,6 @@ export class Command {
     }
   }
 
-  /** Run a 1156e build — handles both Linux (remote SSH) and WSL. */
-  private static async build1156e(): Promise<void> {
-    const source = GlobalModel.instance.source;
-    if (source === 'linux') {
-      await this.build1156eLinux();
-    } else if (source === 'wsl') {
-      await this.build1156eWSL();
-    } else {
-      throw new Error('1156e build requires an active Linux or WSL connection.');
-    }
-  }
-
-  /** Read the SDK path for 1156e from the active .hiproj file. */
-  private static read1156eSdkPath(): { remoteSdkPath: string; localSdkPath: string } {
-    const hiprojPath = GlobalModel.instance.hiprojPath;
-    if (!hiprojPath || !fs.existsSync(hiprojPath)) { throw new Error('hiproj file not found.'); }
-    const hiprojContent = ini.parse(fs.readFileSync(hiprojPath, 'utf-8'));
-    return {
-      remoteSdkPath: String(hiprojContent?.information?.remote_sdk_path ?? ''),
-      localSdkPath: String(hiprojContent?.information?.sdk_path ?? ''),
-    };
-  }
-
-  /** Return (and create if needed) the fixed-name local deploy images directory. */
-  private static prepareDeployDir(): string {
-    const aiCacheDir = GlobalModel.instance.aiCacheDir;
-    if (!aiCacheDir) { throw new Error('No model selected — import a model before building.'); }
-    const localImagesDir = path.join(aiCacheDir, 'Deploy', 'images');
-    fs.mkdirSync(localImagesDir, { recursive: true });
-    return localImagesDir;
-  }
-
-  /** 1156e build over Linux SSH. */
-  private static async build1156eLinux(): Promise<void> {
-    const remoteHome = GlobalModel.instance.remoteHome;
-    if (!remoteHome) { throw new Error('Remote server not connected.'); }
-
-    const { remoteSdkPath } = this.read1156eSdkPath();
-    if (!remoteSdkPath) { throw new Error('Remote SDK path not found in .hiproj.'); }
-
-    const installScriptLocal = path.join(__dirname, '../resources/install_deps.sh');
-    const installScriptRemote = `${remoteHome}/hispark_install_deps.sh`;
-    const remoteImagesDir = `${remoteSdkPath}/output/tiangong2_cmcc_hgu_release/images`;
-
-    type R = { exitCode: number; stdout: string; stderr: string };
-    let ret: R;
-
-    // Step 1: upload and run install_deps.sh (strip \r in case of Windows line endings).
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Installing dependencies...' } });
-    await vscode.commands.executeCommand(this.remoteCmdLib.uploadCmd, installScriptLocal, installScriptRemote);
-    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
-      `sed 's/\\r$//' "${installScriptRemote}" | bash`);
-    if (ret.exitCode) {
-      const detail = [ret.stderr, ret.stdout].filter(Boolean).join('\n');
-      throw new Error(`install_deps.sh failed (exit ${ret.exitCode}):\n${detail}`);
-    }
-
-    // Helper: check whether the images dir and all output files are present and non-empty.
-    const checkRemoteFilesOk = async (): Promise<boolean> => {
-      const dirRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
-        `test -d "${remoteImagesDir}" && echo "EXISTS" || echo "NOT_EXISTS"`);
-      if (dirRet?.stdout?.trim() !== 'EXISTS') { return false; }
-      for (const f of this.BUILD_1156E_OUTPUT_FILES) {
-        const sRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
-          `stat -c%s "${remoteImagesDir}/${f}" 2>/dev/null || echo 0`);
-        if (isNaN(parseInt((sRet.stdout || '').trim(), 10)) || parseInt((sRet.stdout || '').trim(), 10) === 0) { return false; }
-      }
-      return true;
-    };
-
-    // Step 2: full build — only when images folder or output files are missing.
-    if (!await checkRemoteFilesOk()) {
-      extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building on remote server...' } });
-      const buildCmd = `cd "${remoteSdkPath}" && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release'`;
-      ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, buildCmd);
-      if (this.buildChip !== '1156e') { return; }
-      if (ret.exitCode) { throw new Error(`Build failed (exit ${ret.exitCode}): ${ret.stderr}`); }
-
-      // Verify output files after full build.
-      for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
-        const sizeRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
-          `stat -c%s "${remoteImagesDir}/${fileName}" 2>/dev/null || echo 0`);
-        const size = parseInt((sizeRet.stdout || '').trim(), 10);
-        if (isNaN(size) || size === 0) {
-          vscode.window.showErrorMessage(`1156e build failed: "${fileName}" is missing or empty. Check the build environment.`);
-          throw new Error(`Output file missing or empty: ${fileName}`);
-        }
-      }
-    }
-
-    // Step 3: package fwpkg.
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg...' } });
-    const fwpkgCmd = `cd "${remoteSdkPath}" && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`;
-    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, fwpkgCmd);
-    if (this.buildChip !== '1156e') { return; }
-    if (ret.exitCode) { throw new Error(`fwpkg packaging failed (exit ${ret.exitCode}): ${ret.stderr}`); }
-
-    // Step 4: download fwpkg to local deploy directory.
-    const fwpkgRelPath   = CHIP_CONFIG['1156e'].fwpkgRelPath;
-    const remoteFwpkg    = `${remoteSdkPath}/${fwpkgRelPath}`;
-    const localImagesDir = this.prepareDeployDir();
-    const fwpkgExistRet  = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
-      `test -f "${remoteFwpkg}" && echo "EXISTS" || echo "NOT_EXISTS"`);
-    if (fwpkgExistRet?.stdout?.trim() !== 'EXISTS') {
-      throw new Error(`fwpkg not found after packaging: ${remoteFwpkg}`);
-    }
-    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading fwpkg...' } });
-    await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFwpkg, path.join(localImagesDir, path.basename(fwpkgRelPath)));
-  }
-
-  /** 1156e build via WSL. */
-  /**
-   * Spawn a wsl.exe command and track the child process in wslBuildChild so that
-   * stopBuilding() can kill it. Returns exit code, stdout, stderr.
-   */
-  private static runWslBuildCmd(
-    distro: string,
-    cmd: string,
-  ): Promise<{ code: number; stdout: string; stderr: string }> {
-    return new Promise((resolve) => {
-      const child = spawn('wsl.exe', ['-d', distro, '--', 'bash', '-lc', cmd], { windowsHide: true });
-      this.wslBuildChild = child;
-      let stdout = '';
-      let stderr = '';
-      child.stdout.setEncoding('utf8');
-      child.stderr.setEncoding('utf8');
-      child.stdout.on('data', (d: string) => { stdout += d; this.outputLogger.raw(d); });
-      child.stderr.on('data', (d: string) => { stderr += d; this.outputLogger.raw(d); });
-      child.on('error', (err) => { this.wslBuildChild = null; resolve({ code: -1, stdout, stderr: String(err) }); });
-      child.on('close', (code) => { this.wslBuildChild = null; resolve({ code: code ?? -1, stdout, stderr }); });
-    });
-  }
-
   private static async build1156eWSL(): Promise<void> {
     const distro = GlobalModel.instance.wslDistro;
     if (!distro) { throw new Error('WSL distro not set.'); }
@@ -5405,8 +5268,8 @@ export class Command {
     let ret = await this.runWslBuildCmd(distro, `sed 's/\\r$//' ${common.shQuote(wslScript)} | bash`);
     if (ret.code !== 0) { throw new Error(`install_deps.sh failed (WSL, exit ${ret.code})`); }
 
-    const winImagesDir   = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
-    const fwpkgRelPath   = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const winImagesDir = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
+    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
     const localImagesDir = this.prepareDeployDir();
 
     // Helper: check whether all output files are present and non-empty on Windows path.
@@ -6473,6 +6336,12 @@ export class Command {
     }
   }
 
+  /** Called from the webview frontend to display a VSCode info notification (bottom-right). */
+  static showInfo(message: any): void {
+    const text: string = message?.params?.text ?? '';
+    if (text) { vscode.window.showInformationMessage(text); }
+  }
+
   private static async getWslLists(): Promise<string[]> {
     const list = await common.exeRunner({ exe: 'wsl.exe', args: ['-l', '-q'], mode: 'utf16le', logger: this.outputLogger, silent: true });
     if (list.code !== 0) {
@@ -6673,12 +6542,6 @@ export class Command {
     }
 
     fs.rmdirSync(targetDir);
-  }
-
-  /** Called from the webview frontend to display a VSCode info notification (bottom-right). */
-  static showInfo(message: any): void {
-    const text: string = message?.params?.text ?? '';
-    if (text) { vscode.window.showInformationMessage(text); }
   }
 
   private static showWarnToast(message: string): void {
@@ -6979,6 +6842,153 @@ export class Command {
     }
 
     throw new Error(`Unexpected remote check result for ${fieldName}: ${selectedPath}`);
+  }
+
+  /** Run a 1156e build — handles both Linux (remote SSH) and WSL. */
+  private static async build1156e(): Promise<void> {
+    const source = GlobalModel.instance.source;
+    if (source === 'linux') {
+      await this.build1156eLinux();
+    } else if (source === 'wsl') {
+      await this.build1156eWSL();
+    } else {
+      throw new Error('1156e build requires an active Linux or WSL connection.');
+    }
+  }
+
+  /** Read the SDK path for 1156e from the active .hiproj file. */
+  private static read1156eSdkPath(): { remoteSdkPath: string; localSdkPath: string } {
+    const hiprojPath = GlobalModel.instance.hiprojPath;
+    if (!hiprojPath || !fs.existsSync(hiprojPath)) { throw new Error('hiproj file not found.'); }
+    const hiprojContent = ini.parse(fs.readFileSync(hiprojPath, 'utf-8'));
+    return {
+      remoteSdkPath: String(hiprojContent?.information?.remote_sdk_path ?? ''),
+      localSdkPath: String(hiprojContent?.information?.sdk_path ?? ''),
+    };
+  }
+
+  /** Return (and create if needed) the fixed-name local deploy images directory. */
+  private static prepareDeployDir(): string {
+    const aiCacheDir = GlobalModel.instance.aiCacheDir;
+    if (!aiCacheDir) { throw new Error('No model selected — import a model before building.'); }
+    const localImagesDir = path.join(aiCacheDir, 'Deploy', 'images');
+    fs.mkdirSync(localImagesDir, { recursive: true });
+    return localImagesDir;
+  }
+
+  /** 1156e build over Linux SSH. */
+  private static async build1156eLinux(): Promise<void> {
+    const remoteHome = GlobalModel.instance.remoteHome;
+    if (!remoteHome) { throw new Error('Remote server not connected.'); }
+
+    const { remoteSdkPath } = this.read1156eSdkPath();
+    if (!remoteSdkPath) { throw new Error('Remote SDK path not found in .hiproj.'); }
+
+    const installScriptLocal = path.join(__dirname, '../resources/install_deps.sh');
+    const installScriptRemote = `${remoteHome}/hispark_install_deps.sh`;
+    const remoteImagesDir = `${remoteSdkPath}/output/tiangong2_cmcc_hgu_release/images`;
+
+    interface R { exitCode: number; stdout: string; stderr: string };
+    let ret: R;
+
+    // Step 1: upload and run install_deps.sh (strip \r in case of Windows line endings).
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Installing dependencies...' } });
+    await vscode.commands.executeCommand(this.remoteCmdLib.uploadCmd, installScriptLocal, installScriptRemote);
+    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+      `sed 's/\\r$//' "${installScriptRemote}" | bash`);
+    if (ret.exitCode) {
+      const detail = [ret.stderr, ret.stdout].filter(Boolean).join('\n');
+      throw new Error(`install_deps.sh failed (exit ${ret.exitCode}):\n${detail}`);
+    }
+
+    // Helper: check whether the images dir and all output files are present and non-empty.
+    const checkRemoteFilesOk = async (): Promise<boolean> => {
+      const dirRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+        `test -d "${remoteImagesDir}" && echo "EXISTS" || echo "NOT_EXISTS"`);
+      if (dirRet?.stdout?.trim() !== 'EXISTS') { return false; }
+      for (const f of this.BUILD_1156E_OUTPUT_FILES) {
+        const sRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+          `stat -c%s "${remoteImagesDir}/${f}" 2>/dev/null || echo 0`);
+        if (isNaN(parseInt((sRet.stdout || '').trim(), 10)) || parseInt((sRet.stdout || '').trim(), 10) === 0) { return false; }
+      }
+      return true;
+    };
+
+    // Step 2: full build — only when images folder or output files are missing.
+    if (!await checkRemoteFilesOk()) {
+      extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building on remote server...' } });
+      const buildCmd = `cd "${remoteSdkPath}" && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release'`;
+      ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, buildCmd);
+      if (this.buildChip !== '1156e') { return; }
+      if (ret.exitCode) { throw new Error(`Build failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+
+      // Verify output files after full build.
+      for (const fileName of this.BUILD_1156E_OUTPUT_FILES) {
+        const sizeRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+          `stat -c%s "${remoteImagesDir}/${fileName}" 2>/dev/null || echo 0`);
+        const size = parseInt((sizeRet.stdout || '').trim(), 10);
+        if (isNaN(size) || size === 0) {
+          vscode.window.showErrorMessage(`1156e build failed: "${fileName}" is missing or empty. Check the build environment.`);
+          throw new Error(`Output file missing or empty: ${fileName}`);
+        }
+      }
+    }
+
+    // Step 3: package fwpkg.
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg...' } });
+    const fwpkgCmd = `cd "${remoteSdkPath}" && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`;
+    ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, fwpkgCmd);
+    if (this.buildChip !== '1156e') { return; }
+    if (ret.exitCode) { throw new Error(`fwpkg packaging failed (exit ${ret.exitCode}): ${ret.stderr}`); }
+
+    // Step 4: download fwpkg to local deploy directory.
+    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const remoteFwpkg = `${remoteSdkPath}/${fwpkgRelPath}`;
+    const localImagesDir = this.prepareDeployDir();
+    const fwpkgExistRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+      `test -f "${remoteFwpkg}" && echo "EXISTS" || echo "NOT_EXISTS"`);
+    if (fwpkgExistRet?.stdout?.trim() !== 'EXISTS') {
+      throw new Error(`fwpkg not found after packaging: ${remoteFwpkg}`);
+    }
+    extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Downloading fwpkg...' } });
+    await vscode.commands.executeCommand(this.remoteCmdLib.downloadCmd, remoteFwpkg, path.join(localImagesDir, path.basename(fwpkgRelPath)));
+  }
+
+  /** 1156e build via WSL. */
+  /**
+   * Spawn a wsl.exe command and track the child process in wslBuildChild so that
+   * stopBuilding() can kill it. Returns exit code, stdout, stderr.
+   */
+  private static runWslBuildCmd(
+    distro: string,
+    cmd: string,
+  ): Promise<{ code: number; stdout: string; stderr: string }> {
+    return new Promise((resolve) => {
+      const child = spawn('wsl.exe', ['-d', distro, '--', 'bash', '-lc', cmd], { windowsHide: true });
+      this.wslBuildChild = child;
+      let stdout = '';
+      let stderr = '';
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
+      child.stdout.on('data', (d: string) => { stdout += d; this.outputLogger.raw(d); });
+      child.stderr.on('data', (d: string) => { stderr += d; this.outputLogger.raw(d); });
+      child.on('error', (err) => { this.wslBuildChild = null; resolve({ code: -1, stdout, stderr: String(err) }); });
+      child.on('close', (code) => { this.wslBuildChild = null; resolve({ code: code ?? -1, stdout, stderr }); });
+    });
+  }
+
+  /**
+   * Given a confirmed convert timestamp, determine what step comes next by
+   * checking whether deploy / benchmark history entries reference it.
+   */
+  private static navAfterConvert(
+    convertTime: number,
+    deploy: any[],
+    benchmark: any[],
+  ): readonly string[] {
+    if (benchmark.some((i: any) => i.convertUUId === convertTime)) { return this.NAV.DONE; }
+    if (deploy.some((i: any) => i.convertUUId === convertTime)) { return this.NAV.AT_BENCHMARK; }
+    return this.NAV.AT_DEPLOY;
   }
 
   private static getPlatform(chip: string, target: 'CPU' | 'NPU'): string {

@@ -9,7 +9,7 @@ export interface ProjectMgrData {
   platform: 'CPU' | 'NPU' | '';
   projectName: string;
   projectPath: string;
-  // TODO: temporary — user manually selects an existing SDK folder.
+  // temporary — user manually selects an existing SDK folder.
   // Future: auto-download or auto-configure the SDK.
   sdkPath: string;
   // For 1156e: records whether the SDK lives on a Linux remote or in WSL.

@@ -17,8 +17,9 @@ function entities(state: any = {}, action: any = {}): any {
       return Object.assign({}, state, { [action.key]: action.data });
     case ActionTypes.DELETE_ENTITY:
       return copyWithoutMatchingKeys(state, action.re);
+    default:
+      return state;
   }
-  return state;
 }
 
 const appReducer = combineReducers({ entities });

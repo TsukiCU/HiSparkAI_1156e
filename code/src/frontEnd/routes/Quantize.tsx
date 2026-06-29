@@ -86,7 +86,10 @@ function buildState(
     if (spec.kind === 'input') {
       fixedInputs.push({ group: spec.group, key, title: spec.title, content: spec.defaultValue, disabled: Boolean(spec.disabled) });
     } else if (spec.kind === 'select') {
-      fixedSelects.push({ group: spec.group, key, title: spec.title, content: spec.options ?? [], defaultValue: spec.defaultValue, disabled: Boolean(spec.disabled) });
+      fixedSelects.push({
+        group: spec.group, key, title: spec.title, content: spec.options ?? [],
+        defaultValue: spec.defaultValue, disabled: Boolean(spec.disabled)
+      });
     } else if (spec.kind === 'file') {
       fixedFiles.push({ group: spec.group, key, title: spec.title, content: spec.defaultValue ?? ' ', folder: Boolean(spec.folder), disabled: Boolean(spec.disabled) });
     }
@@ -506,7 +509,10 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
     IStore.getStore().dispatch(updateEntity('compressionData', payload));
     vscode.postMessage({ method: ApiMethod.SAVE_CONFIG, params: { data: payload, key: 'compressionData' } });
     try {
-      vscode.postMessage({ method: ApiMethod.START_DATA_QUANTIZE, params: { coreParams: { target, source }, paramType: type, paramData: payload, layerData } } as Message);
+      vscode.postMessage({
+        method: ApiMethod.START_DATA_QUANTIZE,
+        params: { coreParams: { target, source }, paramType: type, paramData: payload, layerData }
+      } as Message);
     } catch {
       notify('Error: handleQuantizeClick', { type: 'error', stack: false, duration: 2 });
       dispatch(updateEntity('quantPending', false));
@@ -709,9 +715,12 @@ function Quantize(props: { target: Target; source: Source }): React.JSX.Element 
 
         {/* configFile, modelPath, trainCode are in the payload but not shown in the original UI */}
         <div className="row-qat threeQat">
-          {inpByKey(QUANT_KEYS.npu.qat.epochNum) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.epochNum)!} labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
-          {inpByKey(QUANT_KEYS.npu.qat.batchSize) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.batchSize)!} labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
-          {inpByKey(QUANT_KEYS.npu.qat.learningRate) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.learningRate)!} labelOrP={true} transmitStyle={true} getInputed={updateInput} editable={true} />}
+          {inpByKey(QUANT_KEYS.npu.qat.epochNum) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.epochNum)!}
+            labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
+          {inpByKey(QUANT_KEYS.npu.qat.batchSize) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.batchSize)!}
+            labelOrP={true} labelWidth={88} transmitStyle={true} getInputed={updateInput} editable={true} />}
+          {inpByKey(QUANT_KEYS.npu.qat.learningRate) && <InputBoxComponent inputBox={inpByKey(QUANT_KEYS.npu.qat.learningRate)!}
+            labelOrP={true} transmitStyle={true} getInputed={updateInput} editable={true} />}
         </div>
 
         <div className="row-ptq firstNpu">

@@ -21,6 +21,12 @@ export const CHIP_CONFIG: Record<string, ChipConfig> = {
     scriptDir: 'npu',
     remotePython: '/usr/bin/python3.10',
   },
+  'diting': {
+    fwpkgRelPath: 'output/3322/fwpkg/diting-community.fwpkg',
+    buildTarget: 'pack_diting_community',
+    scriptDir: 'npu',
+    remotePython: '/usr/bin/python3.10',
+  },
   '1156e': {
     fwpkgRelPath: 'output/tiangong2_cmcc_hgu_release/images/tiangong2_cmcc_hgu_release.fwpkg',
     buildTarget: 'build_mkp',

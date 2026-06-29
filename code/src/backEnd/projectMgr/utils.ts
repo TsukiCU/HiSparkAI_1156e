@@ -2,21 +2,19 @@
  * Copyright (c) 2025-2026 HiSilicon (Shanghai) Technologies Co., Ltd. All rights reserved.
  * Licensed under the Apache License, Version 2.0
  */
-import * as fs   from 'fs';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ProjectListItem } from './interface/model';
 
 // ─── Path helpers ────────────────────────────────────────────────────────────
-
 export function getUserDir(): string {
   return process.env.HOME ?? process.env.USERPROFILE ?? '/';
 }
 
 // ─── Project list helpers ─────────────────────────────────────────────────────
-
 const PROJECT_LIST_FILE = 'projectMgr_list.json';
-const LATEST_LIST_FILE  = 'projectMgr_latestlist.json';
+const LATEST_LIST_FILE = 'projectMgr_latestlist.json';
 
 function getListPath(globalStoragePath: string, file: string): string {
   return path.join(path.dirname(globalStoragePath), file);
@@ -70,7 +68,6 @@ export function deleteFromProjectList(targetPath: string, globalStoragePath: str
 
 // ─── projectdata.json bridge ──────────────────────────────────────────────────
 // code (hisparkai) extension reads projectdata.json to map SDK workspace → .hiproj path.
-
 const PROJECTDATA_FILE = 'projectdata.json';
 
 export function upsertProjectDataJson(
@@ -98,7 +95,6 @@ export function removeProjectDataJson(sdkDir: string, globalStoragePath: string)
 // The wizard writes to the SAME file using the path pre-computed in extension.ts
 // (ProjectMgrContext.mainProjectListPath) so there is no independent path calculation that
 // could drift from ChipConfigPanel's path on non-standard IDE installs.
-
 export function upsertMainProjectList(item: ProjectListItem, mainProjectListPath: string): void {
   const list: ProjectListItem[] = readJsonSafe(mainProjectListPath);
   const idx = list.findIndex((x) => x.path === item.path);
@@ -112,7 +108,6 @@ export function removeFromMainProjectList(targetPath: string, mainProjectListPat
 }
 
 // ─── hiproj helpers ───────────────────────────────────────────────────────────
-
 export function getHiprojContent(hiprojPath: string): any {
   if (!fs.existsSync(hiprojPath)) { return null; }
   try {
@@ -140,7 +135,6 @@ export function findHiprojFiles(rootDir: string, depth = 0): string[] {
 }
 
 // ─── Modal helper ─────────────────────────────────────────────────────────────
-
 export function showMessageModal(opts: { content: string; infoType?: 'tips' | 'err' | 'warn' }): void {
   if (opts.infoType === 'err') {
     vscode.window.showErrorMessage(opts.content);

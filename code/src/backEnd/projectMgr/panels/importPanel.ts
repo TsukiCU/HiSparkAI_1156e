@@ -33,6 +33,15 @@ export class ImportPanel {
       .replace('flagdefault', 'flagImport');
   }
 
+  onPanelDisposed(): void {
+    this.panel?.dispose();
+    this.panel = undefined;
+  }
+
+  postMessage(message: Message): void {
+    this.panel?.webview.postMessage(message);
+  }
+
   private createPanel(): WebviewPanel {
     const panel = vscode.window.createWebviewPanel(
       'HisparkAIProjectImport',
@@ -52,14 +61,5 @@ export class ImportPanel {
       this.context.subscriptions,
     );
     return panel;
-  }
-
-  onPanelDisposed(): void {
-    this.panel?.dispose();
-    this.panel = undefined;
-  }
-
-  postMessage(message: Message): void {
-    this.panel?.webview.postMessage(message);
   }
 }

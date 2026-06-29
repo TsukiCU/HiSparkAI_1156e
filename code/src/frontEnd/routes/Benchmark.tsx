@@ -123,7 +123,7 @@ const csvRawData: any = {
  * No positional indexing — each field is identified by its key.
  * To change the key patterns, edit benchmarkConfig.ts only.
  */
-function splitBenchmarkData(data: FileInputBoxProps[]) {
+function splitBenchmarkData(data: FileInputBoxProps[]): any {
   return {
     /** Per-node input files (identified by key containing BENCHMARK_KEYS.inputFilePattern). */
     inputFiles: data.filter(f => f.key.includes(BENCHMARK_KEYS.inputFilePattern)),
@@ -169,6 +169,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   const proGraphData = useSelector((state: any) => state.entities.importProGraphCallbackData);
   const proValidationData = useSelector((state: any) => state.entities.importProValidationCallbackData);
   const ports = useSelector((state: any) => state.entities.ports) as [];
+  const isDiting = useSelector((state: any) => state.entities.isDiting);
 
   // ── File input state (single source — no new* duplicate) ──────────────
   const [fileBoxes, setFileBoxes] = useState<FileInputBoxProps[]>([]);
@@ -586,7 +587,10 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
         </div>
       </BenchmarkModal.Header>
       <BenchmarkModal.Body>
-        <ProfilingResultFC onSelectionChange={(keys, rows): void => { setSelectedRowKeys(keys); setSelectedRows(rows); }} selectedRowKeys={selectedRowKeys} target={target} />
+        <ProfilingResultFC onSelectionChange={(keys, rows): void => {
+          setSelectedRowKeys(keys);
+          setSelectedRows(rows);
+        }} selectedRowKeys={selectedRowKeys} target={target} />
       </BenchmarkModal.Body>
       <CustomModal open={modalOpen} config={config} onClose={closeModal} />
     </BenchmarkModal>
@@ -596,7 +600,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   const portOptions = ports?.map((p: PortInfo) => ({ value: p.path, label: p.label }));
   const baudrateOptions = {
     baudrate1: [{ value: '921600', label: '921600' }],
-    baudrate2: [{ value: '115200', label: '115200' }],
+    baudrate2: [{ value: isDiting ? '750000' : '115200', label: isDiting ? '750000' : '115200' }],
   };
 
   // Performance metric values for the current target (from schema, no hardcoded strings).
@@ -690,7 +694,8 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
               children={<ProValidation profilingValidationData={proValidationCfgData} overflowX={tableConfig.overflowX} target={target} />} />
             <CommonCard title="Probability Density Histogram" chartChange={setChartConfig} width="37vw"
               children={profilingCfgData.length > 0
-                ? <ProfilingGraph width={chartConfig.width} height={chartConfig.height} overflowX={chartConfig.overflowX} profilingGraphData={profilingCfgData} />
+                ? <ProfilingGraph width={chartConfig.width} height={chartConfig.height}
+                  overflowX={chartConfig.overflowX} profilingGraphData={profilingCfgData} />
                 : <Empty style={{ height: '300px' }} />} />
           </div>
         </div>

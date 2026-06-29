@@ -36,6 +36,15 @@ export class ProjectMgrPanel {
       .replace('flagdefault', 'flagCreate');
   }
 
+  onPanelDisposed(): void {
+    this.panel?.dispose();
+    this.panel = undefined;
+  }
+
+  postMessage(message: Message): void {
+    this.panel?.webview.postMessage(message);
+  }
+
   private createPanel(): WebviewPanel {
     const panel = vscode.window.createWebviewPanel(
       'HisparkAIProjectWizard',
@@ -55,14 +64,5 @@ export class ProjectMgrPanel {
       this.context.subscriptions,
     );
     return panel;
-  }
-
-  onPanelDisposed(): void {
-    this.panel?.dispose();
-    this.panel = undefined;
-  }
-
-  postMessage(message: Message): void {
-    this.panel?.webview.postMessage(message);
   }
 }

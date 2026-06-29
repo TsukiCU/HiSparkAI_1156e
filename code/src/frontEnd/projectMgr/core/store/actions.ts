@@ -10,7 +10,7 @@ export function createAction(type: string, payload: any = {}): Action {
 
 export const UPDATE_ENTITY = 'UPDATE_ENTITY';
 export const DELETE_ENTITY = 'DELETE_ENTITY';
-export const RESET_STORE   = 'RESET_STORE';
+export const RESET_STORE = 'RESET_STORE';
 
 export const updateEntity = (key: string, data: any): Action =>
   createAction(UPDATE_ENTITY, { key, data });

@@ -104,9 +104,12 @@ export const QUANT_FIELD_SPECS: Record<string, FieldSpec> = {
 // ─── Fixed key sets ────────────────────────────────────────────────────────
 // Dynamic items (per-node shapes, paths, type-selects) are everything
 // NOT in these sets.
-const NPU_FIXED_INPUT_KEYS = new Set([QUANT_KEYS.npu.ptq.batchNum, QUANT_KEYS.npu.qat.trainCode, QUANT_KEYS.npu.qat.epochNum, QUANT_KEYS.npu.qat.batchSize, QUANT_KEYS.npu.qat.learningRate]);
-const NPU_FIXED_SELECT_KEYS = new Set([QUANT_KEYS.npu.ptq.validation, QUANT_KEYS.npu.ptq.bitNum, QUANT_KEYS.npu.ptq.validationLabels, QUANT_KEYS.npu.qat.configFile]);
-const NPU_FIXED_FILE_KEYS = new Set([QUANT_KEYS.npu.ptq.validationFile, QUANT_KEYS.npu.qat.networkStruct, QUANT_KEYS.npu.qat.retrainInputs, QUANT_KEYS.npu.qat.validInputs, QUANT_KEYS.npu.qat.retrainOutput, QUANT_KEYS.npu.qat.validOutput, QUANT_KEYS.npu.qat.modelPath]);
+const NPU_FIXED_INPUT_KEYS = new Set([QUANT_KEYS.npu.ptq.batchNum, QUANT_KEYS.npu.qat.trainCode,
+QUANT_KEYS.npu.qat.epochNum, QUANT_KEYS.npu.qat.batchSize, QUANT_KEYS.npu.qat.learningRate]);
+const NPU_FIXED_SELECT_KEYS = new Set([QUANT_KEYS.npu.ptq.validation, QUANT_KEYS.npu.ptq.bitNum,
+QUANT_KEYS.npu.ptq.validationLabels, QUANT_KEYS.npu.qat.configFile]);
+const NPU_FIXED_FILE_KEYS = new Set([QUANT_KEYS.npu.ptq.validationFile, QUANT_KEYS.npu.qat.networkStruct,
+QUANT_KEYS.npu.qat.retrainInputs, QUANT_KEYS.npu.qat.validInputs, QUANT_KEYS.npu.qat.retrainOutput, QUANT_KEYS.npu.qat.validOutput, QUANT_KEYS.npu.qat.modelPath]);
 const CPU_FIXED_INPUT_KEYS = new Set([QUANT_KEYS.cpu.batchNum]);
 const CPU_FIXED_SELECT_KEYS = new Set([QUANT_KEYS.cpu.validation, QUANT_KEYS.cpu.bitNum, QUANT_KEYS.cpu.quantType, QUANT_KEYS.cpu.validationLabels]);
 const CPU_FIXED_FILE_KEYS = new Set([QUANT_KEYS.cpu.validationFile]);

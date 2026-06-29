@@ -12,7 +12,7 @@ import { Command } from './core/command';
 import { IStore } from './core/store/store';
 import type { Message } from './interface/api';
 
-type VSCodeApi = {
+interface VSCodeApi {
   postMessage: (message: unknown) => void;
   getState?: () => unknown;
   setState?: (state: unknown) => void;
