@@ -5041,7 +5041,7 @@ export class Command {
           let port1 = '', port2 = '', baudRate1 = '', baudRate2 = '';
           if (target === 'NPU' && Array.isArray(raw)) {
             raw.forEach(item => {
-              if (item.type === 'data')    { port1 = `COM${item.port}`; baudRate1 = item.bandrate; }
+              if (item.type === 'data') { port1 = `COM${item.port}`; baudRate1 = item.bandrate; }
               if (item.type === 'command') { port2 = `COM${item.port}`; baudRate2 = item.bandrate; }
             });
           } else {
