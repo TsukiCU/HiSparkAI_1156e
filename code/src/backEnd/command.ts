@@ -4888,14 +4888,22 @@ export class Command {
   static findBenchmarkHistoryConfig(config: any): void {
     const lastConvertTS = config.params?.data;
     const target = config.params?.target ?? '';
-    const [newFileJson, filePath] = this.getCompressionConvertHistoryFilePath('benchmark');
+    const [newFileJson] = this.getCompressionConvertHistoryFilePath('benchmark');
     const historyRootDir = GlobalModel.instance?.aiCacheDir;
+
+    // Keep mockLocalStorage in sync so getProfilingHistoryInfo (called by the
+    // history modal) always filters by the same convert record the user entered from.
+    if (lastConvertTS) {
+      extension.mockLocalStorage?.setItem('lastConvertTS', parseInt(lastConvertTS));
+    }
 
     // 获取并处理 profilingData
     const profilingData = this.getProfilingData();
     if (!profilingData) { return; }
 
-    // 设置通用配置
+    // Send a comprehensive erase first — benchmark.json (filtered by convertUUId)
+    // is the single source of truth.  No stale state from a previous convert record
+    // should bleed into the current session.
     const commonConfig = this.createCommonConfig(profilingData);
 
     // 处理无时间戳的情况
@@ -4905,8 +4913,13 @@ export class Command {
       return;
     }
 
-    // 过滤历史信息
+    // 过滤历史信息 — strictly by convertUUId
     const historyInfo = this.filterHistoryInfo(newFileJson, lastConvertTS);
+
+    // Populate history table immediately using the correctly-filtered records so
+    // the frontend never shows records belonging to another convert session.
+    this.sendProfilingHistoryData(historyInfo);
+
     if (!historyInfo.length) {
       this.updateFrontEndStorage([...commonConfig, ...this.getDefaultAccuracyConfig()]);
       this.clearProfiling();
@@ -4917,15 +4930,28 @@ export class Command {
     const profilingArr = this.sortAndFilterStage(historyInfo, 'profiling');
     const accArr = this.sortAndFilterStage(historyInfo, 'accuracy');
 
+    this.updateResultStatus(profilingArr, accArr);
+
     // 更新前端存储
     if (profilingArr.length) {
       const configSetting = this.createConfigSetting(profilingArr, commonConfig);
       this.updateFrontEndStorage(configSetting);
       this.processBenchmarkDirectory(historyRootDir ?? '', profilingArr, target);
+    } else {
+      this.updateFrontEndStorage(commonConfig);
     }
 
-    // 处理基准测试目录和配置文件
+    // 处理基准测试目录和配置文件 (accuracy stage)
     this.processBenchmarkDirectory(historyRootDir ?? '', accArr, target);
+  }
+
+  /** Push benchmark history records (already filtered by convertUUId) to the frontend. */
+  private static sendProfilingHistoryData(records: any[]): void {
+    const msg = {
+      method: ApiMethod.GET_PROFILING_HISTORY_INFO_BACK,
+      params: { data: records },
+    };
+    extension.chipConfigPanel?.postMessage(msg);
   }
 
   static getProfilingData(): any {
@@ -4939,15 +4965,25 @@ export class Command {
 
   static createCommonConfig(profilingData: any[]): any[] {
     return [
+      // Performance metrics
       { key: 'dbgSize', value: undefined },
       { key: 'modelSize', value: undefined },
       { key: 'inferenceTime', value: undefined },
       { key: 'timeValue', value: undefined },
       { key: 'ramValue', value: undefined },
       { key: 'flashValue', value: undefined },
+      // Accuracy metrics
+      { key: 'balancedAccuracy', value: undefined },
+      { key: 'cosineSimilarity', value: undefined },
+      // Chart / table (Probability Density Histogram + Evaluation Data)
+      { key: 'importProGraphCallbackData', value: [] },
+      { key: 'importProValidationCallbackData', value: [] },
+      // Config and selection state
       { key: 'profilingData', value: profilingData },
       { key: 'benchmarkSelectValue', value: { port1: '', baudRate1: '', port2: '', baudRate2: '' } },
       { key: 'selectResultRecord', value: [] },
+      // History table — cleared here so stale records from another convert never bleed in
+      { key: 'profHistoryData', value: { data: [] } },
     ];
   }
 
