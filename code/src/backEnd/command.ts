@@ -5210,7 +5210,10 @@ export class Command {
       const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
       try {
         if (this.hasDitingCommunity(ditingCfgPath)) { chip = 'diting'; }
-      } catch { /* config.py missing — fall back to standard 3322 */ }
+      } catch(err) {
+        this.logAndReportError(this.handleError(err));
+        return;
+      }
     }
 
     const chipCfg = getChipConfig(chip);
@@ -5391,13 +5394,16 @@ export class Command {
     const isCPU = target === 'CPU';
     let chipName = (rawChipName || (isCPU ? 'ws63' : '3322')) as ChipName;
 
-    // For 3322, detect diting variant at flash time (same logic as startBuilding).
+    // For 3322, detect diting variant at flash time.
     if (chipName === '3322') {
       const rootPath = common.getWorkFolderPath();
       const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
       try {
         if (this.hasDitingCommunity(ditingCfgPath)) { chipName = 'diting'; }
-      } catch { /* fall back to standard 3322 */ }
+      } catch(err) { 
+        this.logAndReportError(this.handleError(err));
+        return;
+      }
     }
 
     const chip = getChipConfig(chipName);
