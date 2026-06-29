@@ -42,28 +42,26 @@ const HISPARKAI_CHANNEL = 'HiSpark Studio AI';
 
 const WALKTHROUGH_STRING = 'HiSpark.hisparkai#hisparkAI.basicGuide';
 
-function getWorkFolderPath(): string {
-  const projectPath = vscode.workspace.workspaceFolders;
-  if (!projectPath || !Array.isArray(projectPath) || !projectPath[0]?.uri?.fsPath) {
-    return '';
-  } else {
-    return projectPath[0].uri.fsPath;
-  }
+/** First workspace folder = hiproj dir (aicache, .vscode/remote-build.json live here). */
+function getHiprojDir(): string {
+  return vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? '';
 }
 
 function detectTargetFromWorkspace(): Target {
-  const workspaceFolderPath = getWorkFolderPath();
-  if (!fs.existsSync(workspaceFolderPath)) {
-    logger.warn(`WARN: Workspace path not found: ${workspaceFolderPath}`);
-    return 'NONE';
-  }
   const cpuRelPath = path.join('build', 'config', 'target_config', 'ws63', 'ws63.json');
   const npuRelPath = path.join('build', 'config', 'target_config', '3322', '3322.json');
-  const cpuIDPath = path.join(workspaceFolderPath, cpuRelPath);
-  const npuIDPath = path.join(workspaceFolderPath, npuRelPath);
 
-  const cpuExist = fs.existsSync(cpuIDPath);
-  const npuExist = fs.existsSync(npuIDPath);
+  // Check all workspace folders — multi-root workspaces have hiproj as folder[0]
+  // and the SDK as folder[1]; the SDK markers live in the SDK folder.
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  let cpuExist = false;
+  let npuExist = false;
+  for (const folder of folders) {
+    const p = folder.uri.fsPath;
+    if (fs.existsSync(path.join(p, cpuRelPath))) { cpuExist = true; }
+    if (fs.existsSync(path.join(p, npuRelPath))) { npuExist = true; }
+    if (cpuExist || npuExist) { break; }
+  }
 
   if (cpuExist && npuExist) {
     logger.error('WARN: Both CPU and NPU configurations exist. Using CPU by default.');
@@ -95,7 +93,7 @@ export default class Extension {
     let target = detectTargetFromWorkspace();
     let iniPath: string | undefined;
     let isActiveProjectFound = false;
-    const workspaceFolderPath = getWorkFolderPath();
+    const workspaceFolderPath = getHiprojDir();
     const storageDir = path.dirname(context.globalStorageUri.fsPath);
     const cachePath = path.join(storageDir, 'projectdata.json');
     if (fs.existsSync(cachePath)) {

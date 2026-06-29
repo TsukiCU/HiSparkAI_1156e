@@ -60,13 +60,14 @@ export interface LinuxPathInfo {
   source: 'windows' | 'wsl-unc' | 'linux';
 };
 
-export function getWorkFolderPath(): string {
-  const projectPath = vscode.workspace.workspaceFolders;
-  if (!projectPath || !Array.isArray(projectPath) || !projectPath[0]?.uri?.fsPath) {
-    return '';
-  } else {
-    return projectPath[0].uri.fsPath;
-  }
+/**
+ * Return the first workspace folder path, which for HiSpark projects is always the
+ * hiproj directory (aicache, .vscode/remote-build.json etc. live here).
+ * Do NOT use this to locate SDK files — use readSdkPath() in command.ts instead.
+ */
+export function getHiprojDir(): string {
+  const folders = vscode.workspace.workspaceFolders;
+  return folders?.[0]?.uri?.fsPath ?? '';
 }
 
 export function getToolsPath(): string {

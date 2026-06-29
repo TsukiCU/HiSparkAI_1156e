@@ -914,8 +914,7 @@ export class Command {
 
     // refresh Redux store.
     // Detect diting variant (3322 NPU only) so the frontend can adapt baud rate etc.
-    const rootPath = common.getWorkFolderPath();
-    const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+    const ditingCfgPath = path.join(this.readSdkPath(), 'build/config/target_config/3322/config.py');
     let isDiting = false;
     if (target === 'NPU') {
       try { isDiting = this.hasDitingCommunity(ditingCfgPath); } catch { /* not 3322 or config.py absent */ }
@@ -1064,7 +1063,7 @@ export class Command {
     const watcher = RemoteHeartbeatWatcher.getInstance();
 
     if (source === 'linux') {
-      const rbPath = path.join(common.getWorkFolderPath(), '.vscode', 'remote-build.json');
+      const rbPath = path.join(common.getHiprojDir(), '.vscode', 'remote-build.json');
 
       // Case 1: remote-build.json was deleted — must reconnect from scratch.
       if (!fs.existsSync(rbPath)) {
@@ -2011,7 +2010,7 @@ export class Command {
     this.generateJsonWriteContent(profilingArr[1]);
     let serversInfo;
     if (source === 'linux') {
-      const remoteBuildDir = path.join(common.getWorkFolderPath(), `/.vscode/remote-build.json`);
+      const remoteBuildDir = path.join(common.getHiprojDir(), `/.vscode/remote-build.json`);
       if (!fs.existsSync(remoteBuildDir)) {
         extension.chipConfigPanel?.postMessage({
           type: 'Error',
@@ -2575,7 +2574,7 @@ export class Command {
     const type = message.type;
     const { target, nextData } = message.params ?? {};
     const connected = extension.isConnected();
-    const remoteBuildPath = path.join(common.getWorkFolderPath(), '.vscode', 'remote-build.json');
+    const remoteBuildPath = path.join(common.getHiprojDir(), '.vscode', 'remote-build.json');
 
     if (!connected) {
       const availableCmds = await vscode.commands.getCommands(true);
@@ -4169,8 +4168,7 @@ export class Command {
       const convConfigArr = common.parseArray(extension.mockLocalStorage?.getItem('convertData'));
 
       // Detect diting variant so the frontend has the flag from panel startup.
-      const rootPath = common.getWorkFolderPath();
-      const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+      const ditingCfgPath = path.join(this.readSdkPath(), 'build/config/target_config/3322/config.py');
       let isDiting = false;
       if (target === 'NPU') {
         try { isDiting = this.hasDitingCommunity(ditingCfgPath); } catch { /* not 3322 or config.py absent */ }
@@ -4356,7 +4354,7 @@ export class Command {
     const serialInfo = { serialConfig: { Port: portNum, BandRate: baudRate1 } };
 
     // tools.
-    const rootDir = common.getWorkFolderPath();
+    const rootDir = this.readSdkPath();
     const lastConvertTS = extension.mockLocalStorage?.getItem('lastConvertTS');
     if (lastConvertTS === undefined) {
       this.logAndReportError('Must enter from a convert result. Aborting...');
@@ -5217,7 +5215,7 @@ export class Command {
   }
 
   static async startBuilding(message: any): Promise<void> {
-    const rootPath = common.getWorkFolderPath();
+    const sdkRoot = this.readSdkPath();
     const { target, chipName: rawChipName } = message;
     const isCPU = target === 'CPU';
     let chip: ChipName = rawChipName || (isCPU ? 'ws63' : '3322');
@@ -5225,17 +5223,14 @@ export class Command {
 
     // For 3322 (NPU), check whether the SDK targets the diting variant at runtime.
     if (chip === '3322') {
-      const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+      const ditingCfgPath = path.join(sdkRoot, 'build/config/target_config/3322/config.py');
       try {
         if (this.hasDitingCommunity(ditingCfgPath)) { chip = 'diting'; }
-      } catch(err) {
-        this.logAndReportError(this.handleError(err));
-        return;
-      }
+      } catch { /* config.py missing — fall back to standard 3322 */ }
     }
 
     const chipCfg = getChipConfig(chip);
-    const fwpkgPath = chipCfg ? path.join(rootPath, chipCfg.fwpkgRelPath) : '';
+    const fwpkgPath = chipCfg ? path.join(sdkRoot, chipCfg.fwpkgRelPath) : '';
 
     if (fwpkgPath && fs.existsSync(fwpkgPath)) {
       extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: 'Binary found. Skipping...' } });
@@ -5262,7 +5257,7 @@ export class Command {
     const args = ['build.py', '-c', effectiveBuildTarget];
 
     try {
-      await this.runProcess(python, args, rootPath, undefined, (p) => { this.buildChildProcess = p; });
+      await this.runProcess(python, args, sdkRoot, undefined, (p) => { this.buildChildProcess = p; });
       extension.chipConfigPanel?.postMessage('compileDone');
     } catch (err) {
       const errMsg = `Failed to execute python script : ${this.handleError(err)}`;
@@ -5362,7 +5357,7 @@ export class Command {
       }
 
       const toolsRoot = common.getToolsPath();
-      const sdkPath = common.getWorkFolderPath();
+      const sdkPath = this.readSdkPath();
       const scriptRoot = path.join(__dirname, '../resources/scripts/cpu/deploy');
       const scriptPath = path.join(scriptRoot, 'deploy.py');
       const python = path.join(toolsRoot, 'tools/python/python.exe');
@@ -5414,14 +5409,10 @@ export class Command {
 
     // For 3322, detect diting variant at flash time.
     if (chipName === '3322') {
-      const rootPath = common.getWorkFolderPath();
-      const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+      const ditingCfgPath = path.join(this.readSdkPath(), 'build/config/target_config/3322/config.py');
       try {
         if (this.hasDitingCommunity(ditingCfgPath)) { chipName = 'diting'; }
-      } catch(err) { 
-        this.logAndReportError(this.handleError(err));
-        return;
-      }
+      } catch { /* fall back to standard 3322 */ }
     }
 
     const chip = getChipConfig(chipName);
@@ -5446,8 +5437,7 @@ export class Command {
         return;
       }
     } else {
-      const rootPath = common.getWorkFolderPath();
-      binPath = path.join(rootPath, chip.fwpkgRelPath);
+      binPath = path.join(this.readSdkPath(), chip.fwpkgRelPath);
       if (!fs.existsSync(binPath)) {
         extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: 'Check if SDK is compiled.' } });
         return;
@@ -6658,7 +6648,7 @@ export class Command {
   }
 
   private static cpuCheckSDKReady(): boolean | string {
-    const rootPath = common.getWorkFolderPath();
+    const rootPath = this.readSdkPath();
     const checkLists = [
       path.join(rootPath, 'middleware', 'utils', 'ai_mcu'),
       path.join(rootPath, 'middleware', 'utils', 'at'),
@@ -6901,6 +6891,24 @@ export class Command {
     } else {
       throw new Error('1156e build requires an active Linux or WSL connection.');
     }
+  }
+
+  /**
+   * Return the local SDK root for the active project by reading sdk_path from
+   * the .hiproj file.  For ws63/3322 this is the actual SDK folder; for 1156e
+   * Linux it equals hiprojDir (remote SDK), so callers should use
+   * read1156eSdkPath() instead when they need the real 1156e path.
+   *
+   * Falls back to getWorkFolderPath() when the .hiproj file is unavailable
+   * (e.g. single-folder legacy workspace).
+   */
+  private static readSdkPath(): string {
+    const hiprojPath = GlobalModel.instance.hiprojPath;
+    if (!hiprojPath || !fs.existsSync(hiprojPath)) { return common.getHiprojDir(); }
+    try {
+      const content = ini.parse(fs.readFileSync(hiprojPath, 'utf-8'));
+      return String(content?.information?.sdk_path ?? '') || common.getHiprojDir();
+    } catch { return common.getHiprojDir(); }
   }
 
   /** Read the SDK path for 1156e from the active .hiproj file. */
