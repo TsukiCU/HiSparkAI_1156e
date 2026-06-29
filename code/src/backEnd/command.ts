@@ -45,7 +45,7 @@ import { getUserGuidePath } from './file/modelConfig';
 import { PanelType } from '@src/backEnd/interface/model';
 import type { HistoryInfo, Release } from '@src/backEnd/interface/model';
 import { GlobalModel, remoteRootDir, DEFAULT_WSL_DISTRO, remotePython, getRemotePython, LAST_SELECTED_PATH } from './storage/Global';
-import { CHIP_CONFIG } from './storage/ChipConfigMap';
+import { CHIP_CONFIG, getChipConfig } from './storage/ChipConfigMap';
 import type { ChipName } from './storage/ChipConfigMap';
 
 import { res } from '@src/i18n/backEndTrans';
@@ -1384,7 +1384,7 @@ export class Command {
         const python = getRemotePython(target, GlobalModel.instance.soc);
         const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` +
           `--model ${parseRemoteFile} ` +
-          `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} ` +
+          `--chip ${chipName} --platform ${getChipConfig(chipName)?.platforms?.[target] ?? ''} ` +
           `--output_path .cache/ai/parsedModel/parsedModel.json`;
 
         let ret: exeCmdRetType;
@@ -1420,7 +1420,7 @@ export class Command {
         const wslPython = await this.getWSLPython(distro);
         const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} ` +
           `--model ${common.shQuote(modelLinuxForRun)} ` +
-          `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} ` +
+          `--chip ${chipName} --platform ${getChipConfig(chipName)?.platforms?.[target] ?? ''} ` +
           `--output_path ${common.shQuote(parsedJsonWsl)}`;
         this.outputLogger.handleLogInfo(`Start running: ${parseCmd}\n`, 'info');
         const ret = await common.exeRunner({
@@ -1436,7 +1436,7 @@ export class Command {
         const python = path.join(toolRootPath, 'tools/python/python.exe');
         if (target !== 'CPU') { throw new Error('Script is running locally but it\'s on NPU platform'); }
         const pythonRootPath = path.join(__dirname, `../resources/scripts/${target.toLowerCase()}/profiling`);
-        const args = [scriptWin, '--model', parseLocalFile, '--chip', chipName, '--platform', this.getPlatform(chipName, target), '--output_path', parsedJson];
+        const args = [scriptWin, '--model', parseLocalFile, '--chip', chipName, '--platform', getChipConfig(chipName)?.platforms?.[target] ?? '', '--output_path', parsedJson];
         try {
           await this.runProcess(python, args, pythonRootPath, { cmd: `${python} ${args.join(' ')}` });
         } catch (err) {
@@ -3415,7 +3415,7 @@ export class Command {
       const wslPython = await this.getWSLPython(distro);
       const parseCmd = `${wslPython} ${common.shQuote(scriptWsl)} ` +
         `--model ${common.shQuote(fakeOnnxPathWsl)} ` +
-        `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} ` +
+        `--chip ${chipName} --platform ${getChipConfig(chipName)?.platforms?.[target] ?? ''} ` +
         `--output_path ${common.shQuote(localModelPathWsl)}`;
       const ret = await common.exeRunner({ exe: 'wsl.exe', args: ['-d', distro, '--', 'bash', '-lc', parseCmd], mode: 'utf8', logger: this.outputLogger, python: true });
       if (ret.code !== 0) { throw new Error(`Post compression failed when analyzing .onnx file, exit code ${ret.code}`); }
@@ -3429,7 +3429,7 @@ export class Command {
       const baseCmd = `cd ${remoteHome}/${rootDir}/ && `;
       const parseModelCmd = `${baseCmd} ${python} ./scripts/model_select/model_arch_parse.py ` +
         `--model ${fakeOnnxPath} --output_path .cache/ai/parsedModel/parsedModel.json` +
-        `--chip ${chipName} --platform ${this.getPlatform(chipName, target)} `;
+        `--chip ${chipName} --platform ${getChipConfig(chipName)?.platforms?.[target] ?? ''} `;
 
       // Run parse.py
       let retValue: { exitCode: number; stdout: string; stderr: string };
@@ -5198,24 +5198,22 @@ export class Command {
     }
   }
 
-  static hasDitingCommunity(filePath: string): boolean {
-    if (!fs.existsSync(filePath)) {
-      throw new Error('Check if SDK is complete.');
-    }
-    const content = fs.readFileSync(filePath, 'utf8');
-    const match = content.match(/target_group\s*=\s*\{([\s\S]*?)\n\}/);
-    if (!match) { return false; }
-    return /['"]pack_diting_community['"]\s*:/.test(match[1]);
-  }
-
   static async startBuilding(message: any): Promise<void> {
     const rootPath = common.getWorkFolderPath();
-    const { buildTarget, target, chipName: rawChipName } = message;
+    const { target, chipName: rawChipName } = message;
     const isCPU = target === 'CPU';
-    const chip: ChipName = rawChipName || (isCPU ? 'ws63' : '3322');
+    let chip: ChipName = rawChipName || (isCPU ? 'ws63' : '3322');
     this.buildChip = chip;
 
-    const chipCfg = CHIP_CONFIG[chip];
+    // For 3322 (NPU), check whether the SDK targets the diting variant at runtime.
+    if (chip === '3322') {
+      const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+      try {
+        if (this.hasDitingCommunity(ditingCfgPath)) { chip = 'diting'; }
+      } catch { /* config.py missing — fall back to standard 3322 */ }
+    }
+
+    const chipCfg = getChipConfig(chip);
     const fwpkgPath = chipCfg ? path.join(rootPath, chipCfg.fwpkgRelPath) : '';
 
     if (fwpkgPath && fs.existsSync(fwpkgPath)) {
@@ -5236,10 +5234,11 @@ export class Command {
       return;
     }
 
-    // ws63 / 3322: local build via python build.py.
+    // ws63 / 3322 / diting: local build via python build.py.
+    const effectiveBuildTarget = chipCfg?.buildTarget ?? '';
     const toolRootPath = common.getToolsPath();
     const python = path.join(toolRootPath, 'tools/python/python.exe');
-    const args = ['build.py', '-c', buildTarget];
+    const args = ['build.py', '-c', effectiveBuildTarget];
 
     try {
       await this.runProcess(python, args, rootPath, undefined, (p) => { this.buildChildProcess = p; });
@@ -5249,6 +5248,20 @@ export class Command {
       this.outputLogger.handleLogInfo(errMsg, 'error');
       extension.chipConfigPanel?.postMessage({ type: 'compileFailed' });
     }
+  }
+
+  /**
+   * Returns true when the 3322 SDK's config.py declares pack_diting_community
+   * as a build target group entry — indicating a diting variant SDK.
+   */
+  private static hasDitingCommunity(filePath: string): boolean {
+    if (!fs.existsSync(filePath)) {
+      throw new Error('Check if SDK is complete.');
+    }
+    const content = fs.readFileSync(filePath, 'utf8');
+    const match = content.match(/target_group\s*=\s*\{([\s\S]*?)\n\}/);
+    if (!match) { return false; }
+    return /['"]pack_diting_community['"]\s*:/.test(match[1]);
   }
 
   private static async build1156eWSL(): Promise<void> {
@@ -5269,7 +5282,7 @@ export class Command {
     if (ret.code !== 0) { throw new Error(`install_deps.sh failed (WSL, exit ${ret.code})`); }
 
     const winImagesDir = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
-    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const fwpkgRelPath = CHIP_CONFIG.chip1156e.fwpkgRelPath;
     const localImagesDir = this.prepareDeployDir();
 
     // Helper: check whether all output files are present and non-empty on Windows path.
@@ -5376,8 +5389,18 @@ export class Command {
     } = message.params ?? {};
 
     const isCPU = target === 'CPU';
-    const chipName = (rawChipName || (isCPU ? 'ws63' : '3322')) as ChipName;
-    const chip = CHIP_CONFIG[chipName];
+    let chipName = (rawChipName || (isCPU ? 'ws63' : '3322')) as ChipName;
+
+    // For 3322, detect diting variant at flash time (same logic as startBuilding).
+    if (chipName === '3322') {
+      const rootPath = common.getWorkFolderPath();
+      const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+      try {
+        if (this.hasDitingCommunity(ditingCfgPath)) { chipName = 'diting'; }
+      } catch { /* fall back to standard 3322 */ }
+    }
+
+    const chip = getChipConfig(chipName);
     if (!chip) {
       extension.chipConfigPanel?.postMessage({ type: 'FlashFailed', params: { description: `Unknown chip: ${chipName}` } });
       return;
@@ -6383,7 +6406,7 @@ export class Command {
     const paths = this.paramsConfig(historyRootDir, remoteHome, 'quant');
 
     const chip = GlobalModel.instance.soc ?? '';
-    const platform = this.getPlatform(chip, target);
+    const platform = getChipConfig(chip)?.platforms?.[target] ?? '';
 
     return {
       source,
@@ -6425,7 +6448,7 @@ export class Command {
     const paths = this.paramsConfig(historyRootDir, remoteHome, 'convert');
 
     const chip = GlobalModel.instance.soc ?? '';
-    const platform = this.getPlatform(chip, target);
+    const platform = getChipConfig(chip)?.platforms?.[target] ?? '';
 
     return {
       source,
@@ -6942,7 +6965,7 @@ export class Command {
     if (ret.exitCode) { throw new Error(`fwpkg packaging failed (exit ${ret.exitCode}): ${ret.stderr}`); }
 
     // Step 4: download fwpkg to local deploy directory.
-    const fwpkgRelPath = CHIP_CONFIG['1156e'].fwpkgRelPath;
+    const fwpkgRelPath = CHIP_CONFIG.chip1156e.fwpkgRelPath;
     const remoteFwpkg = `${remoteSdkPath}/${fwpkgRelPath}`;
     const localImagesDir = this.prepareDeployDir();
     const fwpkgExistRet = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
@@ -6991,30 +7014,4 @@ export class Command {
     return this.NAV.AT_DEPLOY;
   }
 
-  private static getPlatform(chip: string, target: 'CPU' | 'NPU'): string {
-    const platformMap: Record<string, Partial<Record<'CPU' | 'NPU', string>>> = {
-      ws63: {
-        CPU: 'riscv',
-      },
-      diting: {
-        NPU: 'nano',
-      },
-      mcu: {
-        CPU: 'riscv',
-      },
-      '3322': {
-        'NPU': 'nano',
-      },
-      '1156e': {
-        CPU: 'arm',
-        NPU: 'tiny',
-      },
-      '1155': {
-        CPU: 'arm',
-        NPU: 'nano',
-      },
-    };
-
-    return platformMap[chip]?.[target] ?? '';
-  }
 }
