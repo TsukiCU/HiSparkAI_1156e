@@ -1,4 +1,6 @@
-[
+{
+  "pipMirror": "https://pypi.tuna.tsinghua.edu.cn/simple",
+  "packages": [
     {
       "url": "https://mirrors.huaweicloud.com/python/3.11.4/python-3.11.4-embed-amd64.zip",
       "name": "python",
@@ -15,9 +17,24 @@
       "type": "whl"
     },
     {
-        "url": "https://mirrors.cloud.tencent.com/pypi/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
-        "name": "setuptools",
-        "type": "whl"
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
+      "name": "setuptools",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/3f/6b/5610004206cf7f8e7ad91c5a85a8c71b2f2f8051a0c0c4d5916b76d6cbb2/numpy-1.26.4-cp311-cp311-win_amd64.whl",
+      "name": "numpy",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/ad/6e/1bed3b7c904cc178cb8ee8dbaf72934964452b3de95b7a63412591edb93c/protobuf-4.25.3-cp310-abi3-win_amd64.whl",
+      "name": "protobuf",
+      "type": "whl"
+    },
+    {
+      "url": "https://mirrors.cloud.tencent.com/pypi/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl",
+      "name": "typing_extensions",
+      "type": "whl"
     },
     {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/a6/95/ce80f1180b27d6ef0cf65ea82abfea09d0c320f7cbecc36e0a78f20d7888/onnx-1.14.0-cp311-cp311-win_amd64.whl",
@@ -56,17 +73,12 @@
     },
     {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/0c/14/9966e648a48f9bfee456002700cde4ca41f1e04ebaea842ccf663b6e7db2/onnxruntime-1.16.0-cp311-cp311-win_amd64.whl",
-      "name": "onnxrntime",
+      "name": "onnxruntime",
       "type": "whl"
     },
     {
       "url": "https://mirrors.cloud.tencent.com/pypi/packages/8e/59/712db1d7040520de7a4965df15b774348980e6df45c129b8c64d0dbe74ef/pandas-2.3.3-cp311-cp311-win_amd64.whl",
       "name": "pandas",
-      "type": "whl"
-    },
-    {
-      "url": "https://mirrors.cloud.tencent.com/pypi/packages/9b/0f/022ca4783b6e6239a53b988a4d315d67f9ae7126227fb2255054a558bd72/numpy-2.0.0-cp311-cp311-win_amd64.whl",
-      "name": "numpy",
       "type": "whl"
     },
     {
@@ -95,13 +107,14 @@
       "type": "zip"
     },
     {
-     "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/DebugKits_25.12.2.tar.gz",
-     "name": "DebugKits",
-     "type": "tar.gz"
+      "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/DebugKits_25.12.2.tar.gz",
+      "name": "DebugKits",
+      "type": "tar.gz"
     },
     {
-     "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/mindspore-enterprise-lite-win-x64.tar.gz",
-     "name": "MindSpore",
-     "type": "tar.gz"
+      "url": "https://hispark-obs.obs.cn-east-3.myhuaweicloud.com/mindspore-enterprise-lite-win-x64.tar.gz",
+      "name": "MindSpore",
+      "type": "tar.gz"
     }
   ]
+}

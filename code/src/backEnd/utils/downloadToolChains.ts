@@ -105,13 +105,7 @@ export function setIsDownloading(value: boolean): boolean {
 }
 
 /**
- * 用 Python urllib 测试 pipMirror 是否可达，使用与 pip 相同的 HTTP 栈。
- *
- * - 免安装版 Python 没有内置 CA 证书，用 ssl._create_unverified_context()
- *   跳过证书验证：407 发生在 TCP 层（SSL 握手之前），跳过 SSL 不影响区分结果。
- * - 测试 /numpy/ 子页面而非根路径，更贴近 pip 真实请求行为。
- * - finished 守卫防止 setTimeout 与 proc.close 竞态导致 resolve 被调用两次。
- * - exit 0：可达（外网）；exit 2：407 代理拦截（内网）；exit 1：其他错误。
+ * 内外网网络环境不同，测试清华源是否可以访达
  */
 async function isTsinghuaReachable(pythonPath: string, pipMirror: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
