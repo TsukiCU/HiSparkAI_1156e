@@ -913,6 +913,14 @@ export class Command {
     ({ compMerged, convMerged } = configRet);
 
     // refresh Redux store.
+    // Detect diting variant (3322 NPU only) so the frontend can adapt baud rate etc.
+    const rootPath = common.getWorkFolderPath();
+    const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+    let isDiting = false;
+    if (target === 'NPU') {
+      try { isDiting = this.hasDitingCommunity(ditingCfgPath); } catch { /* not 3322 or config.py absent */ }
+    }
+
     const config = [
       // General setup.
       { key: 'compressionData', value: compMerged },
@@ -921,6 +929,7 @@ export class Command {
       { key: 'profilingData', value: profilingItems },
 
       { key: 'modelOutputNames', value: outputNames },
+      { key: 'isDiting', value: isDiting },
 
       // Flashing flags.
       { key: 'isFlashed', value: false },
@@ -4159,10 +4168,19 @@ export class Command {
       const compConfigArr = common.parseArray(extension.mockLocalStorage?.getItem('compressionData'));
       const convConfigArr = common.parseArray(extension.mockLocalStorage?.getItem('convertData'));
 
+      // Detect diting variant so the frontend has the flag from panel startup.
+      const rootPath = common.getWorkFolderPath();
+      const ditingCfgPath = path.join(rootPath, 'build/config/target_config/3322/config.py');
+      let isDiting = false;
+      if (target === 'NPU') {
+        try { isDiting = this.hasDitingCommunity(ditingCfgPath); } catch { /* not 3322 or config.py absent */ }
+      }
+
       const config = [
         { key: 'compressionData', value: compConfigArr },
         { key: 'convertData', value: convConfigArr },
         { key: 'chipName', value: GlobalModel.instance.chipName ?? '' },
+        { key: 'isDiting', value: isDiting },
       ];
       const frontEndConfigCallbackMessage: ConfigMessage = {
         method: ApiMethod.SAVE_CONFIG_CALLBACK,
