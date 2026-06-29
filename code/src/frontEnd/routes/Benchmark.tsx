@@ -503,7 +503,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
               ))}
             </div>
           )}
-          {inputFiles.map((box) => (
+          {inputFiles.map((box: any) => (
             <div key={box.key} className="AVC-container-rows" style={{ position: 'relative' }}>
               <FileInputBoxComponent
                 fileInputBox={{ ...box, disabled: !onnxAvailable || Boolean(box.disabled) }}
