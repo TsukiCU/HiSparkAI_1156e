@@ -4695,6 +4695,15 @@ export class Command {
       paramType: string;
       selectedOutputNode?: string;
       source: Source;
+      serialConfig?: { port1: string; baudRate1: string; port2: string; baudRate2: string };
+      profilingSnapshot?: any[];
+    };
+
+    // Extra fields for benchmark.json persistence.
+    const historyExtra = {
+      serialConfig: params.serialConfig ?? null,
+      profilingSnapshot: params.profilingSnapshot ?? [],
+      selectedOutputNode: params.selectedOutputNode ?? '',
     };
 
     const { target } = accuMsg.params.targetPlatform;
@@ -4828,7 +4837,7 @@ export class Command {
     }
 
     const outputRootPath = `${path.join(historyRootDir, `Benchmark/benchmark_${dateTime}`)}`;
-    if (this.postProfiling(target, stage, outputRootPath, dateTime)) {
+    if (this.postProfiling(target, stage, outputRootPath, dateTime, historyExtra)) {
       extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: `Error when presenting results.` } });
       return;
     }
@@ -4953,9 +4962,8 @@ export class Command {
   }
 
   static createConfigSetting(profilingArr: any[], commonConfig: any[]): any[] {
-    const { flash, ram, time, psramEnabled } = profilingArr[0] ?? {};
-
-    return [
+    const { flash, ram, time, psramEnabled, serialConfig } = profilingArr[0] ?? {};
+    const cfg = [
       ...commonConfig,
       { key: 'dbgSize', value: `${ram} KB` },
       { key: 'modelSize', value: `${flash} KB` },
@@ -4964,6 +4972,11 @@ export class Command {
       { key: 'ramValue', value: `${ram} KB` },
       { key: 'flashValue', value: `${flash} KB` },
     ];
+    // Restore serial config from benchmark.json if present; directory fallback happens in processBenchmarkDirectory.
+    if (serialConfig) {
+      cfg.push({ key: 'benchmarkSelectValue', value: serialConfig });
+    }
+    return cfg;
   }
 
   static getDefaultAccuracyConfig(): any[] {
@@ -4974,56 +4987,63 @@ export class Command {
   }
 
   static processBenchmarkDirectory(historyRootDir: string, accArr: any[], target: string): void {
-    if (!historyRootDir) {
-      extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: 'History directory not found!' } });
-      return;
-    }
+    if (!historyRootDir || !accArr.length) { return; }
 
-    const updateTime = accArr[0]?.updateTime;
-    const benchMarkRoot = `${path.join(historyRootDir, `Benchmark/benchmark_${updateTime}`)}`;
-    const accuracyConfigPath = `${path.join(benchMarkRoot, 'accuracyConfig.json')}`;
-    const nowConfigPath = `${path.join(benchMarkRoot, 'nowConfig.json')}`;
-    if (!fs.existsSync(nowConfigPath)) { return; }
-    try {
-      const serialConfig = JSON.parse(fs.readFileSync(nowConfigPath, 'utf8'));
-      // 更新波特率的配置
-      let port1 = '';
-      let port2 = '';
-      let baudRate1 = '';
-      let baudRate2 = '';
-      if (target === 'NPU') {
-        if (Array.isArray(serialConfig)) {
-          serialConfig.forEach(item => {
-            if (item.type === 'data') {
-              port1 = `COM${item.port}`;
-              baudRate1 = item.bandrate;
-            }
-            if (item.type === 'command') {
-              port2 = `COM${item.port}`;
-              baudRate2 = item.bandrate;
-            }
-          });
+    const record = accArr[0];
+    const updateTime = record?.updateTime;
+    const benchMarkRoot = path.join(historyRootDir, `Benchmark/benchmark_${updateTime}`);
+
+    // ── Serial config ────────────────────────────────────────────────────────
+    // Prefer benchmark.json field (new format); fall back to legacy nowConfig.json.
+    if (record?.serialConfig) {
+      this.updateFrontEndStorage([{ key: 'benchmarkSelectValue', value: record.serialConfig }]);
+    } else {
+      const nowConfigPath = path.join(benchMarkRoot, 'nowConfig.json');
+      if (fs.existsSync(nowConfigPath)) {
+        try {
+          const raw = JSON.parse(fs.readFileSync(nowConfigPath, 'utf8'));
+          let port1 = '', port2 = '', baudRate1 = '', baudRate2 = '';
+          if (target === 'NPU' && Array.isArray(raw)) {
+            raw.forEach(item => {
+              if (item.type === 'data')    { port1 = `COM${item.port}`; baudRate1 = item.bandrate; }
+              if (item.type === 'command') { port2 = `COM${item.port}`; baudRate2 = item.bandrate; }
+            });
+          } else {
+            const { Port, BandRate } = raw ?? {};
+            port1 = `COM${Port}`; baudRate1 = BandRate;
+          }
+          this.updateFrontEndStorage([{ key: 'benchmarkSelectValue', value: { port1, port2, baudRate1, baudRate2 } }]);
+        } catch (err) {
+          this.logAndReportError(`nowConfig.json parse error: ${this.handleError(err)}`);
         }
-      } else {
-        const { Port, BandRate } = serialConfig ?? {};
-        port1 = `COM${Port}`;
-        baudRate1 = BandRate;
-        port2 = '';
-        baudRate2 = '';
       }
-      this.updateFrontEndStorage([{ key: 'benchmarkSelectValue', value: { port1, port2, baudRate1, baudRate2 } }]);
-    } catch (error) {
-      this.logAndReportError(`/nowConfig.json parse error: ${this.handleError(error)}`);
     }
-    if (!fs.existsSync(benchMarkRoot) || !fs.existsSync(accuracyConfigPath)) { return; }
 
-    try {
-      const json = JSON.parse(fs.readFileSync(accuracyConfigPath, 'utf8'));
-      this.updateFrontEndStorage([{ key: 'profilingData', value: json }]);
-      this.importProGraph(target === 'NPU', benchMarkRoot, updateTime, true);
-      this.importProValidation(target === 'NPU', benchMarkRoot);
-    } catch (err) {
-      this.logAndReportError(`/accuracyConfig.json parse error: ${this.handleError(err)}`);
+    // ── Accuracy-only fields ─────────────────────────────────────────────────
+    // Prefer benchmark.json embedded data; fall back to per-run files in the directory.
+    if (record?.stage === 'accuracy' && record?.profilingSnapshot?.length) {
+      // Restore from benchmark.json fields.
+      this.updateFrontEndStorage([{ key: 'profilingData', value: record.profilingSnapshot }]);
+      if (record.chartData?.length) { this.updateProfilingChart(record.chartData); }
+      if (record.tableData?.length) { this.sendProfilingValidation(record.tableData); }
+      if (record.accuracyB && record.accuracyB !== '----') {
+        this.updateFrontEndStorage([
+          { key: 'balancedAccuracy', value: record.accuracyB },
+          { key: 'cosineSimilarity', value: record.avgSimB },
+        ]);
+      }
+    } else {
+      // Legacy path: read from directory files.
+      const accuracyConfigPath = path.join(benchMarkRoot, 'accuracyConfig.json');
+      if (!fs.existsSync(benchMarkRoot) || !fs.existsSync(accuracyConfigPath)) { return; }
+      try {
+        const json = JSON.parse(fs.readFileSync(accuracyConfigPath, 'utf8'));
+        this.updateFrontEndStorage([{ key: 'profilingData', value: json }]);
+        this.importProGraph(target === 'NPU', benchMarkRoot, updateTime, true);
+        this.importProValidation(target === 'NPU', benchMarkRoot);
+      } catch (err) {
+        this.logAndReportError(`accuracyConfig.json parse error: ${this.handleError(err)}`);
+      }
     }
   }
 
@@ -5057,7 +5077,10 @@ export class Command {
     extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: 'Benchmark aborted by user.' } });
   }
 
-  static postProfiling(target: any, stage: any, outputRootPath: any, dateTime: any): number {
+  static postProfiling(
+    target: any, stage: any, outputRootPath: any, dateTime: any,
+    extra?: { serialConfig?: any; profilingSnapshot?: any[]; selectedOutputNode?: string },
+  ): number {
     if (!fs.existsSync(outputRootPath)) {
       this.logAndReportError('Post profiling failed: outputrootpath not found!');
       return 0;
@@ -5089,20 +5112,20 @@ export class Command {
           { key: 'modelSize', value: `${modelSizeValue} KB` },
           { key: 'inferenceTime', value: psramEnabled ? `${inferenceTimeValue} MS (PSRAM)` : `${inferenceTimeValue} MS` },
         ];
-        const paramsHistory = { timeValue: inferenceTimeValue, ramValue: dbgSizeValue, flashValue: modelSizeValue, dateTime, stage, psramEnabled };
+        const paramsHistory = { timeValue: inferenceTimeValue, ramValue: dbgSizeValue, flashValue: modelSizeValue, dateTime, stage, psramEnabled, serialConfig: extra?.serialConfig };
         this.generateProfilingHistory(paramsHistory);
         this.updateFrontEndStorage(config);
       } else if (stage === 'accuracy') {
         // Accuracy results on NPU : accuracyOutput.csv
-        let errMsg = this.importProValidation(isNPU, outputRootPath);
-        if (errMsg) {
-          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: errMsg } });
+        const { tableData, errMsg: csvErr } = this.importProValidation(isNPU, outputRootPath);
+        if (csvErr) {
+          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: csvErr } });
           return 1;
         }
         // Accuracy results on NPU : accuracyOutput.json
-        errMsg = this.importProGraph(isNPU, outputRootPath, dateTime);
-        if (errMsg) {
-          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: errMsg } });
+        const graphErr = this.importProGraph(isNPU, outputRootPath, dateTime, false, { ...extra, tableData });
+        if (graphErr) {
+          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: graphErr } });
           return 1;
         }
       } else {
@@ -5125,7 +5148,7 @@ export class Command {
           { key: 'ramValue', value: `${ramValue} KB` },
           { key: 'flashValue', value: `${flashValue} KB` },
         ];
-        const paramsHistory = { timeValue, ramValue, flashValue, dateTime, stage };
+        const paramsHistory = { timeValue, ramValue, flashValue, dateTime, stage, serialConfig: extra?.serialConfig };
         this.generateProfilingHistory(paramsHistory);
         const frontEndConfigCallbackMessage: ConfigMessage = {
           method: ApiMethod.SAVE_CONFIG_CALLBACK,
@@ -5134,15 +5157,15 @@ export class Command {
         extension.chipConfigPanel?.postMessage(frontEndConfigCallbackMessage);
       } else if (stage === 'accuracy') {
         // Accuracy results on CPU : output.csv
-        let errMsg = this.importProValidation(isNPU, outputRootPath);
-        if (errMsg) {
-          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: errMsg } });
+        const { tableData, errMsg: csvErr } = this.importProValidation(isNPU, outputRootPath);
+        if (csvErr) {
+          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: csvErr } });
           return 1;
         }
         // Accuracy results on CPU : output.json
-        errMsg = this.importProGraph(isNPU, outputRootPath, dateTime);
-        if (errMsg) {
-          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: errMsg } });
+        const graphErr = this.importProGraph(isNPU, outputRootPath, dateTime, false, { ...extra, tableData });
+        if (graphErr) {
+          extension.chipConfigPanel?.postMessage({ type: 'Failed', params: { description: graphErr } });
           return 1;
         }
       } else {
@@ -5166,7 +5189,11 @@ export class Command {
       let [historyInfo] = fileJsonCompression[0].filter((item: any) => {
         return item.updateTime === parseInt(lastConvertTS);
       });
-      const { timeValue, ramValue, flashValue, dateTime, balancedAccuracy, cosineSimilarity, stage, psramEnabled } = newData ?? {};
+      const {
+        timeValue, ramValue, flashValue, dateTime, balancedAccuracy, cosineSimilarity,
+        stage, psramEnabled,
+        serialConfig, profilingSnapshot, selectedOutputNode, chartData, tableData,
+      } = newData ?? {};
 
       const historyList = newFileJson;
       const source = GlobalModel.instance.source;
@@ -5176,10 +5203,15 @@ export class Command {
       });
       if (nowHistoryList.length > 0) {
         historyList.forEach(item => {
-          // 更新balancedAccuracy和cosineSimilarity
           if (item.updateTime === dateTime) {
             item.accuracyB = balancedAccuracy ?? '----';
             item.avgSimB = cosineSimilarity ?? '----';
+            // Patch accuracy-only fields into an existing record (e.g. accuracy run after profiling).
+            if (chartData !== undefined) { item.chartData = chartData; }
+            if (tableData !== undefined) { item.tableData = tableData; }
+            if (profilingSnapshot?.length) { item.profilingSnapshot = profilingSnapshot; }
+            if (selectedOutputNode !== undefined) { item.selectedOutputNode = selectedOutputNode; }
+            if (serialConfig) { item.serialConfig = serialConfig; }
           }
         });
       } else {
@@ -5203,6 +5235,11 @@ export class Command {
           psramEnabled,
           accuracyB: balancedAccuracy ?? '----',
           avgSimB: cosineSimilarity ?? '----',
+          serialConfig: serialConfig ?? null,
+          profilingSnapshot: profilingSnapshot ?? [],
+          selectedOutputNode: selectedOutputNode ?? '',
+          chartData: chartData ?? [],
+          tableData: tableData ?? [],
         };
         historyList.push(historyInfo);
       }
@@ -5866,7 +5903,11 @@ export class Command {
     }
   }
 
-  static importProGraph(isNPU: boolean, outputRootPath: string, dateTime: number, listUpdateStatus?: boolean): string | undefined {
+  static importProGraph(
+    isNPU: boolean, outputRootPath: string, dateTime: number,
+    listUpdateStatus?: boolean,
+    extra?: { serialConfig?: any; profilingSnapshot?: any[]; selectedOutputNode?: string; tableData?: any[] },
+  ): string | undefined {
     let errMsg;
 
     try {
@@ -5878,7 +5919,6 @@ export class Command {
       }
 
       fileString = fs.readFileSync(filePath, 'utf8');
-      // 异常处理  当返回JSON中存在Infinity/NaN的值时 JSON无法解析 导致报错
       fileString = fileString.replace(/Infinity/g, '\"Infinity\"');
       fileString = fileString.replace(/NaN/g, '\"NaN\"');
       const newFileJson = JSON.parse(fileString);
@@ -5893,26 +5933,17 @@ export class Command {
         let accuracy;
 
         for (const item of metrics) {
-          if ('Accuracy' in item) {
-            accuracy = item.Accuracy;
-          }
-          if ('CosineSimilarity' in item) {
-            cosSim = item.CosineSimilarity;
-          }
+          if ('Accuracy' in item) { accuracy = item.Accuracy; }
+          if ('CosineSimilarity' in item) { cosSim = item.CosineSimilarity; }
         }
 
         accValue = (accuracy === '-' || (typeof accuracy === 'undefined')) ? '--- %' : `${(accuracy * 100).toFixed(2)}%`;
         cosSim = (cosSim === '-' || (typeof cosSim === 'undefined')) ? '----' : `${(Number(cosSim)).toFixed(4)}`;
         initAccValue = accuracy;
-        const config = [
-          { key: 'balancedAccuracy', value: accValue },
-          { key: 'cosineSimilarity', value: cosSim },
-        ];
-        const saveConfigMsg: ConfigMessage = {
+        extension.chipConfigPanel?.postMessage({
           method: ApiMethod.SAVE_CONFIG_CALLBACK,
-          params: { config: config },
-        };
-        extension.chipConfigPanel?.postMessage(saveConfigMsg);
+          params: { config: [{ key: 'balancedAccuracy', value: accValue }, { key: 'cosineSimilarity', value: cosSim }] },
+        } as ConfigMessage);
       } else {
         const metrics = newFileJson.Metrics;
         fileString = newFileJson.Histogram;
@@ -5921,24 +5952,30 @@ export class Command {
         accValue = (accuracy === '-' || (typeof accuracy === 'undefined')) ? '--- %' : `${(accuracy * 100).toFixed(2)}%`;
         cosSim = (cosSim === '-' || (typeof cosSim === 'undefined')) ? '----' : `${(Number(cosSim)).toFixed(4)}`;
         initAccValue = accuracy;
-        const config = [
-          { key: 'balancedAccuracy', value: accValue },
-          { key: 'cosineSimilarity', value: cosSim },
-        ];
-        const saveConfigMsg: ConfigMessage = {
+        extension.chipConfigPanel?.postMessage({
           method: ApiMethod.SAVE_CONFIG_CALLBACK,
-          params: { config: config },
-        };
-        extension.chipConfigPanel?.postMessage(saveConfigMsg);
+          params: { config: [{ key: 'balancedAccuracy', value: accValue }, { key: 'cosineSimilarity', value: cosSim }] },
+        } as ConfigMessage);
       }
+
       initAccValue = (initAccValue === '-' || (typeof initAccValue === 'undefined')) ? '----' : initAccValue;
-      const paramsHistory = { balancedAccuracy: initAccValue ?? '----', cosineSimilarity: cosSim ?? '----', dateTime, stage: 'accuracy' };
+      const chartData = Array.isArray(fileString) ? fileString : [];
+      const paramsHistory = {
+        balancedAccuracy: initAccValue ?? '----',
+        cosineSimilarity: cosSim ?? '----',
+        dateTime,
+        stage: 'accuracy',
+        chartData,
+        tableData: extra?.tableData ?? [],
+        serialConfig: extra?.serialConfig ?? null,
+        profilingSnapshot: extra?.profilingSnapshot ?? [],
+        selectedOutputNode: extra?.selectedOutputNode ?? '',
+      };
       if (!listUpdateStatus) {
         this.generateProfilingHistory(paramsHistory);
       }
 
-      const frontEndConfigArr = fileString;
-      this.updateProfilingChart(frontEndConfigArr);
+      this.updateProfilingChart(chartData);
     } catch (err) {
       errMsg = `importProGraph failed : ${this.handleError(err)}`;
       this.updateProfilingChart([]);
@@ -5958,13 +5995,10 @@ export class Command {
     extension.chipConfigPanel?.postMessage(frontEndConfigCallbackMessage);
   }
 
-  static importProValidation(isNpu: boolean, outputRootPath: string): string | undefined {
-    let errMsg;
-
+  static importProValidation(isNpu: boolean, outputRootPath: string): { tableData: any[]; errMsg?: string } {
     const historyRootDir = GlobalModel.instance.aiCacheDir;
     if (!historyRootDir) {
-      errMsg = 'historyRootDir not found in postprofiling!';
-      return errMsg;
+      return { tableData: [], errMsg: 'historyRootDir not found in postprofiling!' };
     }
 
     try {
@@ -5972,8 +6006,7 @@ export class Command {
         ? `${outputRootPath}/accuracyOutput.csv`
         : `${outputRootPath}/output.csv`;
       if (!fs.existsSync(filePath)) {
-        errMsg = 'csv file not foun.';
-        return errMsg;
+        return { tableData: [], errMsg: 'csv file not found.' };
       }
 
       const rawCsv = fs.readFileSync(filePath, 'utf-8');
@@ -5982,11 +6015,9 @@ export class Command {
         .map(line => line.trim())
         .filter(line => line.length > 0);
       if (arr.length <= 1) {
-        errMsg = 'csv result files format error.';
-        return errMsg;
+        return { tableData: [], errMsg: 'csv result files format error.' };
       }
 
-      // Parse the csv file.
       const tableHeader = arr.shift();
       const tableHeaderArr = tableHeader?.split(',') ?? [];
       const result = arr.map((item: any) => {
@@ -5995,20 +6026,23 @@ export class Command {
         return arrayToObject(tableHeaderArr, fields);
       });
 
-      // All done. send message.
-      const frontEndConfigCallbackMessage: FrontEndConfigMessage = {
+      extension.chipConfigPanel?.postMessage({
         method: ApiMethod.IMPORT_PROVALIDATION_CALLBACK,
-        params: {
-          data: result,
-        },
-      };
-      extension.chipConfigPanel?.postMessage(frontEndConfigCallbackMessage);
-    } catch (err) {
-      errMsg = `importProValidation failed: ${this.handleError(err)}`;
-      return errMsg;
-    }
+        params: { data: result },
+      } as FrontEndConfigMessage);
 
-    return undefined;
+      return { tableData: result };
+    } catch (err) {
+      return { tableData: [], errMsg: `importProValidation failed: ${this.handleError(err)}` };
+    }
+  }
+
+  /** Send pre-loaded table data to the frontend (used when restoring from benchmark.json). */
+  private static sendProfilingValidation(data: any[]): void {
+    extension.chipConfigPanel?.postMessage({
+      method: ApiMethod.IMPORT_PROVALIDATION_CALLBACK,
+      params: { data },
+    } as FrontEndConfigMessage);
   }
 
   static showMessageModal({ title, content = '', btn = [], cb = (): void => { }, infoType = 'tips' }: any): void {

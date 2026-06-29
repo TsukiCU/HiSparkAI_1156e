@@ -74,6 +74,7 @@ interface ProfilingParams {
   source?: Source;
 }
 
+// ProfilingCommandMsg kept for documentation; cast to `any` when extra fields are added at call site.
 type ProfilingCommandMsg = Omit<CommandMsg, 'params'> & { params: ProfilingParams };
 
 // ─── History modal sub-components ─────────────────────────────────────────
@@ -456,7 +457,23 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
     benchmarkSetup();
     if (target === 'CPU') { IStore.getStore().dispatch(updateEntity('benchmarkSelectValue', { port1, baudRate1 })); }
     else { IStore.getStore().dispatch(updateEntity('benchmarkSelectValue', { port1, baudRate1, port2, baudRate2 })); }
-    vscode.postMessage({ method: ApiMethod.START_PROFILING, params: { targetPlatform: { target }, paramType: 'accuracy', selectedOutputNode: selectedOutput, source } } as ProfilingCommandMsg);
+    const profilingSnapshot = profilingBoxes.map(item => {
+      const box = fileBoxes.find(f => f.key === item.key && f.group === item.group);
+      const content = (item.key === BENCHMARK_KEYS.provalidation && selectedOutput === 'None')
+        ? '' : (box?.content || item.content || '');
+      return { ...item, content, selectedOutputNode: selectedOutput };
+    });
+    vscode.postMessage({
+      method: ApiMethod.START_PROFILING,
+      params: {
+        targetPlatform: { target },
+        paramType: 'accuracy',
+        selectedOutputNode: selectedOutput,
+        source,
+        serialConfig: { port1, baudRate1, port2: target === 'NPU' ? port2 : '', baudRate2: target === 'NPU' ? baudRate2 : '' },
+        profilingSnapshot,
+      },
+    } as any);
   };
 
   const handleProfiling = (): void => {
@@ -473,7 +490,16 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
     benchmarkSetup();
     if (target === 'CPU') { IStore.getStore().dispatch(updateEntity('benchmarkSelectValue', { port1, baudRate1 })); }
     else { IStore.getStore().dispatch(updateEntity('benchmarkSelectValue', { port1, baudRate1, port2, baudRate2 })); }
-    vscode.postMessage({ method: ApiMethod.START_PROFILING, params: { targetPlatform: { target }, paramType: 'profiling', selectedOutputNode: selectedOutput, source } } as ProfilingCommandMsg);
+    vscode.postMessage({
+      method: ApiMethod.START_PROFILING,
+      params: {
+        targetPlatform: { target },
+        paramType: 'profiling',
+        selectedOutputNode: selectedOutput,
+        source,
+        serialConfig: { port1, baudRate1, port2: target === 'NPU' ? port2 : '', baudRate2: target === 'NPU' ? baudRate2 : '' },
+      },
+    } as any);
   };
 
   // ─── Rendering ──────────────────────────────────────────────────────────
