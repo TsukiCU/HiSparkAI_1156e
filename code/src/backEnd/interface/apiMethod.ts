@@ -81,6 +81,7 @@ export enum ApiMethod {
   GET_COMPRESSION_DATA_CONFIG = 'getCompressDataConfigInfo',
   DOWNLOAD_SAMPLE_CONFIG = 'downloadSampleConfig',
   LOG_MANUAL_INPUT_TO_CHANNEL = 'logManualInputToChannel',
+  VALIDATE_MANUAL_PATH = 'validateManualPath',
   STOP_DATA_QUANTIZE = 'stopDataQuantize',
   STOP_DATA_CONVERT = 'stopDataConvert',
   STOP_FLASHING = 'stopFlashing',

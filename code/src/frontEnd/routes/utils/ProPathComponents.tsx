@@ -111,24 +111,16 @@ const FileInputBoxComponent: React.FC<{
     vscode.postMessage(filePickMsg);
   };
 
-  // 失焦
+  // 失焦：验证手动输入路径是否有效
   const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
     if (validationStatus || inactive) { return; }
     const blurValue = e.target.value.trim();
     setManualInput(blurValue);
-
-    // 输入内容
-    const logMsg: Message = {
-      method: ApiMethod.LOG_MANUAL_INPUT_TO_CHANNEL,
-      params: {
-        inputKey,
-        manualInput: blurValue,
-        folder,
-        title,
-      },
-    };
-    // 发送消息
-    vscode.postMessage(logMsg);
+    if (!blurValue) { return; } // 空值不验证
+    vscode.postMessage({
+      method: ApiMethod.VALIDATE_MANUAL_PATH,
+      params: { path: blurValue, filePickerType, folder, title, inputKey },
+    } as Message);
   };
 
   const handleBrowseClick = (): void => {

@@ -6430,16 +6430,47 @@ export class Command {
 
   // 输入框手动输入信息
   static async logManualInputToChannel(message: any): Promise<void> {
-    // 判断 method 是否匹配
     if (message.method === ApiMethod.LOG_MANUAL_INPUT_TO_CHANNEL) {
       const { inputKey, manualInput, folder, title } = message.params || {};
-      // 避免空值
       const inputNull = !inputKey || title === undefined || folder === undefined || !manualInput || manualInput.trim() === '';
-      if (inputNull) {
-        return;
+      if (inputNull) { return; }
+      vscode.window.showInformationMessage(`User input: ${manualInput?.trim()}`);
+    }
+  }
+
+  /**
+   * Validate a manually-typed path.
+   * - local / wsl: fs.existsSync (Windows or UNC path)
+   * - linux:       SSH test -e on the remote server
+   * Shows vscode.window.showErrorMessage when the path does not exist.
+   */
+  static async validateManualPath(message: any): Promise<void> {
+    const { path: inputPath, filePickerType, folder, title } = message.params ?? {};
+    if (!inputPath || inputPath.trim() === '') { return; }
+    const p = inputPath.trim();
+    const label = title ? `"${title}"` : 'Path';
+
+    if (filePickerType === 'linux') {
+      const remoteHome = GlobalModel.instance?.remoteHome;
+      if (!remoteHome) { return; } // not connected yet — skip silently
+      try {
+        type R = { exitCode: number; stdout: string };
+        const result = await vscode.commands.executeCommand<R>(
+          this.remoteCmdLib.executeCmd,
+          `test -${folder ? 'd' : 'e'} ${common.shQuote(p)} && echo "EXISTS" || echo "NOT_EXISTS"`,
+        );
+        if (result?.stdout?.trim() !== 'EXISTS') {
+          vscode.window.showErrorMessage(`${label}: path not found on remote server — ${p}`);
+        }
+      } catch (err) {
+        logger.warn(`validateManualPath (linux) error: ${this.handleError(err)}`);
       }
-      const logContent = `User input ： ${manualInput?.trim()}`;
-      vscode.window.showInformationMessage(`${logContent}`);
+    } else {
+      // local (Windows) or wsl (Windows/UNC path)
+      const exists = folder ? (fs.existsSync(p) && fs.statSync(p).isDirectory()) : fs.existsSync(p);
+      if (!exists) {
+        vscode.window.showErrorMessage(`${label}: path not found — ${p}`);
+      }
     }
   }
 
