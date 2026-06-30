@@ -159,9 +159,9 @@ const FileInputBoxComponent: React.FC<{
             className="inputFile"
             value={inputValue}
             onChange={handleInputChange}
-            onBlur={onBlur ? onBlur : handleInputBlur} // 绑定失焦事件
+            onBlur={onBlur ? onBlur : handleInputBlur}
             disabled={isDisabled}
-            style={{ width: '180px', height: '32px' }}
+            style={{ width: '180px', height: '32px', pointerEvents: 'auto' }}
           />
         </Tooltip>
         <Button
