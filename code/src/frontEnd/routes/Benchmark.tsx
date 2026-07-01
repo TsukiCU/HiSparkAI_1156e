@@ -199,21 +199,6 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   const [profilingCfgData, setProfilingCfgData] = useState<ProfilingGraphData[]>([]);
   const [proValidationCfgData, setProValidationCfgData] = useState<ProfilingValidationData[]>([]);
 
-  // ── Flashing ──────────────────────────────────────────────────────────
-  let isFlashed = useSelector((state: any) => state.entities.isFlashed);
-  let skipFlashing = useSelector((state: any) => state.entities.skipFlashing);
-
-  const setIsFlashed = (v: boolean): void => {
-    isFlashed = v;
-    vscode.postMessage({ method: ApiMethod.SAVE_CONFIG, params: { data: v, key: 'isFlashed' } });
-    IStore.getStore().dispatch(updateEntity('isFlashed', v));
-  };
-  const setSkipFlashing = (v: boolean): void => {
-    skipFlashing = v;
-    vscode.postMessage({ method: ApiMethod.SAVE_CONFIG, params: { data: v, key: 'skipFlashing' } });
-    IStore.getStore().dispatch(updateEntity('isFlashed', v));
-  };
-
   // ── Delete modal ──────────────────────────────────────────────────────
   const { openModal, closeModal, modalOpen, config } = useCustomModal();
   const handleDeleteSelected = (): void => {
@@ -283,10 +268,6 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
   useEffect(() => {
     const handler = (event: MessageEvent): void => {
       const msg = event.data;
-      if (msg.type === 'SkipFlashing') {
-        setSkipFlashing(true);
-        if (msg.params?.stage === 'accuracy') { handleAccuracy(); } else { handleProfiling(); }
-      }
       if (msg.type === 'Failed') {
         setPending(false); setPerformancePending(false); setAccuracyPending(false);
         if (msg.params?.stage === 'profiling') {
@@ -307,7 +288,7 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [setIsFlashed, setSkipFlashing]);
+  }, []);
 
   // ─── File input state from profilingData ──────────────────────────────
   useEffect(() => {
@@ -450,7 +431,6 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
       message.error({ content: BENCHMARK_TEXT.errors.noSerialConfig, duration: 1 }); return;
     }
     if (pending) { notify(BENCHMARK_TEXT.errors.scriptRunning, { type: 'info', stack: false, duration: 1 }); return; }
-    if (target === 'NPU' && !isFlashed && !skipFlashing) { vscode.postMessage({ method: 'confirmFlash', isFlashed, stage: 'accuracy' }); return; }
 
     vscode.postMessage({ method: ApiMethod.SAVE_CONFIG_CALLBACK, params: { config: [{ key: 'balancedAccuracy', value: undefined }, { key: 'cosineSimilarity', value: undefined }] } });
     setPending(true); setAccuracyPending(true);
@@ -484,7 +464,6 @@ function Benchmark(props: { target: Target; source: Source }): React.JSX.Element
     if (!baudRate1) { missing.push('baud rate'); }
     if (missing.length > 0) { notify(`Configure ${missing.join(missing.length === 2 ? ' and ' : ', and ')}.`, { type: 'info', stack: false, duration: 3 }); return; }
     if (pending) { notify(BENCHMARK_TEXT.errors.scriptRunning, { type: 'info', stack: false, duration: 1 }); return; }
-    if (target === 'NPU' && !isFlashed && !skipFlashing) { vscode.postMessage({ method: 'confirmFlash', isFlashed, stage: 'profiling' }); return; }
 
     setPending(true); setPerformancePending(true);
     benchmarkSetup();

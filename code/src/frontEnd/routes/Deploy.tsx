@@ -125,11 +125,6 @@ function Deploy(props: { target: Target; source: Source }): React.JSX.Element {
   };
 
   const handleFlashing = (): void => {
-    if (isFlashed) {
-      vscode.postMessage({ method: 'confirmFlash', isFlashed });
-      return;
-    }
-
     if (is1156e) {
       const missing: string[] = [];
       if (burnType === 'Serial' && !flashPort) { missing.push('port'); }
@@ -257,11 +252,6 @@ function Deploy(props: { target: Target; source: Source }): React.JSX.Element {
         return;
       }
 
-      // FlashAgain
-      if (msg?.type === 'FlashAgain') {
-        setIsFlashed(false);
-        handleFlashing();
-      }
     };
 
     window.addEventListener('message', handleMessage);
@@ -296,10 +286,6 @@ function Deploy(props: { target: Target; source: Source }): React.JSX.Element {
         setIsFlashed(true);
         notify('Successfully flashed.', { type: 'info', stack: false, duration: 2 });
         IStore.getStore().dispatch(updateEntity('navbarStatus', ['finish', 'finish', 'finish', 'finish', 'finish']));
-      }
-      if (msg.type === 'FlashAgain') {
-        setIsFlashed(false);
-        handleFlashing();
       }
     };
     window.addEventListener('message', handleMessage);

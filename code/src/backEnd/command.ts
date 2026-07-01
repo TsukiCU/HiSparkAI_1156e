@@ -1077,7 +1077,6 @@ export class Command {
       // Case 2: connection not established this session (fresh window) — remoteHome is unset.
       const remoteHome = GlobalModel.instance.remoteHome;
       if (!remoteHome) {
-        vscode.window.showWarningMessage('Remote server not connected. Reconnecting…');
         extension.chipConfigPanel?.postMessage({ type: 'ConnectToRemote' });
         return;
       }
@@ -4932,6 +4931,10 @@ export class Command {
 
     this.updateResultStatus(profilingArr, accArr);
 
+    // Benchmark records exist for this convert → all pipeline steps are done.
+    // Restore navbarStatus so the checkmark survives page switches and plugin reloads.
+    this.updateFrontEndStorage([{ key: 'navbarStatus', value: ['finish', 'finish', 'finish', 'finish', 'finish'] }]);
+
     // 更新前端存储
     if (profilingArr.length) {
       const configSetting = this.createConfigSetting(profilingArr, commonConfig);
@@ -5603,43 +5606,6 @@ export class Command {
     extension.chipConfigPanel?.postMessage({ type: 'compileAborted' });
   }
 
-  static async confirmFlash(message: any): Promise<void> {
-    const { isFlashed, stage } = message;
-    const options = {
-      flashAgain: [
-        { label: 'Yes', description: 'Flash again' },
-        { label: 'No', description: 'Don\'t flash again' },
-      ],
-      skipFlashing: [
-        { label: 'Yes', description: 'Skip Flashing' },
-        { label: 'No', description: 'Don\'t skip flashing' },
-      ],
-    };
-
-    if (isFlashed) {
-      // Already flashed, confirm whether to flash again.
-      const choice = await vscode.window.showQuickPick(
-        options.flashAgain,
-        { placeHolder: 'Already flashed. Flash again?' }
-      );
-
-      if (!choice || choice.label === 'No') { return; }
-      if (choice.label === 'Yes') {
-        extension.chipConfigPanel?.postMessage({ type: 'FlashAgain' });
-      }
-    } else {
-      // Not yet flashed. Confirm whether to skip flashing once and for all.
-      const choice = await vscode.window.showQuickPick(
-        options.skipFlashing,
-        { placeHolder: 'Not flashed. Skip flashing? (Flashing is available in Deploy page)' }
-      );
-
-      if (!choice || choice.label === 'No') { return; }
-      if (choice.label === 'Yes') {
-        extension.chipConfigPanel?.postMessage({ type: 'SkipFlashing', params: { stage: stage } });
-      }
-    }
-  }
 
   static profParseResults({
     filePath,
