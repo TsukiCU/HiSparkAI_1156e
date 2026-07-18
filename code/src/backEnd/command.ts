@@ -5317,8 +5317,10 @@ export class Command {
     if (chip === '1156e') {
       try {
         await this.build1156e();
+        if (this.buildChip !== '1156e') { return; } // Aborted — stopBuilding already sent compileAborted.
         extension.chipConfigPanel?.postMessage('compileDone');
       } catch (err) {
+        if (this.buildChip !== '1156e') { return; } // Aborted — stopBuilding already sent compileAborted.
         const errMsg = `1156e build failed: ${this.handleError(err)}`;
         this.outputLogger.handleLogInfo(errMsg, 'error');
         extension.chipConfigPanel?.postMessage({ type: 'compileFailed' });
@@ -5371,6 +5373,7 @@ export class Command {
     // Step 1: run install_deps.sh inside WSL (tracked for abort).
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Installing dependencies (WSL)...' } });
     let ret = await this.runWslBuildCmd(distro, `sed 's/\\r$//' ${common.shQuote(wslScript)} | bash`);
+    if (this.buildChip !== '1156e') { return; } // Aborted.
     if (ret.code !== 0) { throw new Error(`install_deps.sh failed (WSL, exit ${ret.code})`); }
 
     const winImagesDir = path.join(localSdkPath, 'output', 'tiangong2_cmcc_hgu_release', 'images');
@@ -5392,6 +5395,7 @@ export class Command {
       extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Building (WSL)...' } });
       ret = await this.runWslBuildCmd(distro,
         `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release`);
+      if (this.buildChip !== '1156e') { return; } // Aborted.
       if (ret.code !== 0) { throw new Error(`cbuild.py failed (WSL, exit ${ret.code})`); }
 
       // Verify output files after full build.
@@ -5408,6 +5412,7 @@ export class Command {
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg (WSL)...' } });
     ret = await this.runWslBuildCmd(distro,
       `cd ${common.shQuote(wslSdkPath)} && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`);
+    if (this.buildChip !== '1156e') { return; } // Aborted.
     if (ret.code !== 0) { throw new Error(`fwpkg packaging failed (WSL, exit ${ret.code})`); }
 
     // Step 4: copy fwpkg to local deploy directory.
@@ -5580,7 +5585,7 @@ export class Command {
         // the kill is a no-op then but that command is short-lived anyway.
         vscode.commands.executeCommand(
           this.remoteCmdLib.executeCmd,
-          `kill -TERM $(cat ${this.BUILD_1156E_PID_FILE}) 2>/dev/null; rm -f ${this.BUILD_1156E_PID_FILE}`,
+          `kill -TERM $(cat ${this.BUILD_1156E_PID_FILE} 2>/dev/null) 2>/dev/null; rm -f ${this.BUILD_1156E_PID_FILE}`,
         );
       }
 
@@ -7013,11 +7018,15 @@ export class Command {
     interface R { exitCode: number; stdout: string; stderr: string };
     let ret: R;
 
-    // Step 1: upload and run install_deps.sh (strip \r in case of Windows line endings).
+    // Step 1: upload and run install_deps.sh (strip \r, track PID for abort).
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Installing dependencies...' } });
     await vscode.commands.executeCommand(this.remoteCmdLib.uploadCmd, installScriptLocal, installScriptRemote);
+    // Strip \r into a temp file, then exec under a tracked PID so stopBuilding() can kill it.
+    await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
+      `sed 's/\\r$//' "${installScriptRemote}" > /tmp/hispark_install_deps_clean.sh`);
     ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd,
-      `sed 's/\\r$//' "${installScriptRemote}" | bash`);
+      `bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec bash /tmp/hispark_install_deps_clean.sh'`);
+    if (this.buildChip !== '1156e') { return; } // Aborted.
     if (ret.exitCode) {
       const detail = [ret.stderr, ret.stdout].filter(Boolean).join('\n');
       throw new Error(`install_deps.sh failed (exit ${ret.exitCode}):\n${detail}`);
@@ -7056,9 +7065,9 @@ export class Command {
       }
     }
 
-    // Step 3: package fwpkg.
+    // Step 3: package fwpkg (track PID for abort).
     extension.chipConfigPanel?.postMessage({ type: 'Info', params: { description: '1156e: Packaging fwpkg...' } });
-    const fwpkgCmd = `cd "${remoteSdkPath}" && ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg`;
+    const fwpkgCmd = `cd "${remoteSdkPath}" && bash -c 'echo $$ > ${this.BUILD_1156E_PID_FILE} && exec ./cbuild.py -c tiangong2 -p cmcc_hgu -t release -j -m build_mkp -v fwpkg'`;
     ret = await vscode.commands.executeCommand<R>(this.remoteCmdLib.executeCmd, fwpkgCmd);
     if (this.buildChip !== '1156e') { return; }
     if (ret.exitCode) { throw new Error(`fwpkg packaging failed (exit ${ret.exitCode}): ${ret.stderr}`); }
